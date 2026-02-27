@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn, formatCurrency } from '@/src/lib/utils';
+import { cn, formatCurrency } from '../lib/utils';
 
 interface KPICardProps {
   title: string;
@@ -10,28 +10,72 @@ interface KPICardProps {
 }
 
 export const KPICard: React.FC<KPICardProps> = ({ title, value, count, trend, type }) => {
-  const colors = {
-    possible: 'border-emerald-500 text-emerald-700 bg-emerald-50',
-    checking: 'border-amber-500 text-amber-700 bg-amber-50',
-    impossible: 'border-red-500 text-red-700 bg-red-50',
-    default: 'border-slate-200 text-slate-700 bg-white'
+  const typeStyles = {
+    possible: {
+      bg: 'bg-emerald-50/50',
+      border: 'border-emerald-100',
+      text: 'text-emerald-600',
+      accent: 'bg-emerald-500',
+      icon: '✓'
+    },
+    checking: {
+      bg: 'bg-amber-50/50',
+      border: 'border-amber-100',
+      text: 'text-amber-600',
+      accent: 'bg-amber-500',
+      icon: '?'
+    },
+    impossible: {
+      bg: 'bg-rose-50/50',
+      border: 'border-rose-100',
+      text: 'text-rose-600',
+      accent: 'bg-rose-500',
+      icon: '×'
+    },
+    default: {
+      bg: 'bg-white',
+      border: 'border-slate-200',
+      text: 'text-slate-600',
+      accent: 'bg-slate-400',
+      icon: ''
+    }
   };
 
-  const icons = {
-    possible: '✅',
-    checking: '❓',
-    impossible: '❌',
-    default: ''
-  };
+  const style = typeStyles[type];
 
   return (
-    <div className={cn("p-6 rounded-2xl border-2 shadow-sm transition-all hover:shadow-md", colors[type])}>
-      <div className="flex justify-between items-start mb-2">
-        <span className="text-sm font-medium opacity-80">{icons[type]} {title}</span>
-        {trend && <span className="text-xs font-bold">{trend}</span>}
+    <div className={cn(
+      "relative overflow-hidden p-6 rounded-3xl border transition-all duration-300 hover:shadow-lg hover:-translate-y-1",
+      style.bg,
+      style.border
+    )}>
+      {/* Accent Line */}
+      <div className={cn("absolute top-0 left-0 w-full h-1", style.accent)} />
+      
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white", style.accent)}>
+            {style.icon}
+          </div>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{title}</span>
+        </div>
+        {trend && (
+          <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border", style.border, style.text)}>
+            {trend}
+          </span>
+        )}
       </div>
-      <div className="text-3xl font-bold mb-1">{formatCurrency(value)}</div>
-      <div className="text-sm opacity-70">{count.toLocaleString()}건</div>
+      
+      <div className="space-y-1">
+        <div className="text-3xl font-bold tracking-tight text-slate-900">
+          {formatCurrency(value)}
+        </div>
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+          <span>{count.toLocaleString()}건</span>
+          <div className="w-1 h-1 rounded-full bg-slate-200" />
+          <span>전체 대비 {((count / 805) * 100).toFixed(1)}%</span>
+        </div>
+      </div>
     </div>
   );
 };

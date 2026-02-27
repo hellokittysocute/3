@@ -64,32 +64,42 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-emerald-600 p-2 rounded-xl">
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-8 h-24 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200">
               <LayoutDashboard className="text-white w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">3월 중점관리 품목 대시보드</h1>
-              <p className="text-xs text-slate-500 font-medium">매출목표 1,250억 달성 프로젝트</p>
+              <h1 className="text-2xl font-black tracking-tighter text-slate-900">
+                3월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
+              </h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project 1,250억</span>
+                <div className="w-1 h-1 rounded-full bg-slate-300" />
+                <p className="text-xs text-slate-400 font-medium italic">3월 중점관리 품목 실시간 현황</p>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Last Update</div>
-              <div className="text-sm font-bold text-slate-700">2026.02.27 09:36</div>
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">시스템 상태</span>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-bold text-slate-700">실시간 동기화 중</span>
+              </div>
             </div>
-            <button className="bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" />
+            <div className="h-10 w-px bg-slate-200" />
+            <button className="group bg-slate-900 text-white pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-xl shadow-slate-200">
+              <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
               데이터 갱신
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="max-w-[1600px] mx-auto px-6 flex gap-8">
+        <div className="max-w-[1600px] mx-auto px-8 flex gap-10">
           {[
             { id: 'summary', label: '종합현황', icon: LayoutDashboard },
             { id: 'priority', label: '중점관리품목', icon: Package },
@@ -100,64 +110,79 @@ export default function App() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex items-center gap-2 py-4 text-sm font-bold transition-all border-b-2 relative",
+                "flex items-center gap-2 py-5 text-xs font-black uppercase tracking-widest transition-all relative group",
                 activeTab === tab.id 
-                  ? "text-emerald-600 border-emerald-600" 
-                  : "text-slate-400 border-transparent hover:text-slate-600"
+                  ? "text-slate-900" 
+                  : "text-slate-400 hover:text-slate-600"
               )}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className={cn("w-4 h-4", activeTab === tab.id ? "text-emerald-500" : "text-slate-300 group-hover:text-slate-400")} />
               {tab.label}
+              {activeTab === tab.id && (
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-emerald-500 rounded-t-full" />
+              )}
             </button>
           ))}
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-8">
+      <main className="max-w-[1600px] mx-auto p-10">
         {activeTab === 'summary' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-1">
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Bento Grid Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Main Progress Section */}
+              <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <LayoutDashboard size={120} />
+                </div>
                 <ProgressGauge 
                   rate={stats.overall.progressRate} 
-                  label="3월 중점관리 진도율" 
-                  subLabel={`가능: ${formatCurrency(stats.overall.possibleRevenue)} / 관리대상: ${formatCurrency(stats.overall.totalRevenue)}`}
+                  label="전체 진도율" 
+                  subLabel={`목표: 1,250억 / 현재: ${formatCurrency(stats.overall.possibleRevenue)}`}
                 />
               </div>
-              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              {/* KPI Grid */}
+              <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} type="possible" trend="+12억" />
                 <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} type="checking" trend="-8억" />
                 <KPICard title="불가능" value={stats.overall.impossibleRevenue} count={stats.overall.impossibleCount} type="impossible" trend="-4억" />
                 
-                <div className="md:col-span-3 p-8 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="text-lg font-bold text-slate-800 mb-6">버킷별 진도율</div>
-                  <div className="space-y-8">
-                    <div>
-                      <div className="flex justify-between items-end mb-3">
-                        <span className="font-bold text-slate-700">중점관리품목 (350억)</span>
-                        <span className="text-emerald-600 font-bold text-xl">{stats.priority.progressRate.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-emerald-500" style={{ width: `${stats.priority.progressRate}%` }}></div>
-                      </div>
-                      <div className="flex gap-4 mt-3 text-xs font-medium text-slate-500">
-                        <span>가능 {formatCurrency(stats.priority.possibleRevenue)}</span>
-                        <span>확인중 {formatCurrency(stats.priority.checkingRevenue)}</span>
-                        <span>불가 {formatCurrency(stats.priority.impossibleRevenue)}</span>
-                      </div>
+                {/* Secondary Progress */}
+                <div className="md:col-span-3 p-10 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl shadow-slate-200 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                      <h3 className="text-xl font-bold tracking-tight">관리구분별 진도 현황</h3>
+                      <span className="text-[10px] font-bold bg-white/10 px-2 py-1 rounded uppercase tracking-widest">실시간 분석</span>
                     </div>
-                    <div>
-                      <div className="flex justify-between items-end mb-3">
-                        <span className="font-bold text-slate-700">자재조정필요 (130억)</span>
-                        <span className="text-amber-600 font-bold text-xl">{stats.material.progressRate.toFixed(1)}%</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                          <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">중점관리품목 (350억)</span>
+                          <span className="text-3xl font-black text-emerald-400">{stats.priority.progressRate.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]" style={{ width: `${stats.priority.progressRate}%` }}></div>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          <span>가능: {formatCurrency(stats.priority.possibleRevenue)}</span>
+                          <span>{stats.priority.possibleCount} 품목</span>
+                        </div>
                       </div>
-                      <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-amber-500" style={{ width: `${stats.material.progressRate}%` }}></div>
-                      </div>
-                      <div className="flex gap-4 mt-3 text-xs font-medium text-slate-500">
-                        <span>가능 {formatCurrency(stats.material.possibleRevenue)}</span>
-                        <span>확인중 {formatCurrency(stats.material.checkingRevenue)}</span>
-                        <span>불가 {formatCurrency(stats.material.impossibleRevenue)}</span>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                          <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">자재조정필요 (130억)</span>
+                          <span className="text-3xl font-black text-amber-400">{stats.material.progressRate.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]" style={{ width: `${stats.material.progressRate}%` }}></div>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          <span>가능: {formatCurrency(stats.material.possibleRevenue)}</span>
+                          <span>{stats.material.possibleCount} 품목</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -165,143 +190,191 @@ export default function App() {
               </div>
             </div>
 
-            <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm h-96">
-              <div className="text-lg font-bold text-slate-800 mb-6">진도율 추이 (Daily Trend)</div>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={4} dot={{ r: 6, fill: '#10B981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
-                </LineChart>
-              </ResponsiveContainer>
+            {/* Trend Section */}
+            <div className="p-10 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+              <div className="flex items-center justify-between mb-10">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">진도율 추이</h3>
+                  <p className="text-sm text-slate-400 font-medium">3월 목표 달성을 위한 일별 진척도 변화</p>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="text-xs font-bold text-slate-600">목표 경로</span>
+                </div>
+              </div>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} dx={-10} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
+                    />
+                    <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={4} dot={{ r: 6, fill: '#10B981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'priority' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700">
              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="p-6 bg-slate-900 rounded-2xl text-white">
-                  <div className="text-xs font-medium opacity-60 mb-1">전체 관리대상</div>
-                  <div className="text-3xl font-bold">{formatCurrency(stats.priority.totalRevenue)}</div>
-                  <div className="text-sm opacity-60 mt-1">{stats.priority.totalCount}건</div>
+                <div className="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-200 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-2">전체 관리대상</div>
+                  <div className="text-3xl font-black tracking-tight">{formatCurrency(stats.priority.totalRevenue)}</div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="text-xs font-bold bg-white/10 px-2 py-0.5 rounded">{stats.priority.totalCount}건</span>
+                  </div>
                 </div>
-                <div className="p-6 bg-white border border-slate-200 rounded-2xl">
-                  <div className="text-xs font-bold text-emerald-600 mb-1">✅ 가능</div>
-                  <div className="text-3xl font-bold">{formatCurrency(stats.priority.possibleRevenue)}</div>
-                  <div className="text-sm text-slate-500 mt-1">{stats.priority.progressRate.toFixed(1)}%</div>
+                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-2">가능</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.possibleRevenue)}</div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500" style={{ width: `${stats.priority.progressRate}%` }} />
+                    </div>
+                    <span className="text-xs font-black text-emerald-600">{stats.priority.progressRate.toFixed(1)}%</span>
+                  </div>
                 </div>
-                <div className="p-6 bg-white border border-slate-200 rounded-2xl">
-                  <div className="text-xs font-bold text-amber-600 mb-1">❓ 확인중</div>
-                  <div className="text-3xl font-bold">{formatCurrency(stats.priority.checkingRevenue)}</div>
-                  <div className="text-sm text-slate-500 mt-1">{stats.priority.checkingCount}건</div>
+                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mb-2">확인중</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.checkingRevenue)}</div>
+                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.priority.checkingCount} 품목 대기 중</div>
                 </div>
-                <div className="p-6 bg-white border border-slate-200 rounded-2xl">
-                  <div className="text-xs font-bold text-red-600 mb-1">❌ 불가능</div>
-                  <div className="text-3xl font-bold">{formatCurrency(stats.priority.impossibleRevenue)}</div>
-                  <div className="text-sm text-slate-500 mt-1">{stats.priority.impossibleCount}건</div>
+                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-2">불가능</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.impossibleRevenue)}</div>
+                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.priority.impossibleCount} 품목 불가</div>
                 </div>
              </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <StackedBarChart title="고객사별 진도율 (TOP 10)" data={customerChartData} />
-                <StackedBarChart title="마케팅팀별 진도율" data={teamChartData} />
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                  <StackedBarChart title="고객사별 진도율 (TOP 10)" data={customerChartData} />
+                </div>
+                <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                  <StackedBarChart title="마케팅팀별 진도율" data={teamChartData} />
+                </div>
              </div>
           </div>
         )}
 
         {activeTab === 'material' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-amber-50 border-l-8 border-amber-500 p-8 rounded-2xl flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-amber-900 mb-2 flex items-center gap-2">
-                  <AlertTriangle className="w-8 h-8" />
-                  자재조정필요 130억 — 긴급 대응 현황
-                </h2>
-                <p className="text-amber-700 font-medium">3월 매출 목표 달성을 위해 부자재 수급 일정이 타이트한 품목들입니다.</p>
+          <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-slate-900 p-10 rounded-[2.5rem] flex items-center justify-between relative overflow-hidden shadow-2xl shadow-slate-200">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent" />
+              <div className="relative z-10 flex items-center gap-8">
+                <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <AlertTriangle className="text-slate-900 w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black text-white tracking-tight mb-2 uppercase">
+                    자재 <span className="text-amber-500">리스크</span> 분석
+                  </h2>
+                  <p className="text-slate-400 font-medium max-w-xl">
+                    부자재 수급 일정이 타이트한 품목들에 대한 집중 모니터링 세션입니다.
+                    130억 규모의 매출 전환을 목표로 합니다.
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-amber-600 font-bold uppercase tracking-wider">부자재 최종 셋팅 마감</div>
-                <div className="text-4xl font-black text-amber-900">3/20 (D-21)</div>
+              <div className="relative z-10 text-right">
+                <div className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] mb-2">최종 셋팅 마감일</div>
+                <div className="text-5xl font-black text-white tracking-tighter">03.20 <span className="text-xl text-slate-500 font-bold ml-2">D-21</span></div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="text-lg font-bold text-slate-800">고객사별 집중 관리 (자재조정)</div>
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                      <span className="text-xs font-bold text-slate-500">가능</span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+              <div className="lg:col-span-8 bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                <div className="flex justify-between items-center mb-10">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">고객사별 리스크 매트릭스</h3>
+                    <p className="text-sm text-slate-400 font-medium">자재 조정이 필요한 품목의 집중 관리 현황</p>
+                  </div>
+                  <div className="flex gap-6 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">가능</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                      <span className="text-xs font-bold text-slate-500">확인중</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">확인중</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <span className="text-xs font-bold text-slate-500">불가능</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">불가능</span>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {customerChartData.slice(0, 5).map((c, idx) => (
-                    <div key={idx} className="flex items-center gap-6">
-                      <div className="w-20 font-bold text-slate-600">{c.name}</div>
-                      <div className="flex-1 h-8 bg-slate-100 rounded-lg overflow-hidden flex">
-                         <div className="h-full bg-emerald-500" style={{ width: `${(c.가능 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
-                         <div className="h-full bg-amber-500" style={{ width: `${(c.확인중 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
-                         <div className="h-full bg-red-500" style={{ width: `${(c.불가능 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
+                    <div key={idx} className="group">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{c.name}</span>
+                        <span className="text-xs font-black text-slate-400 tracking-tighter">{formatCurrency(c.가능 + c.확인중 + c.불가능)}</span>
                       </div>
-                      <div className="w-24 text-right font-bold text-slate-700">{formatCurrency(c.가능 + c.확인중 + c.불가능)}</div>
+                      <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(c.가능 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
+                         <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${(c.확인중 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
+                         <div className="h-full bg-rose-500 transition-all duration-500" style={{ width: `${(c.불가능 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                <div className="text-lg font-bold text-slate-800 mb-6">사급 품목 리스크 (외부 조달)</div>
-                <div className="space-y-4">
-                  <div className="p-4 bg-red-50 rounded-xl border border-red-100">
-                    <div className="text-sm font-bold text-red-700">전체 사급 품목</div>
-                    <div className="text-2xl font-black text-red-900">20건 / 2.4억</div>
+              <div className="lg:col-span-4 bg-rose-50/50 p-10 rounded-[2.5rem] border border-rose-100 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200 mb-6">
+                    <Package className="text-white w-6 h-6" />
                   </div>
-                  <div className="text-sm text-slate-500 leading-relaxed">
-                    외부 조달 부자재는 리드타임 통제가 어려워 3월 매출 전환 리스크가 매우 높습니다. 별도 집중 관리가 필요합니다.
+                  <h3 className="text-xl font-bold text-rose-900 tracking-tight mb-4 uppercase">사급 품목 리스크</h3>
+                  <div className="p-6 bg-white rounded-2xl border border-rose-100 shadow-sm mb-6">
+                    <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">전체 사급 품목</div>
+                    <div className="text-3xl font-black text-rose-900 tracking-tight">20 <span className="text-sm font-bold text-rose-400">/ 2.4억</span></div>
                   </div>
+                  <p className="text-sm text-rose-700/70 leading-relaxed font-medium italic">
+                    "외부 조달 부자재는 리드타임 통제가 어려워 3월 매출 전환 리스크가 매우 높습니다."
+                  </p>
                 </div>
+                <button className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-200">
+                  리스크 상세 보기
+                </button>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'details' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="relative w-full md:w-96">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
+              <div className="relative w-full md:w-[500px]">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <input 
                   type="text" 
                   placeholder="품명, 고객사, 담당자 검색..." 
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all">
                   <Filter className="w-4 h-4" />
-                  필터
+                  상세 필터
                 </button>
-                <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
-                <span className="text-sm text-slate-500 font-medium">검색 결과: <span className="text-slate-900 font-bold">{filteredItems.length}</span>건</span>
+                <div className="h-10 w-px bg-slate-200 mx-2 hidden md:block"></div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">검색 결과</span>
+                  <span className="text-lg font-black text-slate-900 tracking-tighter">{filteredItems.length} <span className="text-xs font-bold text-slate-400">품목</span></span>
+                </div>
               </div>
             </div>
-            <DataTable items={filteredItems} />
+            <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
+              <DataTable items={filteredItems} />
+            </div>
           </div>
         )}
       </main>
