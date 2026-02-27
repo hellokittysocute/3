@@ -9,7 +9,7 @@ import { StackedBarChart } from './components/StackedBarChart';
 import { cn, formatCurrency } from './lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-import { get805Items } from './data/mockData';
+import { get805Items, CATEGORIES } from './data/mockData';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'summary' | 'priority' | 'material' | 'details'>('summary');
@@ -21,8 +21,8 @@ export default function App() {
   const filteredItems = useMemo(() => {
     return items.filter(item => 
       item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.cisManager.toLowerCase().includes(searchTerm.toLowerCase())
+      item.materialCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.salesDocument.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [items, searchTerm]);
 
@@ -72,7 +72,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tighter text-slate-900">
-                3월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
+                📊 3월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project 1,250억</span>
@@ -265,33 +265,11 @@ export default function App() {
 
         {activeTab === 'material' && (
           <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700">
-            <div className="bg-slate-900 p-10 rounded-[2.5rem] flex items-center justify-between relative overflow-hidden shadow-2xl shadow-slate-200">
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent" />
-              <div className="relative z-10 flex items-center gap-8">
-                <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <AlertTriangle className="text-slate-900 w-8 h-8" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-black text-white tracking-tight mb-2 uppercase">
-                    자재 <span className="text-amber-500">리스크</span> 분석
-                  </h2>
-                  <p className="text-slate-400 font-medium max-w-xl">
-                    부자재 수급 일정이 타이트한 품목들에 대한 집중 모니터링 세션입니다.
-                    130억 규모의 매출 전환을 목표로 합니다.
-                  </p>
-                </div>
-              </div>
-              <div className="relative z-10 text-right">
-                <div className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] mb-2">최종 셋팅 마감일</div>
-                <div className="text-5xl font-black text-white tracking-tighter">03.20 <span className="text-xl text-slate-500 font-bold ml-2">D-21</span></div>
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <div className="lg:col-span-8 bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+              <div className="lg:col-span-12 bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
                 <div className="flex justify-between items-center mb-10">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">고객사별 리스크 매트릭스</h3>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">고객사별 자재조정 현황</h3>
                     <p className="text-sm text-slate-400 font-medium">자재 조정이 필요한 품목의 집중 관리 현황</p>
                   </div>
                   <div className="flex gap-6 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
@@ -309,8 +287,8 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-8">
-                  {customerChartData.slice(0, 5).map((c, idx) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                  {customerChartData.slice(0, 10).map((c, idx) => (
                     <div key={idx} className="group">
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{c.name}</span>
@@ -325,53 +303,65 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              <div className="lg:col-span-4 bg-rose-50/50 p-10 rounded-[2.5rem] border border-rose-100 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200 mb-6">
-                    <Package className="text-white w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold text-rose-900 tracking-tight mb-4 uppercase">사급 품목 리스크</h3>
-                  <div className="p-6 bg-white rounded-2xl border border-rose-100 shadow-sm mb-6">
-                    <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">전체 사급 품목</div>
-                    <div className="text-3xl font-black text-rose-900 tracking-tight">20 <span className="text-sm font-bold text-rose-400">/ 2.4억</span></div>
-                  </div>
-                  <p className="text-sm text-rose-700/70 leading-relaxed font-medium italic">
-                    "외부 조달 부자재는 리드타임 통제가 어려워 3월 매출 전환 리스크가 매우 높습니다."
-                  </p>
-                </div>
-                <button className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-200">
-                  리스크 상세 보기
-                </button>
-              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'details' && (
           <div className="space-y-8 animate-in fade-in duration-700">
-            <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
-              <div className="relative w-full md:w-[500px]">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input 
-                  type="text" 
-                  placeholder="품명, 고객사, 담당자 검색..." 
-                  className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-4 w-full md:w-auto">
-                <button className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all">
-                  <Filter className="w-4 h-4" />
-                  상세 필터
-                </button>
-                <div className="h-10 w-px bg-slate-200 mx-2 hidden md:block"></div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">검색 결과</span>
-                  <span className="text-lg font-black text-slate-900 tracking-tighter">{filteredItems.length} <span className="text-xs font-bold text-slate-400">품목</span></span>
+            {/* Image-style Header */}
+            <div className="bg-[#4B49AC] text-white p-8 rounded-[2rem] flex items-center justify-between shadow-xl shadow-indigo-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative z-10">
+                <h2 className="text-3xl font-black tracking-tight mb-2">APS 상세 수주 현황</h2>
+                <div className="flex items-center gap-3 text-indigo-100/80 font-medium">
+                  <span>주식회사 에이피알</span>
+                  <div className="w-1 h-1 rounded-full bg-indigo-200/40" />
+                  <span>마케팅 3팀</span>
+                  <div className="w-1 h-1 rounded-full bg-indigo-200/40" />
+                  <span className="text-white font-bold">총 {filteredItems.length}건</span>
                 </div>
               </div>
+              <button 
+                onClick={() => setActiveTab('summary')}
+                className="relative z-10 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+              >
+                <RefreshCw className="w-6 h-6 rotate-45" />
+              </button>
             </div>
+
+            {/* Image-style Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/판매문서)</label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <input 
+                    type="text" 
+                    placeholder="검색어 입력..." 
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">납기일</label>
+                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
+                  <option>전체</option>
+                  <option>2026-03</option>
+                  <option>2026-04</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
+                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
+                  <option>전체</option>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
             <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
               <DataTable items={filteredItems} />
             </div>

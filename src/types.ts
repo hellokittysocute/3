@@ -15,8 +15,10 @@ export interface DashboardItem {
   dueMonth: number;
   materialCode: string; // M열 (자재)
   itemName: string; // N열 (내역)
+  salesDocument: string; // 판매문서
   totalQuantity: number; // O열 (총본품수량)
   orderQuantity: number; // P열 (총오더수량)
+  originalOrderQuantity: number; // 원수주수량
   deliveredQuantity: number; // Q열 (납품수량)
   remainingQuantity: number; // R열 (미납잔량)
   materialSource: string;

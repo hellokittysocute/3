@@ -25,7 +25,7 @@ const SAMPLE_CUSTOMERS = [
   { code: 'M4T', name: '마케팅 4팀 고객사', team: '마케팅 4팀' }, // Added 4팀
 ];
 
-const CATEGORIES = ['미스트', '에센스', '크림', '선제품', '립글로스', '아이섀도', '겔마스크', '클렌징', '파운데이션', '두발용'];
+export const CATEGORIES = ['미스트', '에센스', '크림', '선제품', '립글로스', '아이섀도', '겔마스크', '클렌징', '파운데이션', '두발용'];
 const MANAGERS = ['백승윤', '최윤호', '박진형', '김현석', '정태수', '안세연', '조경수', '김현주', '민예지', '이상엽'];
 const DELAY_REASONS = ['영업', '고객', '구매', '생산', '품질'];
 
@@ -72,8 +72,10 @@ export function get805Items(): DashboardItem[] {
       dueMonth: isPriority ? 3 : 4,
       materialCode: `MAT-${1000 + i}`,
       itemName: `${customer.code} ${category} ${i + 1}`,
+      salesDocument: `10${500000 + i}`,
       totalQuantity: 10000,
       orderQuantity: 10000,
+      originalOrderQuantity: 10000 + Math.floor(Math.random() * 5000),
       deliveredQuantity: Math.floor(Math.random() * 2000),
       remainingQuantity: 8000 + Math.floor(Math.random() * 2000),
       materialSource: Math.random() > 0.9 ? '사급' : '자급',
