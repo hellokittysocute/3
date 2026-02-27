@@ -9,7 +9,7 @@ interface StackedBarChartProps {
 
 export const StackedBarChart: React.FC<StackedBarChartProps> = ({ data, title }) => {
   return (
-    <div className="h-80">
+    <div style={{ height: Math.max(320, data.length * 40 + 80) }}>
       <div className="flex items-center justify-between mb-8">
         <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">{title}</h3>
         <div className="flex gap-4">
