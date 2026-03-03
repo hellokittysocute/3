@@ -39,6 +39,8 @@ export interface DashboardItem {
   managementType: ManagementType; // [34] 내용 (관리구분)
   managementNote: string;       // [35] 중점관리사항
   unitPrice: number;            // [36] 단가
+  salesDocument: string;        // 판매문서 (materialCode alias)
+  originalOrderQuantity: number;// 원수주수량
 }
 
 export interface EditableData {

@@ -90,6 +90,8 @@ export function parseDashboardData(csvText: string): DashboardItem[] {
       managementType: parsedMgmt,
       managementNote: cols[35] || '',
       unitPrice,
+      salesDocument: cols[12] || '',
+      originalOrderQuantity: parseNum(cols[15]),
     } as DashboardItem;
   });
 }

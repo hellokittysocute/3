@@ -9,7 +9,7 @@ interface DataTableProps {
   editData: Record<string, EditableData>;
   onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
   onSave: () => void;
-  saveStatus: 'idle' | 'saved';
+  saveStatus: 'idle' | 'saved' | 'loading';
 }
 
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus }) => {
