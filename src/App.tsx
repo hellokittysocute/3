@@ -35,6 +35,20 @@ export default function App() {
   const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('loading');
 
+  // 진도율: 매출 가능 수량 합계 / 미납잔량 합계 (editData 기준)
+  const editProgressRates = useMemo(() => {
+    const calc = (filtered: DashboardItem[]) => {
+      const totalRemaining = filtered.reduce((s, i) => s + i.remainingQuantity, 0);
+      const totalPossibleQty = filtered.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity), 0);
+      return totalRemaining > 0 ? (totalPossibleQty / totalRemaining) * 100 : 0;
+    };
+    return {
+      overall: calc(items),
+      priority: calc(items.filter(i => i.managementType === '중점관리품목')),
+      material: calc(items.filter(i => i.managementType === '자재조정필요')),
+    };
+  }, [items, editData]);
+
   // Fetch latest edit data from server
   const fetchEditData = useCallback(() => {
     return fetch('/api/edit-data')
@@ -243,7 +257,7 @@ export default function App() {
                   <LayoutDashboard size={120} />
                 </div>
                 <ProgressGauge
-                  rate={stats.overall.progressRate}
+                  rate={editProgressRates.overall}
                   label="전체 진도율"
                   subLabel={`목표: 480억 / 현재: ${formatCurrency(stats.overall.possibleRevenue)}`}
                 />
@@ -267,10 +281,10 @@ export default function App() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-end">
                           <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">중점관리품목 (350억)</span>
-                          <span className="text-3xl font-black text-emerald-400">{stats.priority.progressRate.toFixed(1)}%</span>
+                          <span className="text-3xl font-black text-emerald-400">{editProgressRates.priority.toFixed(1)}%</span>
                         </div>
                         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]" style={{ width: `${stats.priority.progressRate}%` }}></div>
+                          <div className="h-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]" style={{ width: `${editProgressRates.priority}%` }}></div>
                         </div>
                         <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                           <span>가능: {formatCurrency(stats.priority.possibleRevenue)}</span>
@@ -280,10 +294,10 @@ export default function App() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-end">
                           <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">자재조정필요 (130억)</span>
-                          <span className="text-3xl font-black text-amber-400">{stats.material.progressRate.toFixed(1)}%</span>
+                          <span className="text-3xl font-black text-amber-400">{editProgressRates.material.toFixed(1)}%</span>
                         </div>
                         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]" style={{ width: `${stats.material.progressRate}%` }}></div>
+                          <div className="h-full bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]" style={{ width: `${editProgressRates.material}%` }}></div>
                         </div>
                         <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                           <span>가능: {formatCurrency(stats.material.possibleRevenue)}</span>
@@ -403,9 +417,9 @@ export default function App() {
                   <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.possibleRevenue)}</div>
                   <div className="mt-4 flex items-center gap-2">
                     <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${stats.priority.progressRate}%` }} />
+                      <div className="h-full bg-emerald-500" style={{ width: `${editProgressRates.priority}%` }} />
                     </div>
-                    <span className="text-xs font-black text-emerald-600">{stats.priority.progressRate.toFixed(1)}%</span>
+                    <span className="text-xs font-black text-emerald-600">{editProgressRates.priority.toFixed(1)}%</span>
                   </div>
                 </div>
                 <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
@@ -447,9 +461,9 @@ export default function App() {
                   <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.possibleRevenue)}</div>
                   <div className="mt-4 flex items-center gap-2">
                     <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${stats.material.progressRate}%` }} />
+                      <div className="h-full bg-emerald-500" style={{ width: `${editProgressRates.material}%` }} />
                     </div>
-                    <span className="text-xs font-black text-emerald-600">{stats.material.progressRate.toFixed(1)}%</span>
+                    <span className="text-xs font-black text-emerald-600">{editProgressRates.material.toFixed(1)}%</span>
                   </div>
                 </div>
                 <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
