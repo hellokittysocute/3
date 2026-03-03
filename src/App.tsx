@@ -153,7 +153,8 @@ export default function App() {
       .sort((a, b) => b.count - a.count);
   }, [items]);
 
-  const DELAY_DEPT_COLORS = ['#10b981', '#f59e0b', '#6366f1', '#f43f5e', '#3b82f6', '#8b5cf6'];
+  // 구매, 품질, 연구소, 물류, 영업 순서
+  const DELAY_DEPT_COLORS = ['#10b981', '#f43f5e', '#6366f1', '#f59e0b', '#8b5cf6'];
 
   const trendData = [
     { date: '02/27', rate: 0 },
@@ -634,8 +635,8 @@ export default function App() {
                   <option value="">전체</option>
                   <option value="구매">구매</option>
                   <option value="품질">품질</option>
-                  <option value="생산">생산</option>
-                  <option value="고객">고객</option>
+                  <option value="연구소">연구소</option>
+                  <option value="물류">물류</option>
                   <option value="영업">영업</option>
                 </select>
               </div>

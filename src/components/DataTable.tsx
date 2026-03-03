@@ -172,8 +172,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       <option value="">선택</option>
                       <option value="구매">구매</option>
                       <option value="품질">품질</option>
-                      <option value="생산">생산</option>
-                      <option value="고객">고객</option>
+                      <option value="연구소">연구소</option>
+                      <option value="물류">물류</option>
+                      <option value="영업">영업</option>
                     </select>
                   </td>
                   <td className="px-4 py-3 border-r border-slate-100/60 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>
