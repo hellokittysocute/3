@@ -142,7 +142,7 @@ export default function App() {
   const delayByDeptData = useMemo(() => {
     const deptMap: Record<string, { count: number; revenue: number }> = {};
     items.forEach(item => {
-      const dept = item.delayReason?.trim();
+      const dept = (editData[item.id]?.delayReason || '').trim();
       if (!dept) return;
       if (!deptMap[dept]) deptMap[dept] = { count: 0, revenue: 0 };
       deptMap[dept].count += 1;
@@ -151,7 +151,7 @@ export default function App() {
     return Object.entries(deptMap)
       .map(([name, v]) => ({ name, count: v.count, revenue: v.revenue }))
       .sort((a, b) => b.count - a.count);
-  }, [items]);
+  }, [items, editData]);
 
   // 구매, 품질, 연구소, 물류, 영업 순서
   const DELAY_DEPT_COLORS = ['#10b981', '#f43f5e', '#6366f1', '#f59e0b', '#8b5cf6'];
