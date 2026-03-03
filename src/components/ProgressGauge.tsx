@@ -15,7 +15,7 @@ export const ProgressGauge: React.FC<ProgressGaugeProps> = ({ rate, label, subLa
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-8">{label}</div>
+      <div className="text-sm font-black uppercase tracking-[0.3em] text-slate-400 mb-8">{label}</div>
       <div className="relative w-72 h-72">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

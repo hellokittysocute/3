@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight } from 'lucide-react';
 import { DashboardItem, SummaryStats } from './types';
-import { parseDashboardData, calculateStats } from './services/dataService';
+import { parseDashboardData, calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
 import { KPICard } from './components/KPICard';
 import { ProgressGauge } from './components/ProgressGauge';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
 import { cn, formatCurrency } from './lib/utils';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 import { get805Items, CATEGORIES } from './data/mockData';
 
@@ -22,7 +22,7 @@ export default function App() {
     return items.filter(item => 
       item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.materialCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.salesDocument.toLowerCase().includes(searchTerm.toLowerCase())
+      item.customerCode.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [items, searchTerm]);
 
@@ -33,9 +33,9 @@ export default function App() {
       const cItems = items.filter(i => i.customerCode === code);
       return {
         name: code,
-        가능: cItems.filter(i => i.status === '가능').reduce((s, i) => s + i.revenue, 0),
-        확인중: cItems.filter(i => i.status === '확인중').reduce((s, i) => s + i.revenue, 0),
-        불가능: cItems.filter(i => i.status === '불가능').reduce((s, i) => s + i.revenue, 0),
+        가능: cItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
+        확인중: cItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
+        불가능: cItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
       };
     }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
   }, [items]);
@@ -45,13 +45,31 @@ export default function App() {
     return teams.map(team => {
       const tItems = items.filter(i => i.teamName === team);
       return {
-        name: team,
-        가능: tItems.filter(i => i.status === '가능').reduce((s, i) => s + i.revenue, 0),
-        확인중: tItems.filter(i => i.status === '확인중').reduce((s, i) => s + i.revenue, 0),
-        불가능: tItems.filter(i => i.status === '불가능').reduce((s, i) => s + i.revenue, 0),
+        name: team || '기타',
+        가능: tItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
+        확인중: tItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
+        불가능: tItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
       };
     }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
   }, [items]);
+
+  const materialCustomerData = useMemo(() => getMaterialByCustomer(items), [items]);
+
+  const delayByDeptData = useMemo(() => {
+    const deptMap: Record<string, { count: number; revenue: number }> = {};
+    items.forEach(item => {
+      const dept = item.delayReason?.trim();
+      if (!dept) return;
+      if (!deptMap[dept]) deptMap[dept] = { count: 0, revenue: 0 };
+      deptMap[dept].count += 1;
+      deptMap[dept].revenue += getRevenue(item);
+    });
+    return Object.entries(deptMap)
+      .map(([name, v]) => ({ name, count: v.count, revenue: v.revenue }))
+      .sort((a, b) => b.count - a.count);
+  }, [items]);
+
+  const DELAY_DEPT_COLORS = ['#10b981', '#f59e0b', '#6366f1', '#f43f5e', '#3b82f6', '#8b5cf6'];
 
   const trendData = [
     { date: '02/27', rate: 0 },
@@ -75,7 +93,7 @@ export default function App() {
                 📊 3월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project 1,250억</span>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project 480억</span>
                 <div className="w-1 h-1 rounded-full bg-slate-300" />
                 <p className="text-xs text-slate-400 font-medium italic">3월 중점관리 품목 실시간 현황</p>
               </div>
@@ -139,7 +157,7 @@ export default function App() {
                 <ProgressGauge 
                   rate={stats.overall.progressRate} 
                   label="전체 진도율" 
-                  subLabel={`목표: 1,250억 / 현재: ${formatCurrency(stats.overall.possibleRevenue)}`}
+                  subLabel={`목표: 480억 / 현재: ${formatCurrency(stats.overall.possibleRevenue)}`}
                 />
               </div>
 
@@ -190,30 +208,92 @@ export default function App() {
               </div>
             </div>
 
-            {/* Trend Section */}
-            <div className="p-10 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm">
-              <div className="flex items-center justify-between mb-10">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">진도율 추이</h3>
-                  <p className="text-sm text-slate-400 font-medium">3월 목표 달성을 위한 일별 진척도 변화</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Trend Section */}
+              <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">진도율 추이</h3>
+                    <p className="text-xs text-slate-400 font-medium">일별 진척도 변화</p>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-bold text-slate-600">목표 경로</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-bold text-slate-600">목표 경로</span>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} dx={-10} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
+                      />
+                      <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={4} dot={{ r: 6, fill: '#10B981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} dx={-10} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
-                    />
-                    <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={4} dot={{ r: 6, fill: '#10B981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+
+              {/* Delay by Department Donut */}
+              <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">귀책부서별 지연 현황</h3>
+                    <p className="text-xs text-slate-400 font-medium">귀책부서별 품목 수 및 매출 비중</p>
+                  </div>
+                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase tracking-widest">
+                    총 {delayByDeptData.reduce((s, d) => s + d.count, 0)}건
+                  </span>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="w-52 h-52 relative shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={delayByDeptData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="count"
+                          stroke="none"
+                        >
+                          {delayByDeptData.map((_, idx) => (
+                            <Cell key={idx} fill={DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
+                          formatter={(value: number, name: string, props: any) => [`${value}건 (${formatCurrency(props.payload.revenue)})`, props.payload.name]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">지연</span>
+                      <span className="text-2xl font-black text-slate-900">{delayByDeptData.reduce((s, d) => s + d.count, 0)}</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2.5">
+                    {delayByDeptData.map((dept, idx) => {
+                      const total = delayByDeptData.reduce((s, d) => s + d.count, 0);
+                      const pct = total > 0 ? ((dept.count / total) * 100).toFixed(1) : '0';
+                      return (
+                        <div key={dept.name} className="flex items-center gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }} />
+                          <span className="text-xs font-bold text-slate-700 w-12">{dept.name}</span>
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }} />
+                          </div>
+                          <span className="text-xs font-black w-12 text-right" style={{ color: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }}>{pct}%</span>
+                          <span className="text-[10px] font-bold text-slate-400 w-14 text-right">{dept.count}건</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -265,75 +345,149 @@ export default function App() {
 
         {activeTab === 'material' && (
           <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <div className="lg:col-span-12 bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
-                <div className="flex justify-between items-center mb-10">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">고객사별 자재조정 현황</h3>
-                    <p className="text-sm text-slate-400 font-medium">자재 조정이 필요한 품목의 집중 관리 현황</p>
-                  </div>
-                  <div className="flex gap-6 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">가능</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">확인중</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">불가능</span>
-                    </div>
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-200 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-2">전체 관리대상</div>
+                  <div className="text-3xl font-black tracking-tight">{formatCurrency(stats.material.totalRevenue)}</div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="text-xs font-bold bg-white/10 px-2 py-0.5 rounded">{stats.material.totalCount}건</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                  {customerChartData.slice(0, 10).map((c, idx) => (
-                    <div key={idx} className="group">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{c.name}</span>
-                        <span className="text-xs font-black text-slate-400 tracking-tighter">{formatCurrency(c.가능 + c.확인중 + c.불가능)}</span>
-                      </div>
-                      <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-                         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(c.가능 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
-                         <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${(c.확인중 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
-                         <div className="h-full bg-rose-500 transition-all duration-500" style={{ width: `${(c.불가능 / (c.가능 + c.확인중 + c.불가능)) * 100}%` }}></div>
-                      </div>
+                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-2">가능</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.possibleRevenue)}</div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500" style={{ width: `${stats.material.progressRate}%` }} />
                     </div>
-                  ))}
+                    <span className="text-xs font-black text-emerald-600">{stats.material.progressRate.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mb-2">확인중</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.checkingRevenue)}</div>
+                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.material.checkingCount} 품목 대기 중</div>
+                </div>
+                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-2">불가능</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.impossibleRevenue)}</div>
+                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.material.impossibleCount} 품목 불가</div>
+                </div>
+             </div>
+            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">고객사별 자재조정 현황</h3>
+                  <p className="text-sm text-slate-400 font-medium">호버 시 대표 품목 확인 가능</p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">가능</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">확인중</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">불가능</span>
+                  </div>
                 </div>
               </div>
+              {(() => {
+                const chartData = materialCustomerData
+                  .map(c => {
+                    const allItems = c.products.flatMap(p => p.items);
+                    return {
+                      name: c.customerCode,
+                      revenue: allItems.reduce((s, i) => s + getRevenue(i), 0),
+                      가능: allItems.filter(i => i.status === '가능').length,
+                      확인중: allItems.filter(i => i.status === '확인중').length,
+                      불가능: allItems.filter(i => i.status === '불가능').length,
+                      products: (() => {
+                        const sorted = c.products
+                          .map(p => ({
+                            name: p.name,
+                            count: p.count,
+                            qty: p.items.reduce((s, i) => s + i.remainingQuantity, 0),
+                          }))
+                          .sort((a, b) => b.qty - a.qty);
+                        return { top5: sorted.slice(0, 5), restCount: Math.max(0, sorted.length - 5) };
+                      })(),
+                    };
+                  })
+                  .sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능))
+                  .slice(0, 10);
+                const chartHeight = Math.max(300, chartData.length * 40 + 60);
+
+                const CustomTooltip = ({ active, payload }: any) => {
+                  if (!active || !payload?.length) return null;
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 max-w-[520px] w-max">
+                      <div className="text-sm font-black text-slate-900 mb-2">{data.name}</div>
+                      <div className="flex gap-4 text-xs font-bold mb-3 pb-3 border-b border-slate-100">
+                        {data.가능 > 0 && <span className="text-emerald-600">가능 {data.가능}건</span>}
+                        {data.확인중 > 0 && <span className="text-amber-600">확인중 {data.확인중}건</span>}
+                        {data.불가능 > 0 && <span className="text-rose-600">불가능 {data.불가능}건</span>}
+                      </div>
+                      <div className="space-y-1">
+                        {data.products.top5.map((p: any, i: number) => (
+                          <div key={i} className="text-[11px] text-slate-600 flex justify-between gap-3">
+                            <span className="whitespace-nowrap">{p.name}</span>
+                            <span className="whitespace-nowrap text-slate-400">{p.count}건 / {p.qty >= 10000 ? (p.qty / 10000).toFixed(1).replace(/\.0$/, '') + '만' : p.qty.toLocaleString()}개</span>
+                          </div>
+                        ))}
+                        {data.products.restCount > 0 && (
+                          <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                            외 {data.products.restCount}개 품목
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                };
+
+                return (
+                  <div style={{ height: chartHeight }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        layout="vertical"
+                        data={chartData}
+                        margin={{ top: 0, right: 30, left: 10, bottom: 0 }}
+                        barSize={16}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          width={60}
+                          tick={{ fontSize: 12, fontWeight: 800, fill: '#334155' }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                        <Bar dataKey="가능" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="확인중" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="불가능" stackId="a" fill="#F43F5E" radius={[0, 10, 10, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
 
         {activeTab === 'details' && (
           <div className="space-y-8 animate-in fade-in duration-700">
-            {/* Image-style Header */}
-            <div className="bg-[#4B49AC] text-white p-8 rounded-[2rem] flex items-center justify-between shadow-xl shadow-indigo-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
-              <div className="relative z-10">
-                <h2 className="text-3xl font-black tracking-tight mb-2">APS 상세 수주 현황</h2>
-                <div className="flex items-center gap-3 text-indigo-100/80 font-medium">
-                  <span>주식회사 에이피알</span>
-                  <div className="w-1 h-1 rounded-full bg-indigo-200/40" />
-                  <span>마케팅 3팀</span>
-                  <div className="w-1 h-1 rounded-full bg-indigo-200/40" />
-                  <span className="text-white font-bold">총 {filteredItems.length}건</span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setActiveTab('summary')}
-                className="relative z-10 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
-              >
-                <RefreshCw className="w-6 h-6 rotate-45" />
-              </button>
-            </div>
-
-            {/* Image-style Filters */}
+            {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/판매문서)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input 
