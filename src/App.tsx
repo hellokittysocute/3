@@ -7,7 +7,7 @@ import { ProgressGauge } from './components/ProgressGauge';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
 import { cn, formatCurrency } from './lib/utils';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 import { get805Items, CATEGORIES } from './data/mockData';
 
@@ -216,9 +216,15 @@ export default function App() {
                     <h3 className="text-lg font-bold text-slate-900 tracking-tight">진도율 추이</h3>
                     <p className="text-xs text-slate-400 font-medium">일별 진척도 변화</p>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] font-bold text-slate-600">목표 경로</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-[10px] font-bold text-slate-600">진도율</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="w-4 border-t-2 border-dashed border-rose-400" />
+                      <span className="text-[10px] font-bold text-slate-600">목표 100%</span>
+                    </div>
                   </div>
                 </div>
                 <div className="h-72">
@@ -226,10 +232,11 @@ export default function App() {
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} dx={-10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-10} />
                       <Tooltip
                         contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
                       />
+                      <ReferenceLine y={100} stroke="#f43f5e" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: '목표 100%', position: 'right', fill: '#f43f5e', fontSize: 10, fontWeight: 700 }} />
                       <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={4} dot={{ r: 6, fill: '#10B981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
                     </LineChart>
                   </ResponsiveContainer>
