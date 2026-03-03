@@ -41,6 +41,16 @@ export interface DashboardItem {
   unitPrice: number;            // [36] 단가
 }
 
+export interface EditableData {
+  productionCompleteDate: string;
+  materialSettingDate: string;
+  manufacturingDate: string;
+  packagingDate: string;
+  revenuePossible: 'O' | 'X' | '';
+  revenuePossibleQuantity: number;
+  delayReason: string;
+}
+
 export interface SummaryStats {
   totalRevenue: number;
   totalCount: number;

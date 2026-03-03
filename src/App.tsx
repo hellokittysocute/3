@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight } from 'lucide-react';
-import { DashboardItem, SummaryStats } from './types';
+import { DashboardItem, SummaryStats, EditableData } from './types';
 import { parseDashboardData, calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
 import { KPICard } from './components/KPICard';
 import { ProgressGauge } from './components/ProgressGauge';
@@ -14,17 +14,101 @@ import { get805Items, CATEGORIES } from './data/mockData';
 export default function App() {
   const [activeTab, setActiveTab] = useState<'summary' | 'priority' | 'material' | 'details'>('summary');
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [delayReasonFilter, setDelayReasonFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
+
   const items = useMemo(() => get805Items(), []);
   const stats = useMemo(() => calculateStats(items), [items]);
 
+  const buildInitialEditData = useCallback(() => {
+    const initial: Record<string, EditableData> = {};
+    items.forEach(item => {
+      initial[item.id] = {
+        productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+        revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
+      };
+    });
+    return initial;
+  }, [items]);
+
+  const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('loading');
+
+  // Fetch latest edit data from server
+  const fetchEditData = useCallback(() => {
+    return fetch('/api/edit-data')
+      .then(res => res.json())
+      .then((serverData: Record<string, EditableData>) => {
+        const initial = buildInitialEditData();
+        const merged: Record<string, EditableData> = {};
+        items.forEach(item => {
+          merged[item.id] = serverData[item.id] ?? initial[item.id];
+        });
+        setEditData(merged);
+        setSaveStatus('idle');
+      })
+      .catch(() => {
+        setSaveStatus('idle');
+      });
+  }, [items, buildInitialEditData]);
+
+  // Load edit data from server on mount
+  useEffect(() => {
+    fetchEditData();
+  }, [fetchEditData]);
+
+  // Auto-sync: poll server every 10 seconds for other users' changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchEditData();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchEditData]);
+
+  const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
+    setSaveStatus('idle');
+    setEditData(prev => {
+      const updated = { ...prev, [id]: { ...prev[id], [field]: value } };
+      // Send individual field update to server
+      fetch(`/api/edit-data/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated[id]),
+      }).catch(() => { /* silent fail */ });
+      return updated;
+    });
+  }, []);
+
+  const handleSave = useCallback(() => {
+    setSaveStatus('loading');
+    fetch('/api/edit-data/save-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editData),
+    })
+      .then(() => {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      })
+      .catch(() => {
+        setSaveStatus('idle');
+      });
+  }, [editData]);
+
   const filteredItems = useMemo(() => {
-    return items.filter(item => 
-      item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.materialCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.customerCode.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [items, searchTerm]);
+    return items.filter(item => {
+      const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.materialCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.salesDocument?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.customerCode.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !categoryFilter || item.category === categoryFilter;
+      const row = editData[item.id];
+      const matchesRevenuePossible = !revenuePossibleFilter || (row?.revenuePossible === revenuePossibleFilter);
+      const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
+      return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay;
+    });
+  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, editData]);
 
   // Chart data preparation
   const customerChartData = useMemo(() => {
@@ -99,7 +183,7 @@ export default function App() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-8">
             <div className="flex flex-col items-end">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">시스템 상태</span>
@@ -109,8 +193,11 @@ export default function App() {
               </div>
             </div>
             <div className="h-10 w-px bg-slate-200" />
-            <button className="group bg-slate-900 text-white pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-xl shadow-slate-200">
-              <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+            <button
+              onClick={() => { setSaveStatus('loading'); fetchEditData(); }}
+              className="group bg-slate-900 text-white pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-xl shadow-slate-200"
+            >
+              <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", saveStatus === 'loading' ? "animate-spin" : "group-hover:rotate-180")} />
               데이터 갱신
             </button>
           </div>
@@ -129,8 +216,8 @@ export default function App() {
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
                 "flex items-center gap-2 py-5 text-xs font-black uppercase tracking-widest transition-all relative group",
-                activeTab === tab.id 
-                  ? "text-slate-900" 
+                activeTab === tab.id
+                  ? "text-slate-900"
                   : "text-slate-400 hover:text-slate-600"
               )}
             >
@@ -154,9 +241,9 @@ export default function App() {
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                   <LayoutDashboard size={120} />
                 </div>
-                <ProgressGauge 
-                  rate={stats.overall.progressRate} 
-                  label="전체 진도율" 
+                <ProgressGauge
+                  rate={stats.overall.progressRate}
+                  label="전체 진도율"
                   subLabel={`목표: 480억 / 현재: ${formatCurrency(stats.overall.possibleRevenue)}`}
                 />
               </div>
@@ -166,7 +253,7 @@ export default function App() {
                 <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} type="possible" trend="+12억" />
                 <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} type="checking" trend="-8억" />
                 <KPICard title="불가능" value={stats.overall.impossibleRevenue} count={stats.overall.impossibleCount} type="impossible" trend="-4억" />
-                
+
                 {/* Secondary Progress */}
                 <div className="md:col-span-3 p-10 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl shadow-slate-200 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
@@ -484,20 +571,73 @@ export default function App() {
 
         {activeTab === 'details' && (
           <div className="space-y-8 animate-in fade-in duration-700">
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
-              <div className="space-y-2">
+            {/* Image-style Header */}
+            <div className="bg-[#4B49AC] text-white p-8 rounded-[2rem] flex items-center justify-between shadow-xl shadow-indigo-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative z-10">
+                <h2 className="text-3xl font-black tracking-tight mb-2">중점 관리 품목 현황</h2>
+                <span className="text-white font-bold">총 {filteredItems.length}건</span>
+              </div>
+              <button
+                onClick={() => setActiveTab('summary')}
+                className="relative z-10 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+              >
+                <RefreshCw className="w-6 h-6 rotate-45" />
+              </button>
+            </div>
+
+            {/* Image-style Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
+              <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input 
-                    type="text" 
-                    placeholder="검색어 입력..." 
+                  <input
+                    type="text"
+                    placeholder="검색어 입력..."
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                  value={revenuePossibleFilter}
+                  onChange={(e) => setRevenuePossibleFilter(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  <option value="O">O (가능)</option>
+                  <option value="X">X (불가능)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">지연사유</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                  value={delayReasonFilter}
+                  onChange={(e) => setDelayReasonFilter(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  <option value="구매">구매</option>
+                  <option value="품질">품질</option>
+                  <option value="생산">생산</option>
+                  <option value="고객">고객</option>
+                  <option value="영업">영업</option>
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">납기일</label>
@@ -507,28 +647,21 @@ export default function App() {
                   <option>2026-04</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
-                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
-                  <option>전체</option>
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
             </div>
 
             <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
-              <DataTable items={filteredItems} />
+              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} />
             </div>
           </div>
         )}
       </main>
 
       <footer className="max-w-[1600px] mx-auto px-8 py-12 border-t border-slate-200 text-slate-400 text-xs font-medium flex justify-between items-center">
-        <div>© 2026 Cosmetic OEM/ODM Marketing Dashboard. All rights reserved.</div>
+        <div>© 2026 화장품 OEM/ODM 마케팅 대시보드. 모든 권리 보유.</div>
         <div className="flex gap-6">
-          <a href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-slate-600 transition-colors">Terms of Service</a>
-          <a href="#" className="hover:text-slate-600 transition-colors">Contact Support</a>
+          <a href="#" className="hover:text-slate-600 transition-colors">개인정보처리방침</a>
+          <a href="#" className="hover:text-slate-600 transition-colors">이용약관</a>
+          <a href="#" className="hover:text-slate-600 transition-colors">고객지원</a>
         </div>
       </footer>
     </div>
