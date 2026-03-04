@@ -282,55 +282,33 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Top 10 고객사 랭킹 */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-gray-900">Top 10 고객사</h3>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                      <span className="text-[10px] font-semibold text-gray-400">중점관리</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-                      <span className="text-[10px] font-semibold text-gray-400">자재조정</span>
-                    </div>
-                  </div>
-                </div>
-                {/* 헤더 */}
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <span className="w-6 shrink-0" />
-                  <span className="text-[10px] font-semibold text-gray-400 w-14 shrink-0">고객사</span>
-                  <span className="text-[10px] font-semibold text-gray-400 w-16 text-right shrink-0">매출액</span>
-                  <span className="flex-1 text-[10px] font-semibold text-gray-400 text-center">달성률 바</span>
-                  <span className="text-[10px] font-semibold text-gray-400 w-12 text-right shrink-0">중점</span>
-                  <span className="text-[10px] font-semibold text-gray-400 w-12 text-right shrink-0">자재</span>
-                </div>
-                <div className="space-y-2.5">
+                <h3 className="text-base font-bold text-gray-900 mb-5">Top 10 고객사</h3>
+                <div className="space-y-1">
                   {customerChartData.slice(0, 10).map((c, idx) => {
                     const total = c.가능 + c.확인중 + c.불가능;
                     const maxTotal = customerChartData[0] ? customerChartData[0].가능 + customerChartData[0].확인중 + customerChartData[0].불가능 : 1;
                     const barWidth = (total / maxTotal) * 100;
                     const rateInfo = customerRateData[idx];
-                    const rankColors = ['bg-blue-500 text-white', 'bg-blue-400 text-white', 'bg-blue-300 text-white'];
+                    const overallRate = rateInfo ? (
+                      (rateInfo.priorityCount + rateInfo.materialCount) > 0
+                        ? ((rateInfo.priorityRate * rateInfo.priorityCount + rateInfo.materialRate * rateInfo.materialCount) / (rateInfo.priorityCount + rateInfo.materialCount))
+                        : 0
+                    ) : 0;
                     return (
-                      <div key={c.name} className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${idx < 3 ? rankColors[idx] : 'bg-gray-100 text-gray-500'}`}>
+                      <div key={c.name} className="flex items-center gap-3" style={{ height: 52 }}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${idx < 3 ? 'bg-[#22C55E] text-white' : 'bg-gray-100 text-gray-500'}`}>
                           {idx + 1}
                         </div>
                         <span className="text-xs font-semibold text-gray-700 w-14 shrink-0 truncate">{c.name}</span>
-                        <span className="text-xs font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
-                        <div className="flex-1 flex flex-col gap-0.5">
-                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-gradient-to-r from-green-400 to-green-500" style={{ width: `${Math.min(rateInfo?.priorityRate || 0, 100)}%` }} />
-                          </div>
-                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-500" style={{ width: `${Math.min(rateInfo?.materialRate || 0, 100)}%` }} />
-                          </div>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          />
                         </div>
-                        <span className={`text-[11px] font-bold w-12 text-right shrink-0 ${(rateInfo?.priorityRate || 0) >= 100 ? 'text-[#22C55E]' : 'text-gray-500'}`}>
-                          {rateInfo?.priorityCount ? `${rateInfo.priorityRate.toFixed(0)}%` : '-'}
-                        </span>
-                        <span className={`text-[11px] font-bold w-12 text-right shrink-0 ${(rateInfo?.materialRate || 0) >= 100 ? 'text-[#3B82F6]' : 'text-gray-500'}`}>
-                          {rateInfo?.materialCount ? `${rateInfo.materialRate.toFixed(0)}%` : '-'}
+                        <span className="text-xs font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${overallRate >= 100 ? 'bg-green-50 text-[#22C55E] border border-green-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                          {overallRate.toFixed(0)}%
                         </span>
                       </div>
                     );
@@ -384,43 +362,58 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+
+                {/* 구분선 */}
+                <div className="border-t border-gray-100 my-6" />
+
+                {/* 진도율 추이 */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 style={{ fontSize: 15 }} className="font-bold text-gray-900">진도율 추이</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
+                        <span className="text-[10px] font-semibold text-gray-500">진도율</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 border-t-2 border-dashed border-gray-400" />
+                        <span className="text-[10px] font-semibold text-gray-500">목표 100%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ height: 180 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} dy={6} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-6} />
+                        <Tooltip contentStyle={{ backgroundColor: '#111827', border: 'none', borderRadius: 8, color: '#fff', padding: '6px 12px', fontSize: 12 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
+                        <ReferenceLine y={100} stroke="#9ca3af" strokeDasharray="6 4" strokeWidth={1} />
+                        <Line type="monotone" dataKey="rate" stroke="#22C55E" strokeWidth={2.5} dot={{ r: 4, fill: '#22C55E', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* 미니 카드 3개 */}
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    <div className="text-center rounded-[10px] py-2.5 px-3.5" style={{ backgroundColor: '#F0FDF4' }}>
+                      <div className="text-[10px] font-semibold text-gray-500 mb-1">현재 진도율</div>
+                      <div className="text-xl font-bold text-[#22C55E]">{editProgressRates.overall.toFixed(0)}%</div>
+                    </div>
+                    <div className="text-center rounded-[10px] py-2.5 px-3.5" style={{ backgroundColor: '#F9FAFB' }}>
+                      <div className="text-[10px] font-semibold text-gray-500 mb-1">목표</div>
+                      <div className="text-xl font-bold text-gray-900">480억</div>
+                    </div>
+                    <div className="text-center rounded-[10px] py-2.5 px-3.5" style={{ backgroundColor: '#F9FAFB' }}>
+                      <div className="text-[10px] font-semibold text-gray-500 mb-1">현재 매출</div>
+                      <div className="text-xl font-bold text-gray-900">{formatCurrency(stats.overall.possibleRevenue)}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 3. 하단 좌우 2분할: 진도율 추이 + 귀책부서별 지연 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* 진도율 추이 차트 */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">진도율 추이</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">일별 진척도 변화</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                      <span className="text-[10px] font-semibold text-gray-500">진도율</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-4 border-t-2 border-dashed border-red-400" />
-                      <span className="text-[10px] font-semibold text-gray-500">목표 100%</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} dy={8} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-8} />
-                      <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', padding: '8px 12px' }} />
-                      <ReferenceLine y={100} stroke="#EF4444" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: '목표 100%', position: 'right', fill: '#EF4444', fontSize: 10, fontWeight: 600 }} />
-                      <Line type="monotone" dataKey="rate" stroke="#22C55E" strokeWidth={3} dot={{ r: 5, fill: '#22C55E', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
+            {/* 3. 하단 풀 가로: 귀책부서별 지연 */}
+            <div>
               {/* 귀책부서별 지연 현황 */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-4">
