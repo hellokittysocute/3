@@ -473,10 +473,10 @@ export default function App() {
              </div>
 
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white p-6 pb-20 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <StackedBarChart title="고객사별 진도율 (TOP 10)" data={customerChartData} />
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white p-6 pb-20 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <StackedBarChart title="마케팅팀별 진도율" data={teamChartData} />
                 </div>
              </div>
