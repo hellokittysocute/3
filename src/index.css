@@ -4,9 +4,22 @@
 @theme {
   --font-sans: "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  
+
   --radius-3xl: 24px;
   --radius-4xl: 32px;
+
+  --animate-fadeInUp: fadeInUp 0.5s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @layer base {

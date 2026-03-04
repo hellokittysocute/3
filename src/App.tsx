@@ -3,11 +3,10 @@ import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshC
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { parseDashboardData, calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
 import { KPICard } from './components/KPICard';
-import { ProgressGauge } from './components/ProgressGauge';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
 import { cn, formatCurrency } from './lib/utils';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 import { get805Items, CATEGORIES } from './data/mockData';
 
@@ -138,6 +137,28 @@ export default function App() {
     }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
   }, [items]);
 
+  // 고객사별 관리구분 달성율 (매출가능수량 / 미납잔량)
+  const customerRateData = useMemo(() => {
+    const calcRate = (filtered: DashboardItem[]) => {
+      const totalRemaining = filtered.reduce((s, i) => s + i.remainingQuantity, 0);
+      const totalPossibleQty = filtered.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity), 0);
+      return totalRemaining > 0 ? (totalPossibleQty / totalRemaining) * 100 : 0;
+    };
+    const customerCodes = customerChartData.map(c => c.name);
+    return customerCodes.map(code => {
+      const cItems = items.filter(i => i.customerCode === code);
+      const priorityItems = cItems.filter(i => i.managementType === '중점관리품목');
+      const materialItems = cItems.filter(i => i.managementType === '자재조정필요');
+      return {
+        name: code,
+        priorityRate: calcRate(priorityItems),
+        materialRate: calcRate(materialItems),
+        priorityCount: priorityItems.length,
+        materialCount: materialItems.length,
+      };
+    });
+  }, [items, editData, customerChartData]);
+
   const teamChartData = useMemo(() => {
     const teams = [...new Set(items.map(i => i.teamName))].sort();
     return teams.map(team => {
@@ -248,204 +269,214 @@ export default function App() {
 
       <main className="max-w-[1600px] mx-auto p-10">
         {activeTab === 'summary' && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Main Progress Section */}
-              <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <LayoutDashboard size={120} />
+          <div className="space-y-6">
+            {/* 1. KPI Cards - 4개 일렬 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPICard title="목표" value={48000000000} count={stats.overall.totalCount} type="target" subText="PROJECT 480억" delay={0} />
+              <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} type="possible" trend="+12억" delay={100} />
+              <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} type="checking" trend="-8억" delay={200} />
+              <KPICard title="불가능" value={stats.overall.impossibleRevenue} count={stats.overall.impossibleCount} type="impossible" trend="-4억" delay={300} />
+            </div>
+
+            {/* 2. 중단 좌우 2분할: Top10 랭킹 + 관리구분별 진도 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Top 10 고객사 랭킹 */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-gray-900">Top 10 고객사</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
+                      <span className="text-[10px] font-semibold text-gray-400">중점관리</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+                      <span className="text-[10px] font-semibold text-gray-400">자재조정</span>
+                    </div>
+                  </div>
                 </div>
-                <ProgressGauge
-                  rate={editProgressRates.overall}
-                  label="전체 진도율"
-                  subLabel={`목표: 480억 / 현재: ${formatCurrency(stats.overall.possibleRevenue)}`}
-                />
+                {/* 헤더 */}
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className="w-6 shrink-0" />
+                  <span className="text-[10px] font-semibold text-gray-400 w-14 shrink-0">고객사</span>
+                  <span className="text-[10px] font-semibold text-gray-400 w-16 text-right shrink-0">매출액</span>
+                  <span className="flex-1 text-[10px] font-semibold text-gray-400 text-center">달성율 바</span>
+                  <span className="text-[10px] font-semibold text-gray-400 w-12 text-right shrink-0">중점</span>
+                  <span className="text-[10px] font-semibold text-gray-400 w-12 text-right shrink-0">자재</span>
+                </div>
+                <div className="space-y-2.5">
+                  {customerChartData.slice(0, 10).map((c, idx) => {
+                    const total = c.가능 + c.확인중 + c.불가능;
+                    const maxTotal = customerChartData[0] ? customerChartData[0].가능 + customerChartData[0].확인중 + customerChartData[0].불가능 : 1;
+                    const barWidth = (total / maxTotal) * 100;
+                    const rateInfo = customerRateData[idx];
+                    const rankColors = ['bg-blue-500 text-white', 'bg-blue-400 text-white', 'bg-blue-300 text-white'];
+                    return (
+                      <div key={c.name} className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${idx < 3 ? rankColors[idx] : 'bg-gray-100 text-gray-500'}`}>
+                          {idx + 1}
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700 w-14 shrink-0 truncate">{c.name}</span>
+                        <span className="text-xs font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
+                        <div className="flex-1 flex flex-col gap-0.5">
+                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-green-400 to-green-500" style={{ width: `${Math.min(rateInfo?.priorityRate || 0, 100)}%` }} />
+                          </div>
+                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-500" style={{ width: `${Math.min(rateInfo?.materialRate || 0, 100)}%` }} />
+                          </div>
+                        </div>
+                        <span className={`text-[11px] font-bold w-12 text-right shrink-0 ${(rateInfo?.priorityRate || 0) >= 100 ? 'text-[#22C55E]' : 'text-gray-500'}`}>
+                          {rateInfo?.priorityCount ? `${rateInfo.priorityRate.toFixed(0)}%` : '-'}
+                        </span>
+                        <span className={`text-[11px] font-bold w-12 text-right shrink-0 ${(rateInfo?.materialRate || 0) >= 100 ? 'text-[#3B82F6]' : 'text-gray-500'}`}>
+                          {rateInfo?.materialCount ? `${rateInfo.materialRate.toFixed(0)}%` : '-'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* KPI Grid */}
-              <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} type="possible" trend="+12억" />
-                <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} type="checking" trend="-8억" />
-                <KPICard title="불가능" value={stats.overall.impossibleRevenue} count={stats.overall.impossibleCount} type="impossible" trend="-4억" />
-
-                {/* Secondary Progress */}
-                <div className="md:col-span-3 p-10 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl shadow-slate-200 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-8">
-                      <h3 className="text-xl font-bold tracking-tight">관리구분별 진도 현황</h3>
-                      <span className="text-[10px] font-bold bg-white/10 px-2 py-1 rounded uppercase tracking-widest">실시간 분석</span>
+              {/* 관리구분별 진도 현황 */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-base font-bold text-gray-900">관리구분별 진도 현황</h3>
+                  <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-2 py-1 rounded-full">실시간 분석</span>
+                </div>
+                <div className="space-y-8">
+                  {/* 중점관리품목 */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-end">
+                      <span className="text-sm font-semibold text-gray-600">중점관리품목 (350억)</span>
+                      <span className={`text-3xl font-bold ${editProgressRates.priority >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                        {editProgressRates.priority.toFixed(1)}%
+                      </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">중점관리품목 (350억)</span>
-                          <span className="text-3xl font-black text-emerald-400">{editProgressRates.priority.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]" style={{ width: `${editProgressRates.priority}%` }}></div>
-                        </div>
-                        <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                          <span>가능: {formatCurrency(stats.priority.possibleRevenue)}</span>
-                          <span>{stats.priority.possibleCount} 품목</span>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">자재조정필요 (130억)</span>
-                          <span className="text-3xl font-black text-amber-400">{editProgressRates.material.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]" style={{ width: `${editProgressRates.material}%` }}></div>
-                        </div>
-                        <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                          <span>가능: {formatCurrency(stats.material.possibleRevenue)}</span>
-                          <span>{stats.material.possibleCount} 품목</span>
-                        </div>
-                      </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${editProgressRates.priority >= 100 ? 'bg-[#22C55E]' : 'bg-[#22C55E]'}`}
+                        style={{ width: `${Math.min(editProgressRates.priority, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>가능: {formatCurrency(stats.priority.possibleRevenue)}</span>
+                      <span>{stats.priority.possibleCount} 품목</span>
+                    </div>
+                  </div>
+                  {/* 자재조정필요 */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-end">
+                      <span className="text-sm font-semibold text-gray-600">자재조정필요 (130억)</span>
+                      <span className={`text-3xl font-bold ${editProgressRates.material >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                        {editProgressRates.material.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${editProgressRates.material >= 100 ? 'bg-[#22C55E]' : 'bg-[#22C55E]'}`}
+                        style={{ width: `${Math.min(editProgressRates.material, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>가능: {formatCurrency(stats.material.possibleRevenue)}</span>
+                      <span>{stats.material.possibleCount} 품목</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Trend Section */}
-              <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
+            {/* 3. 하단 좌우 2분할: 진도율 추이 + 귀책부서별 지연 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* 진도율 추이 차트 */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">진도율 추이</h3>
-                    <p className="text-xs text-slate-400 font-medium">일별 진척도 변화</p>
+                    <h3 className="text-base font-bold text-gray-900">진도율 추이</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">일별 진척도 변화</p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] font-bold text-slate-600">진도율</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
+                      <span className="text-[10px] font-semibold text-gray-500">진도율</span>
                     </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="w-4 border-t-2 border-dashed border-rose-400" />
-                      <span className="text-[10px] font-bold text-slate-600">목표 100%</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 border-t-2 border-dashed border-red-400" />
+                      <span className="text-[10px] font-semibold text-gray-500">목표 100%</span>
                     </div>
                   </div>
                 </div>
-                <div className="h-72">
+                <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-10} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
-                      />
-                      <ReferenceLine y={100} stroke="#f43f5e" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: '목표 100%', position: 'right', fill: '#f43f5e', fontSize: 10, fontWeight: 700 }} />
-                      <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={4} dot={{ r: 6, fill: '#10B981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} dy={8} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-8} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', padding: '8px 12px' }} />
+                      <ReferenceLine y={100} stroke="#EF4444" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: '목표 100%', position: 'right', fill: '#EF4444', fontSize: 10, fontWeight: 600 }} />
+                      <Line type="monotone" dataKey="rate" stroke="#22C55E" strokeWidth={3} dot={{ r: 5, fill: '#22C55E', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Delay by Department Donut */}
-              <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
+              {/* 귀책부서별 지연 현황 */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">귀책부서별 지연 현황</h3>
-                    <p className="text-xs text-slate-400 font-medium">귀책부서별 품목 수 및 매출 비중</p>
+                    <h3 className="text-base font-bold text-gray-900">귀책부서별 지연 현황</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">귀책부서별 품목 수 및 매출 비중</p>
                   </div>
-                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase tracking-widest">
+                  <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
                     총 {delayByDeptData.reduce((s, d) => s + d.count, 0)}건
                   </span>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="w-52 h-52 relative shrink-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={delayByDeptData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={90}
-                          paddingAngle={3}
-                          dataKey="count"
-                          stroke="none"
-                        >
-                          {delayByDeptData.map((_, idx) => (
-                            <Cell key={idx} fill={DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
-                          formatter={(value: number, name: string, props: any) => [`${value}건 (${formatCurrency(props.payload.revenue)})`, props.payload.name]}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">지연</span>
-                      <span className="text-2xl font-black text-slate-900">{delayByDeptData.reduce((s, d) => s + d.count, 0)}</span>
-                    </div>
+                {delayByDeptData.length === 0 || delayByDeptData.reduce((s, d) => s + d.count, 0) === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-52">
+                    <span className="text-6xl font-bold text-gray-200">0</span>
+                    <span className="text-sm text-gray-400 mt-2">지연 없음</span>
                   </div>
-                  <div className="flex-1 space-y-2.5">
+                ) : (
+                  <div className="space-y-3 mt-2">
                     {delayByDeptData.map((dept, idx) => {
-                      const total = delayByDeptData.reduce((s, d) => s + d.count, 0);
-                      const pct = total > 0 ? ((dept.count / total) * 100).toFixed(1) : '0';
+                      const maxCount = delayByDeptData[0]?.count || 1;
+                      const barWidth = (dept.count / maxCount) * 100;
                       return (
                         <div key={dept.name} className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }} />
-                          <span className="text-xs font-bold text-slate-700 w-12">{dept.name}</span>
-                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }} />
+                          <span className="text-xs font-semibold text-gray-600 w-12 shrink-0">{dept.name}</span>
+                          <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${barWidth}%`, backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }}
+                            />
                           </div>
-                          <span className="text-xs font-black w-12 text-right" style={{ color: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length] }}>{pct}%</span>
-                          <span className="text-[10px] font-bold text-slate-400 w-14 text-right">{dept.count}건</span>
+                          <span className="text-xs font-bold text-gray-700 w-10 text-right">{dept.count}건</span>
+                          <span className="text-[11px] text-gray-400 w-16 text-right">{formatCurrency(dept.revenue)}</span>
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'priority' && (
-          <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-200 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-2">전체 관리대상</div>
-                  <div className="text-3xl font-black tracking-tight">{formatCurrency(stats.priority.totalRevenue)}</div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <span className="text-xs font-bold bg-white/10 px-2 py-0.5 rounded">{stats.priority.totalCount}건</span>
-                  </div>
-                </div>
-                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-2">가능</div>
-                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.possibleRevenue)}</div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${editProgressRates.priority}%` }} />
-                    </div>
-                    <span className="text-xs font-black text-emerald-600">{editProgressRates.priority.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mb-2">확인중</div>
-                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.checkingRevenue)}</div>
-                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.priority.checkingCount} 품목 대기 중</div>
-                </div>
-                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-2">불가능</div>
-                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.priority.impossibleRevenue)}</div>
-                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.priority.impossibleCount} 품목 불가</div>
-                </div>
+          <div className="space-y-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KPICard title="전체 관리대상" value={stats.priority.totalRevenue} count={stats.priority.totalCount} type="target" subText={`${stats.priority.totalCount}건`} delay={0} />
+                <KPICard title="가능" value={stats.priority.possibleRevenue} count={stats.priority.possibleCount} type="possible" delay={100} />
+                <KPICard title="확인중" value={stats.priority.checkingRevenue} count={stats.priority.checkingCount} type="checking" delay={200} />
+                <KPICard title="불가능" value={stats.priority.impossibleRevenue} count={stats.priority.impossibleCount} type="impossible" delay={300} />
              </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <StackedBarChart title="고객사별 진도율 (TOP 10)" data={customerChartData} />
                 </div>
-                <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <StackedBarChart title="마케팅팀별 진도율" data={teamChartData} />
                 </div>
              </div>
@@ -453,42 +484,18 @@ export default function App() {
         )}
 
         {activeTab === 'material' && (
-          <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-200 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-2">전체 관리대상</div>
-                  <div className="text-3xl font-black tracking-tight">{formatCurrency(stats.material.totalRevenue)}</div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <span className="text-xs font-bold bg-white/10 px-2 py-0.5 rounded">{stats.material.totalCount}건</span>
-                  </div>
-                </div>
-                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-2">가능</div>
-                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.possibleRevenue)}</div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${editProgressRates.material}%` }} />
-                    </div>
-                    <span className="text-xs font-black text-emerald-600">{editProgressRates.material.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mb-2">확인중</div>
-                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.checkingRevenue)}</div>
-                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.material.checkingCount} 품목 대기 중</div>
-                </div>
-                <div className="p-8 bg-white border border-slate-200/60 rounded-[2rem] shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-2">불가능</div>
-                  <div className="text-3xl font-black tracking-tight text-slate-900">{formatCurrency(stats.material.impossibleRevenue)}</div>
-                  <div className="mt-4 text-xs font-bold text-slate-400">{stats.material.impossibleCount} 품목 불가</div>
-                </div>
+          <div className="space-y-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KPICard title="전체 관리대상" value={stats.material.totalRevenue} count={stats.material.totalCount} type="target" subText={`${stats.material.totalCount}건`} delay={0} />
+                <KPICard title="가능" value={stats.material.possibleRevenue} count={stats.material.possibleCount} type="possible" delay={100} />
+                <KPICard title="확인중" value={stats.material.checkingRevenue} count={stats.material.checkingCount} type="checking" delay={200} />
+                <KPICard title="불가능" value={stats.material.impossibleRevenue} count={stats.material.impossibleCount} type="impossible" delay={300} />
              </div>
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">고객사별 자재조정 현황</h3>
-                  <p className="text-sm text-slate-400 font-medium">호버 시 대표 품목 확인 가능</p>
+                  <h3 className="text-base font-bold text-gray-900">고객사별 자재조정 현황</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">호버 시 대표 품목 확인 가능</p>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex items-center gap-1.5">
