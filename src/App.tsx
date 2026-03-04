@@ -137,7 +137,7 @@ export default function App() {
     }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
   }, [items]);
 
-  // 고객사별 관리구분 달성율 (매출가능수량 / 미납잔량)
+  // 고객사별 관리구분 달성률 (매출가능수량 / 미납잔량)
   const customerRateData = useMemo(() => {
     const calcRate = (filtered: DashboardItem[]) => {
       const totalRemaining = filtered.reduce((s, i) => s + i.remainingQuantity, 0);
@@ -300,7 +300,7 @@ export default function App() {
                   <span className="w-6 shrink-0" />
                   <span className="text-[10px] font-semibold text-gray-400 w-14 shrink-0">고객사</span>
                   <span className="text-[10px] font-semibold text-gray-400 w-16 text-right shrink-0">매출액</span>
-                  <span className="flex-1 text-[10px] font-semibold text-gray-400 text-center">달성율 바</span>
+                  <span className="flex-1 text-[10px] font-semibold text-gray-400 text-center">달성률 바</span>
                   <span className="text-[10px] font-semibold text-gray-400 w-12 text-right shrink-0">중점</span>
                   <span className="text-[10px] font-semibold text-gray-400 w-12 text-right shrink-0">자재</span>
                 </div>
@@ -495,7 +495,6 @@ export default function App() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-base font-bold text-gray-900">고객사별 자재조정 현황</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">호버 시 대표 품목 확인 가능</p>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex items-center gap-1.5">
@@ -518,53 +517,14 @@ export default function App() {
                     const allItems = c.products.flatMap(p => p.items);
                     return {
                       name: c.customerCode,
-                      revenue: allItems.reduce((s, i) => s + getRevenue(i), 0),
-                      가능: allItems.filter(i => i.status === '가능').length,
-                      확인중: allItems.filter(i => i.status === '확인중').length,
-                      불가능: allItems.filter(i => i.status === '불가능').length,
-                      products: (() => {
-                        const sorted = c.products
-                          .map(p => ({
-                            name: p.name,
-                            count: p.count,
-                            qty: p.items.reduce((s, i) => s + i.remainingQuantity, 0),
-                          }))
-                          .sort((a, b) => b.qty - a.qty);
-                        return { top5: sorted.slice(0, 5), restCount: Math.max(0, sorted.length - 5) };
-                      })(),
+                      가능: allItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
+                      확인중: allItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
+                      불가능: allItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
                     };
                   })
                   .sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능))
                   .slice(0, 10);
                 const chartHeight = Math.max(300, chartData.length * 40 + 60);
-
-                const CustomTooltip = ({ active, payload }: any) => {
-                  if (!active || !payload?.length) return null;
-                  const data = payload[0].payload;
-                  return (
-                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 max-w-[520px] w-max">
-                      <div className="text-sm font-black text-slate-900 mb-2">{data.name}</div>
-                      <div className="flex gap-4 text-xs font-bold mb-3 pb-3 border-b border-slate-100">
-                        {data.가능 > 0 && <span className="text-emerald-600">가능 {data.가능}건</span>}
-                        {data.확인중 > 0 && <span className="text-amber-600">확인중 {data.확인중}건</span>}
-                        {data.불가능 > 0 && <span className="text-rose-600">불가능 {data.불가능}건</span>}
-                      </div>
-                      <div className="space-y-1">
-                        {data.products.top5.map((p: any, i: number) => (
-                          <div key={i} className="text-[11px] text-slate-600 flex justify-between gap-3">
-                            <span className="whitespace-nowrap">{p.name}</span>
-                            <span className="whitespace-nowrap text-slate-400">{p.count}건 / {p.qty >= 10000 ? (p.qty / 10000).toFixed(1).replace(/\.0$/, '') + '만' : p.qty.toLocaleString()}개</span>
-                          </div>
-                        ))}
-                        {data.products.restCount > 0 && (
-                          <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">
-                            외 {data.products.restCount}개 품목
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                };
 
                 return (
                   <div style={{ height: chartHeight }}>
@@ -585,7 +545,7 @@ export default function App() {
                           axisLine={false}
                           tickLine={false}
                         />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                        <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(value: number) => formatCurrency(value)} contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', padding: '8px 12px' }} itemStyle={{ fontSize: '11px', fontWeight: 700 }} />
                         <Bar dataKey="가능" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
                         <Bar dataKey="확인중" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
                         <Bar dataKey="불가능" stackId="a" fill="#F43F5E" radius={[0, 10, 10, 0]} />
