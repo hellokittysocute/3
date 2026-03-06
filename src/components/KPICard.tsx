@@ -61,19 +61,19 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, count, trend, ty
 
       <div className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</span>
+          <span className="text-[15px] font-semibold text-gray-500 uppercase tracking-wider">{title}</span>
           {trend && (
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${colors.trendBg}`}>
+            <span className={`text-[14px] font-bold px-2.5 py-0.5 rounded-full border ${colors.trendBg}`}>
               {trend}
             </span>
           )}
         </div>
 
-        <div className="text-2xl font-bold text-gray-900 tracking-tight">
+        <div className="text-[28px] font-bold text-gray-900 tracking-tight">
           {formatCurrency(animatedValue)}
         </div>
 
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-[13px] text-gray-500">
           {subText || `${count.toLocaleString()}건 · 전체 대비 ${((count / 805) * 100).toFixed(1)}%`}
         </div>
       </div>
