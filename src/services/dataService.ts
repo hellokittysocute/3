@@ -161,27 +161,47 @@ export function getMaterialByCustomer(items: DashboardItem[]): CustomerMaterialD
   return result.sort((a, b) => b.totalCount - a.totalCount);
 }
 
-export function calculateStats(items: DashboardItem[]): {
+export function calculateStats(items: DashboardItem[], editData?: Record<string, any>): {
   overall: any;
   priority: any;
   material: any;
 } {
+  const getStatus = (item: DashboardItem): Status => {
+    const edited = editData?.[item.id]?.revenuePossible;
+    if (edited === '가능' || edited === '확인중' || edited === '불가능') return edited;
+    return item.status;
+  };
+
+  // 가능 매출액: 단가 × 매출가능수량
+  const getPossibleRevenue = (item: DashboardItem): number => {
+    const qty = editData?.[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity;
+    return item.unitPrice * qty;
+  };
+
+  // 확인중/불가능 매출액: (미납잔량 - 매출가능수량) × 단가
+  const getUnpossibleRevenue = (item: DashboardItem): number => {
+    const qty = editData?.[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity;
+    return item.unitPrice * (item.remainingQuantity - qty);
+  };
+
   const getStats = (filteredItems: DashboardItem[]) => {
     const totalRevenue = filteredItems.reduce((sum, item) => sum + getRevenue(item), 0);
-    const possible = filteredItems.filter(i => i.status === '가능');
-    const checking = filteredItems.filter(i => i.status === '확인중');
-    const impossible = filteredItems.filter(i => i.status === '불가능');
+    const possible = filteredItems.filter(i => getStatus(i) === '가능');
+    const checking = filteredItems.filter(i => getStatus(i) === '확인중');
+    const impossible = filteredItems.filter(i => getStatus(i) === '불가능');
 
-    const possibleRevenue = possible.reduce((sum, item) => sum + getRevenue(item), 0);
+    const possibleRevenue = possible.reduce((sum, item) => sum + getPossibleRevenue(item), 0);
+    const checkingRevenue = checking.reduce((sum, item) => sum + getUnpossibleRevenue(item), 0);
+    const impossibleRevenue = impossible.reduce((sum, item) => sum + getUnpossibleRevenue(item), 0);
 
     return {
       totalRevenue,
       totalCount: filteredItems.length,
       possibleRevenue,
       possibleCount: possible.length,
-      checkingRevenue: checking.reduce((sum, item) => sum + getRevenue(item), 0),
+      checkingRevenue,
       checkingCount: checking.length,
-      impossibleRevenue: impossible.reduce((sum, item) => sum + getRevenue(item), 0),
+      impossibleRevenue,
       impossibleCount: impossible.length,
       progressRate: totalRevenue > 0 ? (possibleRevenue / totalRevenue) * 100 : 0
     };

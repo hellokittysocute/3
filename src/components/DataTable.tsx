@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { Save, Check } from 'lucide-react';
 import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
@@ -75,6 +75,22 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     { key: '하', label: '하', emoji: '🟢' },
   ];
 
+  // 상단/하단 스크롤 동기화
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const topEl = topScrollRef.current;
+    const tableEl = tableScrollRef.current;
+    if (!topEl || !tableEl) return;
+    let syncing = false;
+    const onTopScroll = () => { if (!syncing) { syncing = true; tableEl.scrollLeft = topEl.scrollLeft; syncing = false; } };
+    const onTableScroll = () => { if (!syncing) { syncing = true; topEl.scrollLeft = tableEl.scrollLeft; syncing = false; } };
+    topEl.addEventListener('scroll', onTopScroll);
+    tableEl.addEventListener('scroll', onTableScroll);
+    return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); };
+  }, []);
+
   return (
     <div>
       {/* 필터 탭 + 저장 버튼 */}
@@ -138,7 +154,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <span className="flex items-center gap-1"><span style={{ color: '#16a34a' }}>●</span> 하: 80% 이상</span>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* 상단 스크롤바 */}
+      <div ref={topScrollRef} className="overflow-x-auto" style={{ height: '16px' }}>
+        <div style={{ width: '2800px', height: '1px' }} />
+      </div>
+
+      <div ref={tableScrollRef} className="overflow-auto max-h-[75vh]">
         <table className="w-full text-left border-collapse min-w-[2800px]">
           <thead className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-20 backdrop-blur-md">
             <tr className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
@@ -230,15 +251,17 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20 text-center">
                     <select
                       className={cn(inputClass, "text-center appearance-none cursor-pointer",
-                        row?.revenuePossible === 'O' && "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold",
-                        row?.revenuePossible === 'X' && "bg-rose-50 text-rose-700 border-rose-300 font-bold",
+                        row?.revenuePossible === '가능' && "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold",
+                        row?.revenuePossible === '확인중' && "bg-amber-50 text-amber-700 border-amber-300 font-bold",
+                        row?.revenuePossible === '불가능' && "bg-rose-50 text-rose-700 border-rose-300 font-bold",
                       )}
                       value={row?.revenuePossible ?? ''}
                       onChange={(e) => onUpdateField(item.id, 'revenuePossible', e.target.value)}
                     >
                       <option value="">선택</option>
-                      <option value="O">O</option>
-                      <option value="X">X</option>
+                      <option value="가능">가능</option>
+                      <option value="확인중">확인중</option>
+                      <option value="불가능">불가능</option>
                     </select>
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20">

@@ -48,7 +48,7 @@ export interface EditableData {
   materialSettingDate: string;
   manufacturingDate: string;
   packagingDate: string;
-  revenuePossible: 'O' | 'X' | '';
+  revenuePossible: '가능' | '확인중' | '불가능' | '';
   revenuePossibleQuantity: number;
   delayReason: string;
 }
