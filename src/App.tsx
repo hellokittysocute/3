@@ -1,24 +1,29 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
-import { parseDashboardData, calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
+import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
+import { get805Items } from './data/mockData';
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
+import { PriorityKanban } from './components/PriorityKanban';
 import { cn, formatCurrency } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-import { get805Items, CATEGORIES } from './data/mockData';
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<'summary' | 'priority' | 'material' | 'details'>('summary');
+  const [detailView, setDetailView] = useState<'kanban' | 'table'>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [delayReasonFilter, setDelayReasonFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
 
-  const items = useMemo(() => get805Items(), []);
+  const [items] = useState<DashboardItem[]>(get805Items());
+  const [loading] = useState(false);
   const stats = useMemo(() => calculateStats(items), [items]);
+
+  // CATEGORIES를 items에서 동적으로 추출
+  const CATEGORIES = useMemo(() => [...new Set(items.map(i => i.category).filter(Boolean))].sort(), [items]);
 
   const buildInitialEditData = useCallback(() => {
     const initial: Record<string, EditableData> = {};
@@ -32,7 +37,7 @@ export default function App() {
   }, [items]);
 
   const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('loading');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
 
   // 진도율: 매출 가능 수량 합계 / 미납잔량 합계 (editData 기준)
   const editProgressRates = useMemo(() => {
@@ -48,66 +53,20 @@ export default function App() {
     };
   }, [items, editData]);
 
-  // Fetch latest edit data from server
-  const fetchEditData = useCallback(() => {
-    return fetch('/api/edit-data')
-      .then(res => res.json())
-      .then((serverData: Record<string, EditableData>) => {
-        const initial = buildInitialEditData();
-        const merged: Record<string, EditableData> = {};
-        items.forEach(item => {
-          merged[item.id] = serverData[item.id] ?? initial[item.id];
-        });
-        setEditData(merged);
-        setSaveStatus('idle');
-      })
-      .catch(() => {
-        setSaveStatus('idle');
-      });
-  }, [items, buildInitialEditData]);
-
-  // Load edit data from server on mount
-  useEffect(() => {
-    fetchEditData();
-  }, [fetchEditData]);
-
-  // Auto-sync: poll server every 10 seconds for other users' changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchEditData();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [fetchEditData]);
+  const refreshEditData = useCallback(() => {
+    setEditData(buildInitialEditData());
+    setSaveStatus('idle');
+  }, [buildInitialEditData]);
 
   const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
     setSaveStatus('idle');
-    setEditData(prev => {
-      const updated = { ...prev, [id]: { ...prev[id], [field]: value } };
-      // Send individual field update to server
-      fetch(`/api/edit-data/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated[id]),
-      }).catch(() => { /* silent fail */ });
-      return updated;
-    });
+    setEditData(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   }, []);
 
   const handleSave = useCallback(() => {
-    setSaveStatus('loading');
-    fetch('/api/edit-data/save-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editData),
-    })
-      .then(() => {
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      })
-      .catch(() => {
-        setSaveStatus('idle');
-      });
-  }, [editData]);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  }, []);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -199,6 +158,17 @@ export default function App() {
     { date: '03/03', rate: 24.1 },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
+          <p className="text-slate-500 font-medium">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Header */}
@@ -230,7 +200,7 @@ export default function App() {
             </div>
             <div className="h-10 w-px bg-slate-200" />
             <button
-              onClick={() => { setSaveStatus('loading'); fetchEditData(); }}
+              onClick={() => { setSaveStatus('loading'); refreshEditData(); }}
               className="group bg-slate-900 text-white pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-xl shadow-slate-200"
             >
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", saveStatus === 'loading' ? "animate-spin" : "group-hover:rotate-180")} />
@@ -631,9 +601,39 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
-              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} />
+            {/* 보기 전환 */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setDetailView('kanban')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                  detailView === 'kanban'
+                    ? "bg-slate-900 text-white shadow-lg"
+                    : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+                )}
+              >
+                중요도 보기
+              </button>
+              <button
+                onClick={() => setDetailView('table')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                  detailView === 'table'
+                    ? "bg-slate-900 text-white shadow-lg"
+                    : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+                )}
+              >
+                테이블 보기
+              </button>
             </div>
+
+            {detailView === 'kanban' ? (
+              <PriorityKanban items={filteredItems} />
+            ) : (
+              <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
+                <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} />
+              </div>
+            )}
           </div>
         )}
       </main>
