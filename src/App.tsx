@@ -19,14 +19,16 @@ export default function App() {
   const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
 
   const items = useMemo(() => get805Items(), []);
-  const stats = useMemo(() => calculateStats(items), [items]);
+  // stats는 editData 선언 이후에 계산 (아래에서 정의)
 
   const buildInitialEditData = useCallback(() => {
     const initial: Record<string, EditableData> = {};
     items.forEach(item => {
       initial[item.id] = {
         productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-        revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
+        revenuePossible: item.status,
+        revenuePossibleQuantity: item.status === '가능' ? item.remainingQuantity : 0,
+        delayReason: '',
       };
     });
     return initial;
@@ -34,6 +36,8 @@ export default function App() {
 
   const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('loading');
+
+  const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
 
   // 진도율: 매출 가능 수량 합계 / 미납잔량 합계 (editData 기준)
   const editProgressRates = useMemo(() => {
@@ -57,7 +61,20 @@ export default function App() {
         const initial = buildInitialEditData();
         const merged: Record<string, EditableData> = {};
         items.forEach(item => {
-          merged[item.id] = serverData[item.id] ?? initial[item.id];
+          const server = serverData[item.id];
+          if (server) {
+            // 기존 O/X 값을 가능/불가능으로 마이그레이션
+            if ((server.revenuePossible as string) === 'O') server.revenuePossible = '가능';
+            else if ((server.revenuePossible as string) === 'X') server.revenuePossible = '불가능';
+            // 빈 값이면 CSV 원본 status를 기본값으로
+            if (!server.revenuePossible) {
+              server.revenuePossible = item.status;
+              server.revenuePossibleQuantity = item.status === '가능' ? item.remainingQuantity : 0;
+            }
+            merged[item.id] = server;
+          } else {
+            merged[item.id] = initial[item.id];
+          }
         });
         setEditData(merged);
         setSaveStatus('idle');
@@ -83,7 +100,13 @@ export default function App() {
   const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
     setSaveStatus('idle');
     setEditData(prev => {
-      const updated = { ...prev, [id]: { ...prev[id], [field]: value } };
+      const entry = { ...prev[id], [field]: value };
+      // 매출가능여부 변경 시 수량 자동 조정
+      if (field === 'revenuePossible') {
+        const item = items.find(i => i.id === id);
+        entry.revenuePossibleQuantity = value === '가능' ? (item?.remainingQuantity ?? 0) : 0;
+      }
+      const updated = { ...prev, [id]: entry };
       // Send individual field update to server
       fetch(`/api/edit-data/${id}`, {
         method: 'PUT',
@@ -92,7 +115,7 @@ export default function App() {
       }).catch(() => { /* silent fail */ });
       return updated;
     });
-  }, []);
+  }, [items]);
 
   const handleSave = useCallback(() => {
     setSaveStatus('loading');
@@ -103,14 +126,27 @@ export default function App() {
     })
       .then(() => {
         setSaveStatus('saved');
+        // 저장 시점의 매출가능여부로 정렬 기준 갱신
+        const snap: Record<string, string> = {};
+        items.forEach(item => { snap[item.id] = editData[item.id]?.revenuePossible || item.status; });
+        setSortSnapshot(snap);
+        fetchEditData();
         setTimeout(() => setSaveStatus('idle'), 2000);
       })
       .catch(() => {
         setSaveStatus('idle');
       });
-  }, [editData]);
+  }, [editData, fetchEditData]);
+
+  // 저장 시점의 정렬 기준 스냅샷
+  const [sortSnapshot, setSortSnapshot] = useState<Record<string, string>>(() => {
+    const snap: Record<string, string> = {};
+    items.forEach(item => { snap[item.id] = item.status; });
+    return snap;
+  });
 
   const filteredItems = useMemo(() => {
+    const statusOrder: Record<string, number> = { '불가능': 0, '확인중': 1, '가능': 2 };
     return items.filter(item => {
       const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.materialCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,22 +157,30 @@ export default function App() {
       const matchesRevenuePossible = !revenuePossibleFilter || (row?.revenuePossible === revenuePossibleFilter);
       const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
       return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay;
+    }).sort((a, b) => {
+      return (statusOrder[sortSnapshot[a.id]] ?? 3) - (statusOrder[sortSnapshot[b.id]] ?? 3);
     });
-  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, editData]);
+  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, editData, sortSnapshot]);
 
   // Chart data preparation
+  const getItemStatus = useCallback((item: DashboardItem) => {
+    const edited = editData[item.id]?.revenuePossible;
+    if (edited === '가능' || edited === '확인중' || edited === '불가능') return edited;
+    return item.status;
+  }, [editData]);
+
   const customerChartData = useMemo(() => {
     const customers = [...new Set(items.map(i => i.customerCode))].slice(0, 10);
     return customers.map(code => {
       const cItems = items.filter(i => i.customerCode === code);
       return {
         name: code,
-        가능: cItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
-        확인중: cItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
-        불가능: cItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
+        가능: cItems.filter(i => getItemStatus(i) === '가능').reduce((s, i) => s + getRevenue(i), 0),
+        확인중: cItems.filter(i => getItemStatus(i) === '확인중').reduce((s, i) => s + getRevenue(i), 0),
+        불가능: cItems.filter(i => getItemStatus(i) === '불가능').reduce((s, i) => s + getRevenue(i), 0),
       };
     }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
-  }, [items]);
+  }, [items, getItemStatus]);
 
   const teamChartData = useMemo(() => {
     const teams = [...new Set(items.map(i => i.teamName))].sort();
@@ -144,12 +188,12 @@ export default function App() {
       const tItems = items.filter(i => i.teamName === team);
       return {
         name: team || '기타',
-        가능: tItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
-        확인중: tItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
-        불가능: tItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
+        가능: tItems.filter(i => getItemStatus(i) === '가능').reduce((s, i) => s + getRevenue(i), 0),
+        확인중: tItems.filter(i => getItemStatus(i) === '확인중').reduce((s, i) => s + getRevenue(i), 0),
+        불가능: tItems.filter(i => getItemStatus(i) === '불가능').reduce((s, i) => s + getRevenue(i), 0),
       };
     }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
-  }, [items]);
+  }, [items, getItemStatus]);
 
   const materialCustomerData = useMemo(() => getMaterialByCustomer(items), [items]);
 
@@ -505,9 +549,9 @@ export default function App() {
                     return {
                       name: c.customerCode,
                       revenue: allItems.reduce((s, i) => s + getRevenue(i), 0),
-                      가능: allItems.filter(i => i.status === '가능').length,
-                      확인중: allItems.filter(i => i.status === '확인중').length,
-                      불가능: allItems.filter(i => i.status === '불가능').length,
+                      가능: allItems.filter(i => getItemStatus(i) === '가능').length,
+                      확인중: allItems.filter(i => getItemStatus(i) === '확인중').length,
+                      불가능: allItems.filter(i => getItemStatus(i) === '불가능').length,
                       products: (() => {
                         const sorted = c.products
                           .map(p => ({
@@ -635,8 +679,9 @@ export default function App() {
                   onChange={(e) => setRevenuePossibleFilter(e.target.value)}
                 >
                   <option value="">전체</option>
-                  <option value="O">O (가능)</option>
-                  <option value="X">X (불가능)</option>
+                  <option value="가능">가능</option>
+                  <option value="확인중">확인중</option>
+                  <option value="불가능">불가능</option>
                 </select>
               </div>
               <div className="space-y-2">
