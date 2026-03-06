@@ -68,9 +68,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-4 py-3 border-r border-slate-200">생성일</th>
               <th className="px-4 py-3 border-r border-slate-200">원납기일</th>
               <th className="px-4 py-3 border-r border-slate-200">변경납기일</th>
-              <th className="px-4 py-3 border-r border-slate-200 text-right">총본품수량</th>
+              <th className="px-4 py-3 border-r border-slate-200 text-right">환산수량</th>
               <th className="px-4 py-3 border-r border-slate-200 text-right">총오더수량</th>
-              <th className="px-4 py-3 border-r border-slate-200 text-right">원수주수량</th>
               <th className="px-4 py-3 border-r border-slate-200 text-right">미납잔량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">자재</th>
@@ -87,10 +86,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           <tbody className="text-[12px] divide-y divide-slate-100">
             {/* 전체 합계 */}
             <tr className="bg-blue-50/50 font-bold text-slate-700">
-              <td colSpan={7} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
+              <td colSpan={6} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
-              <td className="px-4 py-2 text-right border-r border-slate-200">{totals.originalOrderQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
@@ -119,19 +117,18 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-4 py-3 border-r border-slate-100/60 text-slate-500">{item.changedDueDate}</td>
                   <td className="px-4 py-3 border-r border-slate-100/60 text-right text-slate-600">{item.totalQuantity.toLocaleString()}</td>
                   <td className="px-4 py-3 border-r border-slate-100/60 text-right text-slate-600">{item.orderQuantity.toLocaleString()}</td>
-                  <td className="px-4 py-3 border-r border-slate-100/60 text-right text-slate-600">{item.originalOrderQuantity.toLocaleString()}</td>
                   <td className="px-4 py-3 border-r border-slate-100/60 text-right font-bold text-slate-900">{item.remainingQuantity.toLocaleString()}</td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="date" className={inputClass} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="date" className={inputClass} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="date" className={inputClass} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} />
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} />
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="date" className={inputClass} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} />
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} />
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20 text-center">
                     <select
