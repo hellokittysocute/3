@@ -4,6 +4,16 @@ import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
 import { formatCurrency, cn } from '../lib/utils';
 
+function formatDateShort(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yy}/${mm}/${dd}`;
+}
+
 interface DataTableProps {
   items: DashboardItem[];
   editData: Record<string, EditableData>;
@@ -168,10 +178,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           <thead className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-20 backdrop-blur-md">
             <tr className="text-[14px] font-bold text-slate-500 uppercase tracking-tight">
               <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px]">중요도</th>
-              <th className="px-4 py-3 border-r border-slate-200">판매문서</th>
+
               <th className="px-4 py-3 border-r border-slate-200">자재</th>
               <th className="px-4 py-3 border-r border-slate-200">내역</th>
-              <th className="px-4 py-3 border-r border-slate-200">중분류명</th>
+
               <th className="px-4 py-3 border-r border-slate-200">생성일</th>
               <th className="px-4 py-3 border-r border-slate-200">원납기일</th>
               <th className="px-4 py-3 border-r border-slate-200">변경납기일</th>
@@ -183,18 +193,19 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
-              <th className="px-3 py-3 border-r border-slate-200 text-right bg-emerald-50/50 text-emerald-600">매출<br/>가능 수량</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능 수량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
-              <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연사유</th>
-              <th className="px-4 py-3 border-r border-slate-200 text-right">단가</th>
-              <th className="px-4 py-3 text-right">매출(단가x잔량)</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</th>
+              <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[120px]">단가</th>
+              <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[140px]">매출<br/>(단가x잔량)</th>
+              <th className="px-3 py-3 text-center min-w-[100px]">관리구분</th>
             </tr>
           </thead>
           <tbody className="text-[15px] divide-y divide-slate-100">
             {/* 전체 합계 */}
             <tr className="bg-blue-50/50 font-bold text-slate-700">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-400">합계</td>
-              <td colSpan={6} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
+              <td colSpan={4} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
@@ -228,15 +239,13 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       {tier}
                     </span>
                   </td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.salesDocument}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700">{item.materialCode}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60">
                     <div className="max-w-[300px] truncate font-medium text-slate-800" title={item.itemName}>{item.itemName}</div>
                   </td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.category}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{item.createdDate}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{item.originalDueDate}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{item.changedDueDate}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.createdDate)}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.originalDueDate)}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.changedDueDate)}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-600">{item.totalQuantity.toLocaleString()}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-600">{item.orderQuantity.toLocaleString()}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-right font-bold text-slate-900">{item.remainingQuantity.toLocaleString()}</td>
@@ -293,7 +302,15 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                     </select>
                   </td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>
-                  <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>
+                  <td className="px-3 py-4 text-center">
+                    <span className={cn(
+                      "text-[12px] font-bold px-2 py-1 rounded-full",
+                      item.managementType === '중점관리품목' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                    )}>
+                      {item.managementType === '중점관리품목' ? '중점관리' : '자재조정'}
+                    </span>
+                  </td>
                 </tr>
               );
             })}
