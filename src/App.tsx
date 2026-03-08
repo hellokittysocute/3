@@ -1,26 +1,81 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
-import { get805Items } from './data/mockData';
+import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData } from './services/supabaseDataService';
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
 import { PriorityKanban } from './components/PriorityKanban';
+import { LoginPage } from './components/LoginPage';
+import { InactivePage } from './components/InactivePage';
+import { AdminUserManagement } from './components/AdminUserManagement';
+import { AdminDataUpload } from './components/AdminDataUpload';
+import { useAuth } from './contexts/AuthContext';
 import { cn, formatCurrency } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
+type TabId = 'summary' | 'priority' | 'material' | 'details' | 'admin-users' | 'admin-upload';
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'summary' | 'priority' | 'material' | 'details'>('summary');
+  const { user, profile, loading: authLoading, isAdmin, isActive, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabId>('summary');
+
+  // 인증 가드
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
+          <p className="text-slate-500 font-medium">인증 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginPage />;
+  if (!isActive) return <InactivePage />;
   const [detailView, setDetailView] = useState<'kanban' | 'table'>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [delayReasonFilter, setDelayReasonFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
 
-  const [items] = useState<DashboardItem[]>(get805Items());
-  const [loading] = useState(false);
+  const [items, setItems] = useState<DashboardItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const stats = useMemo(() => calculateStats(items), [items]);
+
+  // Supabase에서 데이터 로드
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [dashboardItems, editDataFromDb] = await Promise.all([
+          fetchDashboardItems(),
+          fetchAllEditData(),
+        ]);
+        setItems(dashboardItems);
+        // DB에서 가져온 편집 데이터가 있으면 병합
+        if (Object.keys(editDataFromDb).length > 0) {
+          setEditData(prev => {
+            const merged: Record<string, EditableData> = {};
+            dashboardItems.forEach(item => {
+              merged[item.id] = editDataFromDb[item.id] || {
+                productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+                revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
+              };
+            });
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.error('데이터 로드 실패:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
 
 
@@ -52,20 +107,46 @@ export default function App() {
     };
   }, [items, editData]);
 
-  const refreshEditData = useCallback(() => {
-    setEditData(buildInitialEditData());
-    setSaveStatus('idle');
-  }, [buildInitialEditData]);
+  const refreshEditData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [dashboardItems, editDataFromDb] = await Promise.all([
+        fetchDashboardItems(),
+        fetchAllEditData(),
+      ]);
+      setItems(dashboardItems);
+      const merged: Record<string, EditableData> = {};
+      dashboardItems.forEach(item => {
+        merged[item.id] = editDataFromDb[item.id] || {
+          productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+          revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
+        };
+      });
+      setEditData(merged);
+      setSaveStatus('idle');
+    } catch (err) {
+      console.error('데이터 갱신 실패:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
     setSaveStatus('idle');
     setEditData(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   }, []);
 
-  const handleSave = useCallback(() => {
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus('idle'), 2000);
-  }, []);
+  const handleSave = useCallback(async () => {
+    setSaveStatus('loading');
+    try {
+      await saveAllEditData(editData);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error('저장 실패:', err);
+      setSaveStatus('idle');
+    }
+  }, [editData]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -189,7 +270,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             <div className="flex flex-col items-end">
               <span className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-1">시스템 상태</span>
               <div className="flex items-center gap-2">
@@ -205,6 +286,31 @@ export default function App() {
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", saveStatus === 'loading' ? "animate-spin" : "group-hover:rotate-180")} />
               데이터 갱신
             </button>
+            <div className="h-10 w-px bg-slate-200" />
+            {/* 사용자 정보 + 로그아웃 */}
+            <div className="flex items-center gap-3">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-9 h-9 rounded-full border-2 border-slate-200" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-slate-400" />
+                </div>
+              )}
+              <div className="flex flex-col items-start">
+                <span className="text-[13px] font-bold text-slate-700">{profile?.name || profile?.email}</span>
+                <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                  {isAdmin && <Shield className="w-3 h-3 text-indigo-500" />}
+                  {isAdmin ? '관리자' : '일반'}
+                </span>
+              </div>
+              <button
+                onClick={signOut}
+                className="ml-1 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                title="로그아웃"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -215,6 +321,10 @@ export default function App() {
             { id: 'priority', label: '중점관리품목', icon: Package },
             { id: 'material', label: '자재조정필요', icon: AlertTriangle },
             { id: 'details', label: '상세데이터', icon: List },
+            ...(isAdmin ? [
+              { id: 'admin-users', label: '회원관리', icon: Users },
+              { id: 'admin-upload', label: '데이터 업로드', icon: Upload },
+            ] : []),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -665,6 +775,14 @@ export default function App() {
               <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} />
             </div>
           </div>
+        )}
+
+        {activeTab === 'admin-users' && isAdmin && (
+          <AdminUserManagement />
+        )}
+
+        {activeTab === 'admin-upload' && isAdmin && (
+          <AdminDataUpload />
         )}
       </main>
 
