@@ -342,7 +342,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                         row?.revenuePossible === '확인중' && "bg-amber-50 text-amber-700 border-amber-300 font-bold",
                         row?.revenuePossible === '불가능' && "bg-rose-50 text-rose-700 border-rose-300 font-bold",
                       )}
-                      value={row?.revenuePossible ?? ''}
+                      value={row?.revenuePossible || '확인중'}
                       onChange={(e) => onUpdateField(item.id, 'revenuePossible', e.target.value)}
                     >
                       <option value="">선택</option>

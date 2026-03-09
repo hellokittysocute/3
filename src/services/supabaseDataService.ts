@@ -60,7 +60,7 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
     materialSettingDate: (row.material_setting_date as string) || '',
     manufacturingDate: (row.manufacturing_date as string) || '',
     packagingDate: (row.packaging_date as string) || '',
-    revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '',
+    revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '확인중',
     revenuePossibleQuantity: Number(row.revenue_possible_quantity) || 0,
     delayReason: (row.delay_reason as string) || '',
     importance: (row.importance as '상' | '중' | '하' | '') || '',
