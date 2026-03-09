@@ -383,7 +383,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200 sticky left-[170px] z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sticky left-[260px] z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[370px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
-              <td colSpan={2} className="px-4 py-3 text-right border-r border-slate-200"></td>
+              <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
