@@ -94,6 +94,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '자재(일정)': row?.materialSettingDate ?? '',
         '제조': row?.manufacturingDate ?? '',
         '충포장': row?.packagingDate ?? '',
+        '생산처': row?.productionSite ?? '',
         '매출 가능여부': row?.revenuePossible ?? '',
         '매출 가능 수량': row?.revenuePossibleQuantity ?? item.remainingQuantity,
         '진도율(%)': Number(rate.toFixed(1)),
@@ -101,7 +102,6 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '단가': item.unitPrice,
         '매출(단가x잔량)': getRevenue(item),
         '관리구분': item.managementType,
-        '생산처': item.productionSite,
         '생산리드타임': item.leadTime,
       };
     });
@@ -259,11 +259,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">자재</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능 수량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</th>
-              <th className="px-4 py-3 border-r border-slate-200">생산처</th>
               {isAdmin && <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[120px]">단가</th>}
               {isAdmin && <th className="px-6 py-3 text-right min-w-[140px]">매출<br/>(단가x잔량)</th>}
             </tr>
@@ -280,11 +280,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
+              <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-emerald-50/30"></td>
               <td className="px-4 py-2 text-right border-r border-slate-200 bg-emerald-50/30">{totalRevenuePossibleQty.toLocaleString()}</td>
               <td className="px-4 py-2 border-r border-slate-200 bg-amber-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-amber-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200"></td>
               {isAdmin && <td className="px-4 py-2 border-r border-slate-200"></td>}
               {isAdmin && <td className="px-4 py-2 text-right">{formatCurrency(totals.revenue)}</td>}
             </tr>
@@ -334,6 +334,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
                     <input type="text" placeholder="직접입력" className={inputClass} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} />
                   </td>
+                  <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
+                  </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20 text-center">
                     <select
                       className={cn(inputClass, "text-center appearance-none cursor-pointer",
@@ -374,7 +377,6 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       <option value="영업">영업</option>
                     </select>
                   </td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.productionSite}</td>
                   {isAdmin && <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>}
                   {isAdmin && <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>}
                 </tr>

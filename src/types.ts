@@ -52,6 +52,7 @@ export interface EditableData {
   revenuePossibleQuantity: number;
   delayReason: string;
   importance: '상' | '중' | '하' | '';
+  productionSite: string;
 }
 
 export interface SummaryStats {
