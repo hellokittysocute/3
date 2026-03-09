@@ -631,7 +631,7 @@ export default function App() {
         )}
 
         {activeTab === 'details' && (
-          <div className="space-y-8 animate-in fade-in duration-700">
+          <div className="-mx-10 space-y-8 animate-in fade-in duration-700">
             {/* Hero Header */}
             {(() => {
               const getRate = (item: DashboardItem) => item.totalQuantity > 0 ? (item.orderQuantity / item.totalQuantity) * 100 : 0;
@@ -651,7 +651,7 @@ export default function App() {
               ];
 
               return (
-                <div className="bg-[#4B49AC] text-white rounded-[2rem] shadow-xl shadow-indigo-100 relative overflow-hidden">
+                <div className="bg-[#4B49AC] text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
 
                   {/* 상단: 제목 + 카드 */}
@@ -729,7 +729,7 @@ export default function App() {
             })()}
 
             {/* Image-style Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 bg-white p-8 border-y border-slate-200/60">
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
                 <div className="relative">
@@ -792,7 +792,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="bg-white overflow-hidden">
               <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} />
             </div>
           </div>
