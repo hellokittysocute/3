@@ -244,7 +244,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       value={row?.importance || ''}
                       onChange={(e) => onUpdateField(item.id, 'importance', e.target.value)}
                     >
-                      <option value="">자동({autoTierMap[item.id]})</option>
+                      <option value="">선택</option>
                       <option value="상">상</option>
                       <option value="중">중</option>
                       <option value="하">하</option>
