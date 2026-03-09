@@ -651,7 +651,7 @@ export default function App() {
               ];
 
               return (
-                <div className="bg-[#4B49AC] text-white relative overflow-hidden">
+                <div className="bg-[#4B49AC] text-white relative overflow-hidden rounded-2xl mx-8">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
 
                   {/* 상단: 제목 + 카드 */}
@@ -742,18 +742,6 @@ export default function App() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">관리구분</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="">전체</option>
-                  <option value="중점관리품목">중점관리품목</option>
-                  <option value="자재조정필요">자재조정필요</option>
-                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>

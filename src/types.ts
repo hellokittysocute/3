@@ -53,6 +53,8 @@ export interface EditableData {
   delayReason: string;
   importance: '상' | '중' | '하' | '';
   productionSite: string;
+  purchaseManager: string;
+  note: string;
 }
 
 export interface SummaryStats {

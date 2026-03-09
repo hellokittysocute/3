@@ -65,6 +65,8 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
     delayReason: (row.delay_reason as string) || '',
     importance: (row.importance as '상' | '중' | '하' | '') || '',
     productionSite: (row.production_site as string) || '',
+    purchaseManager: (row.purchase_manager as string) || '',
+    note: (row.note as string) || '',
   };
 }
 
@@ -117,6 +119,8 @@ export async function updateEditData(itemId: string, editableData: EditableData)
       delay_reason: editableData.delayReason,
       importance: editableData.importance,
       production_site: editableData.productionSite,
+      purchase_manager: editableData.purchaseManager,
+      note: editableData.note,
       updated_at: new Date().toISOString(),
     });
 
@@ -138,6 +142,8 @@ export async function saveAllEditData(allData: Record<string, EditableData>): Pr
     delay_reason: d.delayReason,
     importance: d.importance,
     production_site: d.productionSite,
+    purchase_manager: d.purchaseManager,
+    note: d.note,
     updated_at: new Date().toISOString(),
   }));
 

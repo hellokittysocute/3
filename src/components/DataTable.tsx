@@ -239,14 +239,15 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <div style={{ width: '2800px', height: '1px' }} />
       </div>
 
-      <div ref={tableScrollRef} className="overflow-auto max-h-[75vh]">
+      <div ref={tableScrollRef} className="overflow-auto max-h-[60vh]">
         <table className="w-full text-left border-collapse min-w-[2800px]">
-          <thead className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-20 backdrop-blur-md">
+          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
             <tr className="text-[14px] font-bold text-slate-500 uppercase tracking-tight">
-              <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px] sticky left-0 z-30 bg-slate-50">중요도</th>
-              <th className="px-4 py-3 border-r border-slate-200 sticky left-[70px] z-30 bg-slate-50">CIS담당</th>
-              <th className="px-4 py-3 border-r border-slate-200 sticky left-[170px] z-30 bg-slate-50">자재</th>
-              <th className="px-4 py-3 border-r-2 border-slate-300 sticky left-[280px] z-30 bg-slate-50">내역</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px] sticky left-0 z-40 bg-slate-50">중요도</th>
+              <th className="px-4 py-3 border-r border-slate-200 sticky left-[70px] z-40 bg-slate-50 whitespace-nowrap">CIS담당</th>
+              <th className="px-4 py-3 border-r border-slate-200 sticky left-[170px] z-40 bg-slate-50 whitespace-nowrap">고객약호</th>
+              <th className="px-4 py-3 border-r border-slate-200 sticky left-[260px] z-40 bg-slate-50">자재</th>
+              <th className="px-4 py-3 border-r-2 border-slate-300 sticky left-[370px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
 
               <th className="px-4 py-3 border-r border-slate-200">생성일</th>
               <th className="px-4 py-3 border-r border-slate-200">원납기일</th>
@@ -259,38 +260,18 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 min-w-[80px]">자사급<br/>구분</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능 수량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
-              <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600 min-w-[100px]">지연<br/>사유</th>
               {isAdmin && <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[120px]">단가</th>}
-              {isAdmin && <th className="px-6 py-3 text-right min-w-[140px]">매출<br/>(단가x잔량)</th>}
+              {isAdmin && <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[140px]">매출<br/>(단가x잔량)</th>}
+              <th className="px-3 py-3 text-center min-w-[150px]">비고</th>
             </tr>
           </thead>
           <tbody className="text-[15px] divide-y divide-slate-100">
-            {/* 전체 합계 */}
-            <tr className="bg-blue-50/50 font-bold text-slate-700">
-              <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-400 sticky left-0 z-10 bg-blue-50">합계</td>
-              <td className="px-4 py-2 border-r border-slate-200 sticky left-[70px] z-10 bg-blue-50"></td>
-              <td className="px-4 py-2 border-r border-slate-200 sticky left-[170px] z-10 bg-blue-50"></td>
-              <td className="px-4 py-2 border-r-2 border-slate-300 sticky left-[280px] z-10 bg-blue-50 text-right">전체 합계</td>
-              <td colSpan={2} className="px-4 py-2 text-right border-r border-slate-200"></td>
-              <td className="px-4 py-2 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
-              <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
-              <td className="px-4 py-2 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-emerald-50/30"></td>
-              <td className="px-4 py-2 text-right border-r border-slate-200 bg-emerald-50/30">{totalRevenuePossibleQty.toLocaleString()}</td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-amber-50/30"></td>
-              <td className="px-4 py-2 border-r border-slate-200 bg-amber-50/30"></td>
-              {isAdmin && <td className="px-4 py-2 border-r border-slate-200"></td>}
-              {isAdmin && <td className="px-4 py-2 text-right">{formatCurrency(totals.revenue)}</td>}
-            </tr>
-
             {filteredItems.map((item) => {
               const row = editData[item.id];
               const rate = getProgressRate(item, editData);
@@ -298,9 +279,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               const color = TIER_COLORS[tier];
 
               return (
-                <tr key={item.id} className="hover:brightness-95 transition-colors" style={{ backgroundColor: color.bg }}>
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                   {/* 중요도 컬럼 - 드롭다운 (고정) */}
-                  <td className="px-2 py-2 border-r border-slate-100/60 text-center sticky left-0 z-10" style={{ backgroundColor: color.bg }}>
+                  <td className="px-2 py-2 border-r border-slate-100/60 text-center sticky left-0 z-20 bg-white" style={{ backgroundColor: color.bg }}>
                     <select
                       className={cn(inputClass, "text-center appearance-none cursor-pointer font-bold text-[14px]")}
                       style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
@@ -313,10 +294,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       <option value="하">하</option>
                     </select>
                   </td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600 sticky left-[70px] z-10" style={{ backgroundColor: color.bg }}>{item.cisManager}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700 sticky left-[170px] z-10" style={{ backgroundColor: color.bg }}>{item.materialCode}</td>
-                  <td className="px-4 py-4 border-r-2 border-slate-300 sticky left-[280px] z-10" style={{ backgroundColor: color.bg }}>
-                    <div className="min-w-[200px] font-medium text-slate-800">{item.itemName}</div>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500 sticky left-[70px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500 sticky left-[170px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500 sticky left-[260px] z-20 bg-white">{item.materialCode}</td>
+                  <td className="px-4 py-4 border-r-2 border-slate-300 sticky left-[370px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+                    <div className="min-w-[200px] text-slate-500">{item.itemName}</div>
                   </td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.createdDate)}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.originalDueDate)}</td>
@@ -338,6 +320,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
                     <input type="text" placeholder="직접입력" className={inputClass} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
+                  </td>
+                  <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20 text-center text-slate-500">
+                    {item.materialSource}
+                  </td>
+                  <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20 text-center">
                     <select
@@ -380,11 +368,41 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                     </select>
                   </td>
                   {isAdmin && <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>}
-                  {isAdmin && <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>}
+                  {isAdmin && <td className="px-4 py-4 border-r border-slate-100/60 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>}
+                  <td className="px-2 py-2">
+                    <input type="text" placeholder="직접입력" className={inputClass} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} />
+                  </td>
                 </tr>
               );
             })}
           </tbody>
+          <tfoot className="sticky bottom-0 z-25 border-t-2 border-slate-300">
+            <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
+              <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sticky left-0 z-20 bg-slate-100">합계</td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[70px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[170px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[260px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[370px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
+              <td colSpan={2} className="px-4 py-3 text-right border-r border-slate-200"></td>
+              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
+              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
+              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 text-right border-r border-slate-200">{totalRevenuePossibleQty.toLocaleString()}</td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {isAdmin && <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrency(totals.revenue)}</td>}
+              <td className="px-4 py-3"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
