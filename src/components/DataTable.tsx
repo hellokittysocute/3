@@ -85,8 +85,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '원납기일': item.originalDueDate,
         '변경납기일': item.changedDueDate,
         '변경납기월': item.dueMonth,
-        '환산수량': item.totalQuantity,
         '총오더수량': item.orderQuantity,
+        '환산수량': item.totalQuantity,
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
         '부자재 자급/사급': item.materialSource,
@@ -252,8 +252,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-4 py-3 border-r border-slate-200">생성일</th>
               <th className="px-4 py-3 border-r border-slate-200">원납기일</th>
               <th className="px-4 py-3 border-r border-slate-200">변경납기일</th>
-              <th className="px-4 py-3 border-r border-slate-200 text-right">총오더수량</th>
               <th className="px-4 py-3 border-r border-slate-200 text-right">환산수량</th>
+              <th className="px-4 py-3 border-r border-slate-200 text-right">총오더수량</th>
               <th className="px-4 py-3 border-r border-slate-200 text-right">미납잔량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">자재</th>
@@ -273,8 +273,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             <tr className="bg-blue-50/50 font-bold text-slate-700">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-400">합계</td>
               <td colSpan={5} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
-              <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
+              <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-indigo-50/30"></td>
@@ -319,8 +319,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.createdDate)}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.originalDueDate)}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.changedDueDate)}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-600">{item.orderQuantity.toLocaleString()}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-600">{item.totalQuantity.toLocaleString()}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-600">{item.orderQuantity.toLocaleString()}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-right font-bold text-slate-900">{item.remainingQuantity.toLocaleString()}</td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
                     <input type="text" placeholder="직접입력" className={inputClass} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
