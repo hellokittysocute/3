@@ -314,7 +314,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.cisManager}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700">{item.materialCode}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60">
-                    <div className="max-w-[300px] truncate font-medium text-slate-800" title={item.itemName}>{item.itemName}</div>
+                    <div className="min-w-[200px] font-medium text-slate-800">{item.itemName}</div>
                   </td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.createdDate)}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.originalDueDate)}</td>
