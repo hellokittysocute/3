@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { Save, Check, Download } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
@@ -50,6 +51,128 @@ const TIER_COLORS = {
   '중': { dot: '#d4880a', bg: 'rgba(212,136,10,0.08)', text: '#d4880a', border: '#d4880a' },
   '하': { dot: '#16a34a', bg: 'rgba(22,163,74,0.08)', text: '#16a34a', border: '#16a34a' },
 };
+
+const INPUT_CLASS = "w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all";
+
+// 메모이즈된 행 컴포넌트
+interface TableRowProps {
+  item: DashboardItem;
+  row: EditableData | undefined;
+  tier: '상' | '중' | '하';
+  color: typeof TIER_COLORS['상'];
+  rate: number;
+  isAdmin?: boolean;
+  onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
+}
+
+const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, onUpdateField }) => {
+  return (
+    <>
+      {/* 중요도 컬럼 - 드롭다운 (고정) */}
+      <td className="px-1 py-1 border-r border-slate-100/60 text-center sticky left-0 z-20 bg-white" style={{ backgroundColor: color.bg }}>
+        <select
+          className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer font-bold text-[13px]")}
+          style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
+          value={row?.importance || ''}
+          onChange={(e) => onUpdateField(item.id, 'importance', e.target.value)}
+        >
+          <option value="">선택</option>
+          <option value="상">상</option>
+          <option value="중">중</option>
+          <option value="하">하</option>
+        </select>
+      </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[50px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[120px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[190px] z-20 bg-white">{item.materialCode}</td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[270px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+        <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
+      </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.originalDueDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.changedDueDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20 text-center">
+        <select
+          className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]")}
+          value={item.materialSource}
+          onChange={(e) => onUpdateField(item.id, 'materialSource' as any, e.target.value)}
+        >
+          <option value="">선택</option>
+          <option value="자급">자급</option>
+          <option value="사급">사급</option>
+        </select>
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20 text-center">
+        <select
+          className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]",
+            row?.revenuePossible === '가능' && "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold",
+            row?.revenuePossible === '확인중' && "bg-amber-50 text-amber-700 border-amber-300 font-bold",
+            row?.revenuePossible === '불가능' && "bg-rose-50 text-rose-700 border-rose-300 font-bold",
+          )}
+          value={row?.revenuePossible || '확인중'}
+          onChange={(e) => onUpdateField(item.id, 'revenuePossible', e.target.value)}
+        >
+          <option value="">선택</option>
+          <option value="가능">가능</option>
+          <option value="확인중">확인중</option>
+          <option value="불가능">불가능</option>
+        </select>
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
+        <input type="number" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ?? item.remainingQuantity} min={0} onChange={(e) => onUpdateField(item.id, 'revenuePossibleQuantity', Number(e.target.value))} />
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
+        <span className="text-[13px] font-bold" style={{ color: color.text }}>
+          {rate.toFixed(1)}%
+        </span>
+      </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
+        <select
+          className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]",
+            row?.delayReason && "font-bold text-amber-700 bg-amber-50 border-amber-300",
+          )}
+          value={row?.delayReason ?? ''}
+          onChange={(e) => onUpdateField(item.id, 'delayReason', e.target.value)}
+        >
+          <option value="">선택</option>
+          <option value="구매">구매</option>
+          <option value="품질">품질</option>
+          <option value="연구소">연구소</option>
+          <option value="물류">물류</option>
+          <option value="영업">영업</option>
+        </select>
+      </td>
+      {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
+      {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrency(getRevenue(item))}</td>}
+      <td className="px-1 py-1">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} />
+      </td>
+    </>
+  );
+});
+
+const ROW_HEIGHT = 40;
 
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
@@ -138,8 +261,6 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     return filteredItems.reduce((sum, item) => sum + (editData[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity), 0);
   }, [filteredItems, editData]);
 
-  const inputClass = "w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all";
-
   const tabs: { key: Tier; label: string; emoji?: string }[] = [
     { key: '전체', label: '전체' },
     { key: '상', label: '상', emoji: '🔴' },
@@ -162,6 +283,14 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     tableEl.addEventListener('scroll', onTableScroll);
     return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); };
   }, []);
+
+  // 가상화 설정
+  const rowVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => tableScrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
 
   return (
     <div>
@@ -271,118 +400,45 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-1 py-2 text-center">비고</th>
             </tr>
           </thead>
-          <tbody className="text-[15px] divide-y divide-slate-100">
-            {filteredItems.map((item) => {
+          <tbody className="text-[15px]">
+            {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
+                <td colSpan={isAdmin ? 25 : 23} />
+              </tr>
+            )}
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const item = filteredItems[virtualRow.index];
               const row = editData[item.id];
               const rate = getProgressRate(item, editData);
               const tier = getTier(item);
               const color = TIER_COLORS[tier];
 
               return (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  {/* 중요도 컬럼 - 드롭다운 (고정) */}
-                  <td className="px-1 py-1 border-r border-slate-100/60 text-center sticky left-0 z-20 bg-white" style={{ backgroundColor: color.bg }}>
-                    <select
-                      className={cn(inputClass, "text-center appearance-none cursor-pointer font-bold text-[13px]")}
-                      style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
-                      value={row?.importance || ''}
-                      onChange={(e) => onUpdateField(item.id, 'importance', e.target.value)}
-                    >
-                      <option value="">선택</option>
-                      <option value="상">상</option>
-                      <option value="중">중</option>
-                      <option value="하">하</option>
-                    </select>
-                  </td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[50px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[120px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[190px] z-20 bg-white">{item.materialCode}</td>
-                  <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[270px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
-                    <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
-                  </td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.originalDueDate)}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.changedDueDate)}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
-                  <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20 text-center">
-                    <select
-                      className={cn(inputClass, "text-center appearance-none cursor-pointer text-[13px]")}
-                      value={item.materialSource}
-                      onChange={(e) => onUpdateField(item.id, 'materialSource' as any, e.target.value)}
-                    >
-                      <option value="">선택</option>
-                      <option value="자급">자급</option>
-                      <option value="사급">사급</option>
-                    </select>
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20 text-center">
-                    <select
-                      className={cn(inputClass, "text-center appearance-none cursor-pointer text-[13px]",
-                        row?.revenuePossible === '가능' && "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold",
-                        row?.revenuePossible === '확인중' && "bg-amber-50 text-amber-700 border-amber-300 font-bold",
-                        row?.revenuePossible === '불가능' && "bg-rose-50 text-rose-700 border-rose-300 font-bold",
-                      )}
-                      value={row?.revenuePossible || '확인중'}
-                      onChange={(e) => onUpdateField(item.id, 'revenuePossible', e.target.value)}
-                    >
-                      <option value="">선택</option>
-                      <option value="가능">가능</option>
-                      <option value="확인중">확인중</option>
-                      <option value="불가능">불가능</option>
-                    </select>
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
-                    <input type="number" className={cn(inputClass, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ?? item.remainingQuantity} min={0} onChange={(e) => onUpdateField(item.id, 'revenuePossibleQuantity', Number(e.target.value))} />
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
-                    <span className="text-[13px] font-bold" style={{ color: color.text }}>
-                      {rate.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
-                    <select
-                      className={cn(inputClass, "text-center appearance-none cursor-pointer text-[13px]",
-                        row?.delayReason && "font-bold text-amber-700 bg-amber-50 border-amber-300",
-                      )}
-                      value={row?.delayReason ?? ''}
-                      onChange={(e) => onUpdateField(item.id, 'delayReason', e.target.value)}
-                    >
-                      <option value="">선택</option>
-                      <option value="구매">구매</option>
-                      <option value="품질">품질</option>
-                      <option value="연구소">연구소</option>
-                      <option value="물류">물류</option>
-                      <option value="영업">영업</option>
-                    </select>
-                  </td>
-                  {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
-                  {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrency(getRevenue(item))}</td>}
-                  <td className="px-1 py-1">
-                    <input type="text" placeholder="입력" className={cn(inputClass, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} />
-                  </td>
+                <tr
+                  key={item.id}
+                  data-index={virtualRow.index}
+                  className="hover:bg-slate-50 transition-colors border-b border-slate-100"
+                  style={{ height: ROW_HEIGHT }}
+                >
+                  <TableRow
+                    item={item}
+                    row={row}
+                    tier={tier}
+                    color={color}
+                    rate={rate}
+                    isAdmin={isAdmin}
+                    onUpdateField={onUpdateField}
+                  />
                 </tr>
               );
             })}
+            {/* 가상화: 하단 패딩 */}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
+                <td colSpan={isAdmin ? 25 : 23} />
+              </tr>
+            )}
           </tbody>
           <tfoot className="sticky bottom-0 z-25 border-t-2 border-slate-300">
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
