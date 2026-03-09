@@ -21,6 +21,7 @@ interface DataTableProps {
   onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
   onSave: () => void;
   saveStatus: 'idle' | 'saved' | 'loading';
+  isAdmin?: boolean;
 }
 
 type Tier = '전체' | '상' | '중' | '하';
@@ -50,7 +51,7 @@ const TIER_COLORS = {
   '하': { dot: '#16a34a', bg: 'rgba(22,163,74,0.08)', text: '#16a34a', border: '#16a34a' },
 };
 
-export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus }) => {
+export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
@@ -244,6 +245,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             <tr className="text-[14px] font-bold text-slate-500 uppercase tracking-tight">
               <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px]">중요도</th>
 
+              <th className="px-4 py-3 border-r border-slate-200">CIS담당</th>
               <th className="px-4 py-3 border-r border-slate-200">자재</th>
               <th className="px-4 py-3 border-r border-slate-200">내역</th>
 
@@ -261,16 +263,16 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능 수량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</th>
-              <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[120px]">단가</th>
-              <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[140px]">매출<br/>(단가x잔량)</th>
-              <th className="px-3 py-3 text-center min-w-[100px]">관리구분</th>
+              <th className="px-4 py-3 border-r border-slate-200">생산처</th>
+              {isAdmin && <th className="px-6 py-3 border-r border-slate-200 text-right min-w-[120px]">단가</th>}
+              {isAdmin && <th className="px-6 py-3 text-right min-w-[140px]">매출<br/>(단가x잔량)</th>}
             </tr>
           </thead>
           <tbody className="text-[15px] divide-y divide-slate-100">
             {/* 전체 합계 */}
             <tr className="bg-blue-50/50 font-bold text-slate-700">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-400">합계</td>
-              <td colSpan={4} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
+              <td colSpan={5} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
@@ -283,7 +285,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-2 border-r border-slate-200 bg-amber-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200 bg-amber-50/30"></td>
               <td className="px-4 py-2 border-r border-slate-200"></td>
-              <td className="px-4 py-2 text-right">{formatCurrency(totals.revenue)}</td>
+              {isAdmin && <td className="px-4 py-2 border-r border-slate-200"></td>}
+              {isAdmin && <td className="px-4 py-2 text-right">{formatCurrency(totals.revenue)}</td>}
             </tr>
 
             {filteredItems.map((item) => {
@@ -308,6 +311,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       <option value="하">하</option>
                     </select>
                   </td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.cisManager}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700">{item.materialCode}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60">
                     <div className="max-w-[300px] truncate font-medium text-slate-800" title={item.itemName}>{item.itemName}</div>
@@ -370,16 +374,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       <option value="영업">영업</option>
                     </select>
                   </td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>
-                  <td className="px-3 py-4 text-center">
-                    <span className={cn(
-                      "text-[12px] font-bold px-2 py-1 rounded-full",
-                      item.managementType === '중점관리품목' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                    )}>
-                      {item.managementType === '중점관리품목' ? '중점관리' : '자재조정'}
-                    </span>
-                  </td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.productionSite}</td>
+                  {isAdmin && <td className="px-4 py-4 border-r border-slate-100/60 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>}
+                  {isAdmin && <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(getRevenue(item))}</td>}
                 </tr>
               );
             })}

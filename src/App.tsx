@@ -793,7 +793,7 @@ export default function App() {
             </div>
 
             <div className="bg-white overflow-hidden">
-              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} />
+              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} isAdmin={isAdmin} />
             </div>
           </div>
         )}
