@@ -47,7 +47,7 @@ export default function App() {
             dashboardItems.forEach(item => {
               merged[item.id] = editDataFromDb[item.id] || {
                 productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-                revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
+                revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
               };
             });
             return merged;
@@ -69,7 +69,7 @@ export default function App() {
     items.forEach(item => {
       initial[item.id] = {
         productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-        revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
+        revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
       };
     });
     return initial;
@@ -104,7 +104,7 @@ export default function App() {
       dashboardItems.forEach(item => {
         merged[item.id] = editDataFromDb[item.id] || {
           productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-          revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
+          revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '',
         };
       });
       setEditData(merged);
@@ -634,28 +634,10 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in duration-700">
             {/* Hero Header */}
             {(() => {
-              // 중요도: editData.importance 수동값 우선, 없으면 매출 기준 자동 분류
-              const autoTier = (() => {
-                const sorted = [...filteredItems].sort((a, b) => getRevenue(b) - getRevenue(a));
-                const top40 = Math.ceil(sorted.length * 0.4);
-                const top70 = Math.ceil(sorted.length * 0.7);
-                const map: Record<string, '상' | '중' | '하'> = {};
-                sorted.forEach((item, idx) => {
-                  if (idx < top40) map[item.id] = '상';
-                  else if (idx < top70) map[item.id] = '중';
-                  else map[item.id] = '하';
-                });
-                return map;
-              })();
-              const getItemTier = (item: DashboardItem): '상' | '중' | '하' => {
-                const manual = editData[item.id]?.importance;
-                if (manual === '상' || manual === '중' || manual === '하') return manual;
-                return autoTier[item.id];
-              };
               const getRate = (item: DashboardItem) => item.totalQuantity > 0 ? (item.orderQuantity / item.totalQuantity) * 100 : 0;
-              const sangItems = filteredItems.filter(i => getItemTier(i) === '상');
-              const jungItems = filteredItems.filter(i => getItemTier(i) === '중');
-              const haItems = filteredItems.filter(i => getItemTier(i) === '하');
+              const sangItems = filteredItems.filter(i => getRate(i) < 50);
+              const jungItems = filteredItems.filter(i => getRate(i) >= 50 && getRate(i) < 80);
+              const haItems = filteredItems.filter(i => getRate(i) >= 80);
               const avgRate = (arr: DashboardItem[]) => arr.length > 0 ? arr.reduce((s, i) => s + getRate(i), 0) / arr.length : 0;
               const totalRate = filteredItems.length > 0
                 ? (filteredItems.reduce((s, i) => s + i.orderQuantity, 0) / filteredItems.reduce((s, i) => s + i.totalQuantity, 0)) * 100

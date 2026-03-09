@@ -52,25 +52,18 @@ const TIER_COLORS = {
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
 
-  const autoTierMap = useMemo(() => buildTierMap(items), [items]);
-
-  // 수동 설정된 importance 우선, 없으면 자동 계산값 사용
-  const getTier = useCallback((item: DashboardItem): '상' | '중' | '하' => {
-    const manual = editData[item.id]?.importance;
-    if (manual === '상' || manual === '중' || manual === '하') return manual;
-    return autoTierMap[item.id];
-  }, [editData, autoTierMap]);
+  const tierMap = useMemo(() => buildTierMap(items), [items]);
 
   const tierCounts = useMemo(() => {
     const counts = { '상': 0, '중': 0, '하': 0 };
-    items.forEach(item => { counts[getTier(item)]++; });
+    items.forEach(item => { counts[tierMap[item.id]]++; });
     return counts;
-  }, [items, getTier]);
+  }, [items, tierMap]);
 
   const filteredItems = useMemo(() => {
     if (activeTier === '전체') return items;
-    return items.filter(item => getTier(item) === activeTier);
-  }, [items, getTier, activeTier]);
+    return items.filter(item => tierMap[item.id] === activeTier);
+  }, [items, tierMap, activeTier]);
 
   const totals = useMemo(() => {
     return filteredItems.reduce((acc, item) => ({
@@ -169,12 +162,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
       {/* 기준 안내 */}
       <div className="px-8 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4 text-[13px] text-slate-400 font-medium">
-        <span>중요도 기준 (기본: 매출 기준 자동분류):</span>
+        <span>중요도 기준:</span>
         <span className="flex items-center gap-1"><span style={{ color: '#e8354a' }}>●</span> 상: 상위 40%</span>
         <span className="flex items-center gap-1"><span style={{ color: '#d4880a' }}>●</span> 중: 중간 30%</span>
         <span className="flex items-center gap-1"><span style={{ color: '#16a34a' }}>●</span> 하: 하위 30%</span>
-        <span className="text-slate-300">|</span>
-        <span>버튼 클릭으로 수동 변경 가능 (다시 클릭 시 자동 복원)</span>
       </div>
 
       {/* 상단 스크롤바 */}
@@ -186,7 +177,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <table className="w-full text-left border-collapse min-w-[2800px]">
           <thead className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-20 backdrop-blur-md">
             <tr className="text-[14px] font-bold text-slate-500 uppercase tracking-tight">
-              <th className="px-3 py-3 border-r border-slate-200 text-center w-[80px]">중요도</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px]">중요도</th>
 
               <th className="px-4 py-3 border-r border-slate-200">자재</th>
               <th className="px-4 py-3 border-r border-slate-200">내역</th>
@@ -233,36 +224,20 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {filteredItems.map((item) => {
               const row = editData[item.id];
               const rate = getProgressRate(item, editData);
-              const tier = getTier(item);
+              const tier = tierMap[item.id];
               const color = TIER_COLORS[tier];
-              const isManual = !!editData[item.id]?.importance;
 
               return (
                 <tr key={item.id} className="hover:brightness-95 transition-colors" style={{ backgroundColor: color.bg }}>
-                  {/* 중요도 컬럼 - 클릭으로 변경 */}
-                  <td className="px-1.5 py-2 border-r border-slate-100/60 text-center">
-                    <div className="flex flex-col gap-0.5">
-                      {(['상', '중', '하'] as const).map(t => {
-                        const tc = TIER_COLORS[t];
-                        const isSelected = tier === t;
-                        return (
-                          <button
-                            key={t}
-                            onClick={() => onUpdateField(item.id, 'importance', isSelected && isManual ? '' : t)}
-                            className={cn(
-                              "px-2 py-0.5 rounded text-[12px] font-bold transition-all",
-                              isSelected
-                                ? "text-white shadow-sm"
-                                : "text-slate-300 hover:opacity-80",
-                            )}
-                            style={isSelected ? { backgroundColor: tc.dot } : { backgroundColor: 'transparent' }}
-                            title={isSelected && isManual ? '클릭하면 자동으로 복원' : `${t}으로 변경`}
-                          >
-                            {t}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  {/* 중요도 컬럼 */}
+                  <td className="px-3 py-4 border-r border-slate-100/60 text-center">
+                    <span
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[14px] font-bold"
+                      style={{ color: color.text, backgroundColor: `${color.dot}15`, border: `1px solid ${color.dot}30` }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color.dot }} />
+                      {tier}
+                    </span>
                   </td>
                   <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700">{item.materialCode}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60">
