@@ -53,18 +53,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).then(p => {
-          setProfile(p);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
+    let mounted = true;
+
+    async function init() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const p = await fetchProfile(session.user.id);
+          if (mounted) setProfile(p);
+        }
+      } catch (err) {
+        console.error('세션 초기화 오류:', err);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    });
+    }
+
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -80,7 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {

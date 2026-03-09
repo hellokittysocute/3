@@ -20,21 +20,6 @@ type TabId = 'summary' | 'priority' | 'material' | 'details' | 'admin-users' | '
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isActive, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('summary');
-
-  // 인증 가드
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">인증 확인 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) return <LoginPage />;
-  if (!isActive) return <InactivePage />;
   const [detailView, setDetailView] = useState<'kanban' | 'table'>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [delayReasonFilter, setDelayReasonFilter] = useState('');
@@ -237,6 +222,21 @@ export default function App() {
     { date: '03/02', rate: 18.5 },
     { date: '03/03', rate: 24.1 },
   ];
+
+  // 인증 가드
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
+          <p className="text-slate-500 font-medium">인증 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginPage />;
+  if (!isActive) return <InactivePage />;
 
   if (loading) {
     return (
