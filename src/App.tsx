@@ -15,7 +15,7 @@ import { useAuth } from './contexts/AuthContext';
 import { cn, formatCurrency } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-type TabId = 'summary' | 'priority' | 'material' | 'details' | 'admin-users' | 'admin-upload';
+type TabId = 'summary' | 'details' | 'admin-users' | 'admin-upload';
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isActive, signOut } = useAuth();
@@ -318,8 +318,6 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto px-8 flex gap-10">
           {[
             { id: 'summary', label: '종합현황', icon: LayoutDashboard },
-            { id: 'priority', label: '중점관리품목', icon: Package },
-            { id: 'material', label: '자재조정필요', icon: AlertTriangle },
             { id: 'details', label: '상세데이터', icon: List },
             ...(isAdmin ? [
               { id: 'admin-users', label: '회원관리', icon: Users },
@@ -531,101 +529,6 @@ export default function App() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'priority' && (
-          <div className="space-y-6">
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard title="전체 관리대상" value={stats.priority.totalRevenue} count={stats.priority.totalCount} type="target" subText={`${stats.priority.totalCount}건`} delay={0} />
-                <KPICard title="가능" value={stats.priority.possibleRevenue} count={stats.priority.possibleCount} type="possible" delay={100} />
-                <KPICard title="확인중" value={stats.priority.checkingRevenue} count={stats.priority.checkingCount} type="checking" delay={200} />
-                <KPICard title="불가능" value={stats.priority.impossibleRevenue} count={stats.priority.impossibleCount} type="impossible" delay={300} />
-             </div>
-
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-white p-6 pb-20 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <StackedBarChart title="고객사별 진도율 (TOP 10)" data={customerChartData} />
-                </div>
-                <div className="bg-white p-6 pb-20 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <StackedBarChart title="마케팅팀별 진도율" data={teamChartData} />
-                </div>
-             </div>
-          </div>
-        )}
-
-        {activeTab === 'material' && (
-          <div className="space-y-6">
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard title="전체 관리대상" value={stats.material.totalRevenue} count={stats.material.totalCount} type="target" subText={`${stats.material.totalCount}건`} delay={0} />
-                <KPICard title="가능" value={stats.material.possibleRevenue} count={stats.material.possibleCount} type="possible" delay={100} />
-                <KPICard title="확인중" value={stats.material.checkingRevenue} count={stats.material.checkingCount} type="checking" delay={200} />
-                <KPICard title="불가능" value={stats.material.impossibleRevenue} count={stats.material.impossibleCount} type="impossible" delay={300} />
-             </div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-[18px] font-bold text-gray-900">고객사별 자재조정 현황</h3>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                    <span className="text-[13px] font-black uppercase tracking-widest text-slate-400">가능</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                    <span className="text-[13px] font-black uppercase tracking-widest text-slate-400">확인중</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-                    <span className="text-[13px] font-black uppercase tracking-widest text-slate-400">불가능</span>
-                  </div>
-                </div>
-              </div>
-              {(() => {
-                const chartData = materialCustomerData
-                  .map(c => {
-                    const allItems = c.products.flatMap(p => p.items);
-                    return {
-                      name: c.customerCode,
-                      가능: allItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
-                      확인중: allItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
-                      불가능: allItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
-                    };
-                  })
-                  .sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능))
-                  .slice(0, 10);
-                const chartHeight = Math.max(300, chartData.length * 40 + 60);
-
-                return (
-                  <div style={{ height: chartHeight }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        layout="vertical"
-                        data={chartData}
-                        margin={{ top: 0, right: 30, left: 10, bottom: 0 }}
-                        barSize={16}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                        <YAxis
-                          dataKey="name"
-                          type="category"
-                          width={60}
-                          tick={{ fontSize: 12, fontWeight: 800, fill: '#334155' }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(value: number) => formatCurrency(value)} contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', padding: '8px 12px' }} itemStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                        <Bar dataKey="가능" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="확인중" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="불가능" stackId="a" fill="#F43F5E" radius={[0, 10, 10, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         )}
