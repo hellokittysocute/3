@@ -47,7 +47,7 @@ export default function App() {
             dashboardItems.forEach(item => {
               merged[item.id] = editDataFromDb[item.id] || {
                 productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-                revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
+                revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
               };
             });
             return merged;
@@ -69,7 +69,7 @@ export default function App() {
     items.forEach(item => {
       initial[item.id] = {
         productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-        revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
+        revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
       };
     });
     return initial;
@@ -104,7 +104,7 @@ export default function App() {
       dashboardItems.forEach(item => {
         merged[item.id] = editDataFromDb[item.id] || {
           productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-          revenuePossible: '', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
+          revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
         };
       });
       setEditData(merged);
