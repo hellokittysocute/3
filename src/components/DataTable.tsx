@@ -52,18 +52,25 @@ const TIER_COLORS = {
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
 
-  const tierMap = useMemo(() => buildTierMap(items), [items]);
+  const autoTierMap = useMemo(() => buildTierMap(items), [items]);
+
+  // 수동 importance 우선, 없으면 자동 계산값
+  const getTier = useCallback((item: DashboardItem): '상' | '중' | '하' => {
+    const manual = editData[item.id]?.importance;
+    if (manual === '상' || manual === '중' || manual === '하') return manual;
+    return autoTierMap[item.id];
+  }, [editData, autoTierMap]);
 
   const tierCounts = useMemo(() => {
     const counts = { '상': 0, '중': 0, '하': 0 };
-    items.forEach(item => { counts[tierMap[item.id]]++; });
+    items.forEach(item => { counts[getTier(item)]++; });
     return counts;
-  }, [items, tierMap]);
+  }, [items, getTier]);
 
   const filteredItems = useMemo(() => {
     if (activeTier === '전체') return items;
-    return items.filter(item => tierMap[item.id] === activeTier);
-  }, [items, tierMap, activeTier]);
+    return items.filter(item => getTier(item) === activeTier);
+  }, [items, getTier, activeTier]);
 
   const totals = useMemo(() => {
     return filteredItems.reduce((acc, item) => ({
@@ -224,20 +231,24 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {filteredItems.map((item) => {
               const row = editData[item.id];
               const rate = getProgressRate(item, editData);
-              const tier = tierMap[item.id];
+              const tier = getTier(item);
               const color = TIER_COLORS[tier];
 
               return (
                 <tr key={item.id} className="hover:brightness-95 transition-colors" style={{ backgroundColor: color.bg }}>
-                  {/* 중요도 컬럼 */}
-                  <td className="px-3 py-4 border-r border-slate-100/60 text-center">
-                    <span
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[14px] font-bold"
-                      style={{ color: color.text, backgroundColor: `${color.dot}15`, border: `1px solid ${color.dot}30` }}
+                  {/* 중요도 컬럼 - 드롭다운 */}
+                  <td className="px-2 py-2 border-r border-slate-100/60 text-center">
+                    <select
+                      className={cn(inputClass, "text-center appearance-none cursor-pointer font-bold text-[14px]")}
+                      style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
+                      value={row?.importance || ''}
+                      onChange={(e) => onUpdateField(item.id, 'importance', e.target.value)}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color.dot }} />
-                      {tier}
-                    </span>
+                      <option value="">자동({autoTierMap[item.id]})</option>
+                      <option value="상">상</option>
+                      <option value="중">중</option>
+                      <option value="하">하</option>
+                    </select>
                   </td>
                   <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700">{item.materialCode}</td>
                   <td className="px-4 py-4 border-r border-slate-100/60">

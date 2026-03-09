@@ -51,6 +51,7 @@ export interface EditableData {
   revenuePossible: '가능' | '확인중' | '불가능' | '';
   revenuePossibleQuantity: number;
   delayReason: string;
+  importance: '상' | '중' | '하' | '';
 }
 
 export interface SummaryStats {

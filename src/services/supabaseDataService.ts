@@ -63,6 +63,7 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
     revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '',
     revenuePossibleQuantity: Number(row.revenue_possible_quantity) || 0,
     delayReason: (row.delay_reason as string) || '',
+    importance: (row.importance as '상' | '중' | '하' | '') || '',
   };
 }
 
@@ -113,6 +114,7 @@ export async function updateEditData(itemId: string, editableData: EditableData)
       revenue_possible: editableData.revenuePossible,
       revenue_possible_quantity: editableData.revenuePossibleQuantity,
       delay_reason: editableData.delayReason,
+      importance: editableData.importance,
       updated_at: new Date().toISOString(),
     });
 
@@ -132,6 +134,7 @@ export async function saveAllEditData(allData: Record<string, EditableData>): Pr
     revenue_possible: d.revenuePossible,
     revenue_possible_quantity: d.revenuePossibleQuantity,
     delay_reason: d.delayReason,
+    importance: d.importance,
     updated_at: new Date().toISOString(),
   }));
 
