@@ -262,7 +262,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 min-w-[80px]">자사급<br/>구분</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
-              <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 min-w-[100px]">매출<br/>가능여부</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능 수량</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
               <th className="px-3 py-3 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600 min-w-[100px]">지연<br/>사유</th>
@@ -335,9 +335,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
                     <input type="text" placeholder="직접입력" className={inputClass} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
                   </td>
-                  <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20 text-center">
+                  <td className="px-2 py-2 border-r border-slate-100/60 bg-emerald-50/20 text-center min-w-[100px]">
                     <select
-                      className={cn(inputClass, "text-center appearance-none cursor-pointer",
+                      className={cn(inputClass, "text-center appearance-none cursor-pointer w-full min-w-[90px]",
                         row?.revenuePossible === '가능' && "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold",
                         row?.revenuePossible === '확인중' && "bg-amber-50 text-amber-700 border-amber-300 font-bold",
                         row?.revenuePossible === '불가능' && "bg-rose-50 text-rose-700 border-rose-300 font-bold",
