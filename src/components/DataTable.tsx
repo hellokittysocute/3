@@ -321,8 +321,16 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
                     <input type="text" placeholder="직접입력" className={inputClass} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
                   </td>
-                  <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20 text-center text-slate-500">
-                    {item.materialSource}
+                  <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20 text-center">
+                    <select
+                      className={cn(inputClass, "text-center appearance-none cursor-pointer")}
+                      value={item.materialSource}
+                      onChange={(e) => onUpdateField(item.id, 'materialSource' as any, e.target.value)}
+                    >
+                      <option value="">선택</option>
+                      <option value="자급">자급</option>
+                      <option value="사급">사급</option>
+                    </select>
                   </td>
                   <td className="px-2 py-2 border-r border-slate-100/60 bg-indigo-50/20">
                     <input type="text" placeholder="직접입력" className={inputClass} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
