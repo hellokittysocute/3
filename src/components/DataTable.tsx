@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
-import { Save, Check } from 'lucide-react';
+import { Save, Check, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
 import { formatCurrency, cn } from '../lib/utils';
@@ -60,6 +61,55 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     if (manual === '상' || manual === '중' || manual === '하') return manual;
     return autoTierMap[item.id];
   }, [editData, autoTierMap]);
+
+  const handleExcelDownload = useCallback(() => {
+    const rows = items.map((item) => {
+      const row = editData[item.id];
+      const tier = getTier(item);
+      const rate = item.remainingQuantity > 0
+        ? ((row?.revenuePossibleQuantity ?? item.remainingQuantity) / item.remainingQuantity) * 100
+        : 0;
+
+      return {
+        '중요도': tier,
+        '자재코드': item.materialCode,
+        '내역': item.itemName,
+        'CIS담당': item.cisManager,
+        '중분류명': item.category,
+        '고객약호': item.customerCode,
+        '판매처이름': item.customerName,
+        '영업팀명': item.teamName,
+        '영업담당자명': item.salesManager,
+        '생성일': item.createdDate,
+        '원납기일': item.originalDueDate,
+        '변경납기일': item.changedDueDate,
+        '변경납기월': item.dueMonth,
+        '환산수량': item.totalQuantity,
+        '총오더수량': item.orderQuantity,
+        '납품수량': item.deliveredQuantity,
+        '미납잔량': item.remainingQuantity,
+        '부자재 자급/사급': item.materialSource,
+        '생산완료 요청일': row?.productionCompleteDate ?? '',
+        '자재(일정)': row?.materialSettingDate ?? '',
+        '제조': row?.manufacturingDate ?? '',
+        '충포장': row?.packagingDate ?? '',
+        '매출 가능여부': row?.revenuePossible ?? '',
+        '매출 가능 수량': row?.revenuePossibleQuantity ?? item.remainingQuantity,
+        '진도율(%)': Number(rate.toFixed(1)),
+        '지연사유': row?.delayReason ?? '',
+        '단가': item.unitPrice,
+        '매출(단가x잔량)': getRevenue(item),
+        '관리구분': item.managementType,
+        '생산처': item.productionSite,
+        '생산리드타임': item.leadTime,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '상세데이터');
+    XLSX.writeFile(wb, `상세데이터_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }, [items, editData, getTier]);
 
   const tierCounts = useMemo(() => {
     const counts = { '상': 0, '중': 0, '하': 0 };
@@ -150,21 +200,29 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           })}
         </div>
 
-        <button
-          onClick={onSave}
-          className={cn(
-            "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg",
-            saveStatus === 'saved'
-              ? "bg-emerald-500 text-white shadow-emerald-200"
-              : "bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200"
-          )}
-        >
-          {saveStatus === 'saved' ? (
-            <><Check className="w-4 h-4" /> 저장 완료</>
-          ) : (
-            <><Save className="w-4 h-4" /> 저장</>
-          )}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExcelDownload}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+          >
+            <Download className="w-4 h-4" /> 다운로드
+          </button>
+          <button
+            onClick={onSave}
+            className={cn(
+              "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg",
+              saveStatus === 'saved'
+                ? "bg-emerald-500 text-white shadow-emerald-200"
+                : "bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200"
+            )}
+          >
+            {saveStatus === 'saved' ? (
+              <><Check className="w-4 h-4" /> 저장 완료</>
+            ) : (
+              <><Save className="w-4 h-4" /> 저장</>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 기준 안내 */}
