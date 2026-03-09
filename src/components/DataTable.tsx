@@ -243,11 +243,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <table className="w-full text-left border-collapse min-w-[2800px]">
           <thead className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-20 backdrop-blur-md">
             <tr className="text-[14px] font-bold text-slate-500 uppercase tracking-tight">
-              <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px]">중요도</th>
-
-              <th className="px-4 py-3 border-r border-slate-200">CIS담당</th>
-              <th className="px-4 py-3 border-r border-slate-200">자재</th>
-              <th className="px-4 py-3 border-r border-slate-200">내역</th>
+              <th className="px-3 py-3 border-r border-slate-200 text-center w-[70px] sticky left-0 z-30 bg-slate-50">중요도</th>
+              <th className="px-4 py-3 border-r border-slate-200 sticky left-[70px] z-30 bg-slate-50">CIS담당</th>
+              <th className="px-4 py-3 border-r border-slate-200 sticky left-[170px] z-30 bg-slate-50">자재</th>
+              <th className="px-4 py-3 border-r-2 border-slate-300 sticky left-[280px] z-30 bg-slate-50">내역</th>
 
               <th className="px-4 py-3 border-r border-slate-200">생성일</th>
               <th className="px-4 py-3 border-r border-slate-200">원납기일</th>
@@ -271,8 +270,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           <tbody className="text-[15px] divide-y divide-slate-100">
             {/* 전체 합계 */}
             <tr className="bg-blue-50/50 font-bold text-slate-700">
-              <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-400">합계</td>
-              <td colSpan={5} className="px-4 py-2 text-right border-r border-slate-200">전체 합계</td>
+              <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-400 sticky left-0 z-10 bg-blue-50">합계</td>
+              <td className="px-4 py-2 border-r border-slate-200 sticky left-[70px] z-10 bg-blue-50"></td>
+              <td className="px-4 py-2 border-r border-slate-200 sticky left-[170px] z-10 bg-blue-50"></td>
+              <td className="px-4 py-2 border-r-2 border-slate-300 sticky left-[280px] z-10 bg-blue-50 text-right">전체 합계</td>
+              <td colSpan={2} className="px-4 py-2 text-right border-r border-slate-200"></td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-2 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
@@ -297,8 +299,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
               return (
                 <tr key={item.id} className="hover:brightness-95 transition-colors" style={{ backgroundColor: color.bg }}>
-                  {/* 중요도 컬럼 - 드롭다운 */}
-                  <td className="px-2 py-2 border-r border-slate-100/60 text-center">
+                  {/* 중요도 컬럼 - 드롭다운 (고정) */}
+                  <td className="px-2 py-2 border-r border-slate-100/60 text-center sticky left-0 z-10" style={{ backgroundColor: color.bg }}>
                     <select
                       className={cn(inputClass, "text-center appearance-none cursor-pointer font-bold text-[14px]")}
                       style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
@@ -311,9 +313,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                       <option value="하">하</option>
                     </select>
                   </td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600">{item.cisManager}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700">{item.materialCode}</td>
-                  <td className="px-4 py-4 border-r border-slate-100/60">
+                  <td className="px-4 py-4 border-r border-slate-100/60 text-slate-600 sticky left-[70px] z-10" style={{ backgroundColor: color.bg }}>{item.cisManager}</td>
+                  <td className="px-4 py-4 border-r border-slate-100/60 font-bold text-slate-700 sticky left-[170px] z-10" style={{ backgroundColor: color.bg }}>{item.materialCode}</td>
+                  <td className="px-4 py-4 border-r-2 border-slate-300 sticky left-[280px] z-10" style={{ backgroundColor: color.bg }}>
                     <div className="min-w-[200px] font-medium text-slate-800">{item.itemName}</div>
                   </td>
                   <td className="px-4 py-4 border-r border-slate-100/60 text-slate-500">{formatDateShort(item.createdDate)}</td>
