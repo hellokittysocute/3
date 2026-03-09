@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const profileFetchRef = useRef<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -55,41 +56,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    async function init() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const p = await fetchProfile(session.user.id);
-          if (mounted) setProfile(p);
-        }
-      } catch (err) {
-        console.error('세션 초기화 오류:', err);
-      } finally {
-        if (mounted) setLoading(false);
+    // 안전장치: 8초 내 초기화 안 되면 강제로 loading 해제
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Auth 초기화 타임아웃 - 로그인 페이지로 이동');
+        setLoading(false);
       }
-    }
+    }, 8000);
 
-    init();
-
+    // onAuthStateChange만 사용 (getSession 별도 호출하지 않음)
+    // INITIAL_SESSION 이벤트로 초기 세션 수신
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const p = await fetchProfile(session.user.id);
-          setProfile(p);
+      (event, newSession) => {
+        if (!mounted) return;
+
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
+          // 프로필 fetch는 콜백 밖에서 비동기로 처리 (데드락 방지)
+          const userId = newSession.user.id;
+          if (profileFetchRef.current !== userId) {
+            profileFetchRef.current = userId;
+            fetchProfile(userId).then((p) => {
+              if (mounted) {
+                setProfile(p);
+                setLoading(false);
+              }
+            });
+          } else {
+            setLoading(false);
+          }
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -105,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    profileFetchRef.current = null;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
