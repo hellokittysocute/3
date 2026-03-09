@@ -649,12 +649,6 @@ export default function App() {
                 { label: '중', count: jungItems.length, color: '#fbbf24' },
                 { label: '하', count: haItems.length, color: '#4ade80' },
               ];
-              const bars = [
-                { label: '전체 진도율', sub: `${filteredItems.length}건 전체`, rate: totalRate, gradient: 'linear-gradient(90deg, #6366f1, #8b5cf6)', color: '#a5b4fc' },
-                { label: '🔴 상 달성률', sub: `${sangItems.length}건 긴급`, rate: avgRate(sangItems), gradient: 'linear-gradient(90deg, #e8354a, #f87171)', color: '#f87171' },
-                { label: '🟡 중 달성률', sub: `${jungItems.length}건 주의`, rate: avgRate(jungItems), gradient: 'linear-gradient(90deg, #d4880a, #fbbf24)', color: '#fbbf24' },
-                { label: '🟢 하 달성률', sub: `${haItems.length}건 양호`, rate: avgRate(haItems), gradient: 'linear-gradient(90deg, #16a34a, #4ade80)', color: '#4ade80' },
-              ];
 
               return (
                 <div className="bg-[#4B49AC] text-white rounded-[2rem] shadow-xl shadow-indigo-100 relative overflow-hidden">
@@ -680,27 +674,54 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 하단: 달성률 2×2 그리드 */}
+                  {/* 하단: 전체진도율(좌) + 상중하 달성률(우) */}
                   <div className="relative z-10 px-8 pb-8 pt-0">
                     <div className="border-t border-white/10 pt-6" />
-                    <div className="grid grid-cols-2 gap-4">
-                      {bars.map((bar, idx) => (
-                        <div key={idx} className="rounded-xl px-5 py-4" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <div className="text-[15px] font-bold text-white/90">{bar.label}</div>
-                              <div className="text-[13px] font-semibold text-white/40">{bar.sub}</div>
-                            </div>
-                            <span className="text-[24px] font-black" style={{ color: bar.color }}>{bar.rate.toFixed(1)}%</span>
+                    <div className="grid grid-cols-5 gap-4">
+                      {/* 전체 진도율 - 크게 */}
+                      <div className="col-span-3 rounded-xl px-6 py-6 flex flex-col justify-center" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div>
+                            <div className="text-[18px] font-bold text-white/90">전체 진도율</div>
+                            <div className="text-[14px] font-semibold text-white/40">{filteredItems.length}건 전체</div>
                           </div>
-                          <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-700"
-                              style={{ width: `${Math.min(bar.rate, 100)}%`, background: bar.gradient }}
-                            />
-                          </div>
+                          <span className="text-[48px] font-black" style={{ color: '#a5b4fc' }}>{totalRate.toFixed(1)}%</span>
                         </div>
-                      ))}
+                        <div className="w-full h-4 bg-white/10 rounded-full overflow-hidden mt-2">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${Math.min(totalRate, 100)}%`, background: 'linear-gradient(90deg, #6366f1, #8b5cf6)' }}
+                          />
+                        </div>
+                        <div className="flex justify-between mt-3 text-[13px] text-white/40 font-semibold">
+                          <span>총 매출: {formatCurrency(totalRevenue)}</span>
+                          <span>목표 대비 {(totalRevenue / 48000000000 * 100).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      {/* 상/중/하 달성률 */}
+                      <div className="col-span-2 flex flex-col gap-3">
+                        {[
+                          { label: '상 달성률', sub: `${sangItems.length}건 긴급`, rate: avgRate(sangItems), gradient: 'linear-gradient(90deg, #e8354a, #f87171)', color: '#f87171', dot: '🔴' },
+                          { label: '중 달성률', sub: `${jungItems.length}건 주의`, rate: avgRate(jungItems), gradient: 'linear-gradient(90deg, #d4880a, #fbbf24)', color: '#fbbf24', dot: '🟡' },
+                          { label: '하 달성률', sub: `${haItems.length}건 양호`, rate: avgRate(haItems), gradient: 'linear-gradient(90deg, #16a34a, #4ade80)', color: '#4ade80', dot: '🟢' },
+                        ].map((bar, idx) => (
+                          <div key={idx} className="rounded-xl px-5 py-3 flex-1 flex flex-col justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <div className="text-[14px] font-bold text-white/90">{bar.dot} {bar.label}</div>
+                                <div className="text-[12px] font-semibold text-white/40">{bar.sub}</div>
+                              </div>
+                              <span className="text-[22px] font-black" style={{ color: bar.color }}>{bar.rate.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{ width: `${Math.min(bar.rate, 100)}%`, background: bar.gradient }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
