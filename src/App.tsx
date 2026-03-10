@@ -363,7 +363,7 @@ export default function App() {
           <div className="space-y-6">
             {/* 1. KPI Cards - 4개 일렬 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPICard title="목표" value={48000000000} count={stats.overall.totalCount} type="target" subText="PROJECT 480억" delay={0} />
+              <KPICard title="매출금액" value={stats.overall.totalRevenue} count={stats.overall.totalCount} type="target" subText={`총 ${(stats.overall.totalRevenue / 100000000).toFixed(0)}억`} delay={0} />
               <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} type="possible" trend="+12억" delay={100} />
               <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} type="checking" trend="-8억" delay={200} />
               <KPICard title="불가능" value={stats.overall.impossibleRevenue} count={stats.overall.impossibleCount} type="impossible" trend="-4억" delay={300} />
@@ -415,7 +415,7 @@ export default function App() {
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
-                    <span className="text-[15px] font-semibold text-gray-600">전체 진도 ({stats.overall.totalCount}건 / 480억)</span>
+                    <span className="text-[15px] font-semibold text-gray-600">전체 진도 ({stats.overall.totalCount}건 / {(stats.overall.totalRevenue / 100000000).toFixed(0)}억)</span>
                     <span className={`text-[28px] font-bold ${editProgressRates.overall >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
                       {editProgressRates.overall.toFixed(1)}%
                     </span>
@@ -469,8 +469,8 @@ export default function App() {
                       <div className="text-[24px] font-bold text-[#22C55E]">{editProgressRates.overall.toFixed(0)}%</div>
                     </div>
                     <div className="text-center rounded-[10px] py-2.5 px-3.5" style={{ backgroundColor: '#F9FAFB' }}>
-                      <div className="text-[13px] font-semibold text-gray-500 mb-1">목표</div>
-                      <div className="text-[24px] font-bold text-gray-900">480억</div>
+                      <div className="text-[13px] font-semibold text-gray-500 mb-1">매출금액</div>
+                      <div className="text-[24px] font-bold text-gray-900">{(stats.overall.totalRevenue / 100000000).toFixed(0)}억</div>
                     </div>
                     <div className="text-center rounded-[10px] py-2.5 px-3.5" style={{ backgroundColor: '#F9FAFB' }}>
                       <div className="text-[13px] font-semibold text-gray-500 mb-1">현재 매출</div>
@@ -599,7 +599,7 @@ export default function App() {
                         </div>
                         <div className="flex justify-between mt-3 text-[13px] text-white/40 font-semibold">
                           <span>총 매출: {formatCurrency(totalRevenue)}</span>
-                          <span>목표 대비 {(totalRevenue / 48000000000 * 100).toFixed(1)}%</span>
+                          <span>{filteredItems.length}건 중 매출가능 {filteredItems.filter(i => { const v = (editData[i.id]?.revenuePossible ?? '').trim().toLowerCase(); return v === 'o' || v === '가능'; }).length}건</span>
                         </div>
                       </div>
                       {/* 상/중/하 달성률 */}
