@@ -86,9 +86,10 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 sticky left-[120px] z-20 bg-white">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[200px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[270px] z-20 bg-white">{item.materialCode}</td>
-      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[350px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[200px] z-20 whitespace-nowrap bg-white">{item.category}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[270px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[340px] z-20 bg-white">{item.materialCode}</td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[420px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
@@ -354,19 +355,20 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
       {/* 상단 스크롤바 */}
       <div ref={topScrollRef} className="overflow-x-auto" style={{ height: '16px' }}>
-        <div style={{ width: '2800px', height: '1px' }} />
+        <div style={{ width: '2870px', height: '1px' }} />
       </div>
 
       <div ref={tableScrollRef} className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-left border-collapse min-w-[2800px]">
+        <table className="w-full text-left border-collapse min-w-[2870px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap">
               <th className="px-1 py-2 border-r border-slate-200 text-center w-[50px] sticky left-0 z-40 bg-slate-50">중요도</th>
               <th className="px-2 py-2 border-r border-slate-200 sticky left-[50px] z-40 bg-slate-50">CIS담당</th>
               <th className="px-1 py-2 border-r border-slate-200 sticky left-[120px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[200px] z-40 bg-slate-50">고객약호</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[270px] z-40 bg-slate-50">자재</th>
-              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[350px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[200px] z-40 bg-slate-50">중분류</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[270px] z-40 bg-slate-50">고객약호</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[340px] z-40 bg-slate-50">자재</th>
+              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[420px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
 
               <th className="px-2 py-2 border-r border-slate-200">생성일</th>
               <th className="px-2 py-2 border-r border-slate-200">원납기일</th>
@@ -435,7 +437,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200 sticky left-[120px] z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sticky left-[200px] z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sticky left-[270px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[350px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[340px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[420px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
               <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
