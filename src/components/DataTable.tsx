@@ -121,9 +121,8 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           value={row?.revenuePossible || '확인중'}
           onChange={(e) => onUpdateField(item.id, 'revenuePossible', e.target.value)}
         >
-          <option value="">선택</option>
-          <option value="가능">가능</option>
           <option value="확인중">확인중</option>
+          <option value="가능">가능</option>
           <option value="불가능">불가능</option>
         </select>
       </td>
