@@ -530,9 +530,10 @@ export default function App() {
             {/* Hero Header */}
             {(() => {
               const getRate = (item: DashboardItem) => item.totalQuantity > 0 ? (item.orderQuantity / item.totalQuantity) * 100 : 0;
-              const sangItems = filteredItems.filter(i => getRate(i) < 50);
-              const jungItems = filteredItems.filter(i => getRate(i) >= 50 && getRate(i) < 80);
-              const haItems = filteredItems.filter(i => getRate(i) >= 80);
+              const getImportance = (item: DashboardItem) => editData[item.id]?.importance || '';
+              const sangItems = filteredItems.filter(i => getImportance(i) === '상');
+              const jungItems = filteredItems.filter(i => getImportance(i) === '중');
+              const haItems = filteredItems.filter(i => getImportance(i) === '하');
               const avgRate = (arr: DashboardItem[]) => arr.length > 0 ? arr.reduce((s, i) => s + getRate(i), 0) / arr.length : 0;
               const totalRate = filteredItems.length > 0
                 ? (filteredItems.reduce((s, i) => s + i.orderQuantity, 0) / filteredItems.reduce((s, i) => s + i.totalQuantity, 0)) * 100
