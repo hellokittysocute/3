@@ -30,7 +30,7 @@ export default function App() {
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const stats = useMemo(() => calculateStats(items), [items]);
+  const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
 
   // Supabase에서 데이터 로드
   useEffect(() => {
