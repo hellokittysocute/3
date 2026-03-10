@@ -531,17 +531,17 @@ export default function App() {
             {(() => {
               const getRate = (item: DashboardItem) => item.totalQuantity > 0 ? (item.orderQuantity / item.totalQuantity) * 100 : 0;
               const getImportance = (item: DashboardItem) => editData[item.id]?.importance || '';
+              const isRevenuePossible = (item: DashboardItem) => {
+                const v = (editData[item.id]?.revenuePossible ?? '').trim().toLowerCase();
+                return v === 'o' || v === '가능';
+              };
               const sangItems = filteredItems.filter(i => getImportance(i) === '상');
               const jungItems = filteredItems.filter(i => getImportance(i) === '중');
               const haItems = filteredItems.filter(i => getImportance(i) === '하');
               const avgRate = (arr: DashboardItem[]) => {
-                const total = arr.reduce((s, i) => s + i.remainingQuantity, 0);
-                const possible = arr.filter(isRevenuePossible).reduce((s, i) => s + i.remainingQuantity, 0);
-                return total > 0 ? (possible / total) * 100 : 0;
-              };
-              const isRevenuePossible = (item: DashboardItem) => {
-                const v = (editData[item.id]?.revenuePossible ?? '').trim().toLowerCase();
-                return v === 'o' || v === '가능';
+                if (arr.length === 0) return 0;
+                const possibleCount = arr.filter(isRevenuePossible).length;
+                return (possibleCount / arr.length) * 100;
               };
               const totalRemaining = filteredItems.reduce((s, i) => s + i.remainingQuantity, 0);
               const possibleRemaining = filteredItems.filter(isRevenuePossible).reduce((s, i) => s + i.remainingQuantity, 0);

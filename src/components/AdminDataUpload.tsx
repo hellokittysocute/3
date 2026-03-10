@@ -345,7 +345,7 @@ export function AdminDataUpload() {
         material_setting_date: (row._material_setting_date as string) || '',
         manufacturing_date: (row._manufacturing_date as string) || '',
         packaging_date: (row._packaging_date as string) || '',
-        revenue_possible: (row._revenue_possible as string) || '',
+        revenue_possible: (row._revenue_possible as string) || '확인중',
         revenue_possible_quantity: row.remaining_quantity as number,
         delay_reason: '',
         importance: (row._importance as string) || '',
