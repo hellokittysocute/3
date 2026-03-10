@@ -83,9 +83,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[50px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
-      <td className="px-1 py-1 border-r border-slate-100/60 sticky left-[120px] z-20 bg-white">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
-      </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[120px] z-20 whitespace-nowrap bg-white">{row?.purchaseManager ?? ''}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[200px] z-20 whitespace-nowrap bg-white">{item.category}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[270px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[340px] z-20 bg-white">{item.materialCode}</td>

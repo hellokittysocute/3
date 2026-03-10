@@ -105,6 +105,14 @@ const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> =
   '내용': { field: 'management_type', type: 'string' },
   '중점관리사항': { field: 'management_note', type: 'string' },
   '단가': { field: 'unit_price', type: 'number' },
+  // edit_data 필드 (_ 접두사 → dashboard_items upsert에서 제외)
+  '구매담당': { field: '_purchase_manager', type: 'string' },
+  '부자재': { field: '_material_setting_date', type: 'string' },
+  '제조': { field: '_manufacturing_date', type: 'string' },
+  '충포장': { field: '_packaging_date', type: 'string' },
+  '매출': { field: '_revenue_possible', type: 'string' },
+  '비고': { field: '_note', type: 'string' },
+  '파셜여부': { field: '_partial', type: 'string' },
 };
 
 function findHeaderMapping(headers: string[]): Map<string, number> {
@@ -243,6 +251,13 @@ function parseCSVToRows(csvText: string): ParseResult {
       sales_document: materialCode,
       original_order_quantity: orderQty,
       _importance: parsedImportance,
+      _purchase_manager: getVal(cols, headerMapping, '구매담당'),
+      _material_setting_date: getVal(cols, headerMapping, '부자재'),
+      _manufacturing_date: getVal(cols, headerMapping, '제조'),
+      _packaging_date: getVal(cols, headerMapping, '충포장'),
+      _revenue_possible: getVal(cols, headerMapping, '매출'),
+      _note: getVal(cols, headerMapping, '비고'),
+      _partial: getVal(cols, headerMapping, '파셜여부'),
     };
   });
 
@@ -302,7 +317,13 @@ export function AdminDataUpload() {
 
       // 2단계: 새 데이터 upsert (기존 ID 덮어쓰기)
       for (let i = 0; i < parsedRows.length; i += 100) {
-        const batch = parsedRows.slice(i, i + 100).map(({ _importance, ...rest }) => rest);
+        const batch = parsedRows.slice(i, i + 100).map((row) => {
+          const clean: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(row)) {
+            if (!k.startsWith('_')) clean[k] = v;
+          }
+          return clean;
+        });
         const { error } = await supabase.from('dashboard_items').upsert(batch);
         if (error) throw new Error(`dashboard_items 업로드 실패 (행 ${i}): ${error.message}`);
       }
@@ -317,17 +338,19 @@ export function AdminDataUpload() {
         }
       }
 
-      // edit_data 초기화
+      // edit_data: CSV 값으로 초기화
       const editRows = parsedRows.map(row => ({
         item_id: row.id,
         production_complete_date: '',
-        material_setting_date: '',
-        manufacturing_date: '',
-        packaging_date: '',
-        revenue_possible: '',
+        material_setting_date: (row._material_setting_date as string) || '',
+        manufacturing_date: (row._manufacturing_date as string) || '',
+        packaging_date: (row._packaging_date as string) || '',
+        revenue_possible: (row._revenue_possible as string) || '',
         revenue_possible_quantity: row.remaining_quantity as number,
         delay_reason: '',
         importance: (row._importance as string) || '',
+        purchase_manager: (row._purchase_manager as string) || '',
+        note: (row._note as string) || '',
       }));
 
       for (let i = 0; i < editRows.length; i += 100) {
