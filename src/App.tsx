@@ -42,17 +42,16 @@ export default function App() {
         setItems(dashboardItems);
         // DB에서 가져온 편집 데이터가 있으면 병합
         if (Object.keys(editDataFromDb).length > 0) {
-          setEditData(prev => {
-            const merged: Record<string, EditableData> = {};
-            dashboardItems.forEach(item => {
-              merged[item.id] = editDataFromDb[item.id] || {
-                productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-                revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
-                purchaseManager: '', note: '',
-              };
-            });
-            return merged;
+          const merged: Record<string, EditableData> = {};
+          dashboardItems.forEach(item => {
+            merged[item.id] = editDataFromDb[item.id] || {
+              productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+              revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
+              purchaseManager: '', note: '',
+            };
           });
+          setEditData(merged);
+          setSavedEditData(merged);
         }
       } catch (err) {
         console.error('데이터 로드 실패:', err);
@@ -78,6 +77,7 @@ export default function App() {
   }, [items]);
 
   const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
+  const [savedEditData, setSavedEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
   const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
 
@@ -119,6 +119,7 @@ export default function App() {
         };
       });
       setEditData(merged);
+      setSavedEditData(merged);
       setSaveStatus('idle');
     } catch (err) {
       console.error('데이터 갱신 실패:', err);
@@ -136,6 +137,7 @@ export default function App() {
     setSaveStatus('loading');
     try {
       await saveAllEditData(editData);
+      setSavedEditData(editData);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err: any) {
@@ -160,11 +162,11 @@ export default function App() {
       return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
     }).sort((a, b) => {
       const order: Record<string, number> = { '불가능': 0, '확인중': 1, '가능': 2 };
-      const aStatus = editData[a.id]?.revenuePossible || '확인중';
-      const bStatus = editData[b.id]?.revenuePossible || '확인중';
+      const aStatus = savedEditData[a.id]?.revenuePossible || '확인중';
+      const bStatus = savedEditData[b.id]?.revenuePossible || '확인중';
       return (order[aStatus] ?? 1) - (order[bStatus] ?? 1);
     });
-  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData]);
+  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData, savedEditData]);
 
   // Chart data preparation
   const customerChartData = useMemo(() => {

@@ -71,6 +71,11 @@ ALTER TABLE dashboard_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE edit_data ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all reads on dashboard_items" ON dashboard_items FOR SELECT USING (true);
+CREATE POLICY "Allow all inserts on dashboard_items" ON dashboard_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all updates on dashboard_items" ON dashboard_items FOR UPDATE USING (true);
+CREATE POLICY "Allow all deletes on dashboard_items" ON dashboard_items FOR DELETE USING (true);
+
 CREATE POLICY "Allow all reads on edit_data" ON edit_data FOR SELECT USING (true);
 CREATE POLICY "Allow all inserts on edit_data" ON edit_data FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow all updates on edit_data" ON edit_data FOR UPDATE USING (true);
+CREATE POLICY "Allow all deletes on edit_data" ON edit_data FOR DELETE USING (true);
