@@ -152,7 +152,8 @@ export default function App() {
         item.customerCode.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !categoryFilter || item.managementType === categoryFilter;
       const row = editData[item.id];
-      const matchesRevenuePossible = !revenuePossibleFilter || (row?.revenuePossible === revenuePossibleFilter);
+      const actualRevenuePossible = row?.revenuePossible || '확인중';
+      const matchesRevenuePossible = !revenuePossibleFilter || (actualRevenuePossible === revenuePossibleFilter);
       const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
       const matchesCisManager = !cisManagerFilter || item.cisManager.toLowerCase().includes(cisManagerFilter.toLowerCase());
       const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager ?? '').toLowerCase().includes(purchaseManagerFilter.toLowerCase());
