@@ -238,9 +238,9 @@ export function AdminDataUpload() {
       await supabase.from('edit_data').delete().not('item_id', 'is', null);
       await supabase.from('dashboard_items').delete().not('id', 'is', null);
 
-      // dashboard_items 업로드
+      // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
       for (let i = 0; i < parsedRows.length; i += 100) {
-        const batch = parsedRows.slice(i, i + 100);
+        const batch = parsedRows.slice(i, i + 100).map(({ _importance, ...rest }) => rest);
         const { error } = await supabase.from('dashboard_items').upsert(batch);
         if (error) throw new Error(`dashboard_items 업로드 실패 (행 ${i}): ${error.message}`);
       }
