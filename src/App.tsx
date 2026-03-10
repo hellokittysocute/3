@@ -655,8 +655,9 @@ export default function App() {
                   onChange={(e) => setRevenuePossibleFilter(e.target.value)}
                 >
                   <option value="">전체</option>
-                  <option value="O">O (가능)</option>
-                  <option value="X">X (불가능)</option>
+                  <option value="가능">가능</option>
+                  <option value="불가능">불가능</option>
+                  <option value="확인중">확인중</option>
                 </select>
               </div>
               <div className="space-y-2">
