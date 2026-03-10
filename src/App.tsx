@@ -188,7 +188,7 @@ export default function App() {
         const v = (editData[i.id]?.revenuePossible || '').trim().toLowerCase();
         return v === '가능' || v === 'o';
       });
-      const possibleRevenue = possibleItems.reduce((s, i) => s + getRevenue(i), 0);
+      const possibleRevenue = possibleItems.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity) * i.unitPrice, 0);
       return totalRevenue > 0 ? (possibleRevenue / totalRevenue) * 100 : 0;
     };
     const customerCodes = customerChartData.map(c => c.name);
