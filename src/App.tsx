@@ -30,8 +30,6 @@ export default function App() {
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
-
   // Supabase에서 데이터 로드
   useEffect(() => {
     async function loadData() {
@@ -81,6 +79,7 @@ export default function App() {
 
   const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
+  const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
 
   const CIS_MANAGERS = useMemo(() => [...new Set(items.map(i => i.cisManager).filter(Boolean))].sort(), [items]);
   const PURCHASE_MANAGERS = useMemo(() => {
