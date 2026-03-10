@@ -116,6 +116,7 @@ interface ParseResult {
   rows: ParsedRow[];
   unmappedHeaders: string[];
   mappedHeaders: string[];
+  headerDebug: string;
 }
 
 function parseCSVToRows(csvText: string): ParseResult {
@@ -202,7 +203,15 @@ function parseCSVToRows(csvText: string): ParseResult {
     };
   });
 
-  return { rows, unmappedHeaders, mappedHeaders };
+  // 디버깅: 헤더 이름과 인덱스 매핑
+  const debugParts: string[] = [];
+  headers.forEach((h, i) => {
+    const trimmed = h.trim();
+    if (trimmed) debugParts.push(`[${i}]=${trimmed}`);
+  });
+  const headerDebug = debugParts.join(' | ');
+
+  return { rows, unmappedHeaders, mappedHeaders, headerDebug };
 }
 
 export function AdminDataUpload() {
@@ -210,6 +219,7 @@ export function AdminDataUpload() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [unmapped, setUnmapped] = useState<string[]>([]);
   const [mapped, setMapped] = useState<string[]>([]);
+  const [debug, setDebug] = useState('');
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -223,10 +233,11 @@ export function AdminDataUpload() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      const { rows, unmappedHeaders, mappedHeaders } = parseCSVToRows(text);
+      const { rows, unmappedHeaders, mappedHeaders, headerDebug } = parseCSVToRows(text);
       setParsedRows(rows);
       setUnmapped(unmappedHeaders);
       setMapped(mappedHeaders);
+      setDebug(headerDebug);
     };
     reader.readAsText(f, 'UTF-8');
   };
@@ -292,6 +303,7 @@ export function AdminDataUpload() {
     setParsedRows([]);
     setUnmapped([]);
     setMapped([]);
+    setDebug('');
     setResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -351,6 +363,10 @@ export function AdminDataUpload() {
                 <p className="text-xs text-amber-600">{unmapped.join(', ')}</p>
               </div>
             )}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <p className="text-xs font-bold text-slate-500 mb-1">8행 헤더 (인덱스:이름)</p>
+              <p className="text-xs text-slate-400 break-all">{debug}</p>
+            </div>
           </div>
         )}
 
@@ -366,6 +382,7 @@ export function AdminDataUpload() {
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-4 py-2 text-xs text-slate-400">ID</th>
                     <th className="text-left px-4 py-2 text-xs text-slate-400">고객약호</th>
+                    <th className="text-left px-4 py-2 text-xs text-slate-400">자재</th>
                     <th className="text-left px-4 py-2 text-xs text-slate-400">내역</th>
                     <th className="text-right px-4 py-2 text-xs text-slate-400">미납잔량</th>
                     <th className="text-center px-4 py-2 text-xs text-slate-400">상태</th>
@@ -377,6 +394,7 @@ export function AdminDataUpload() {
                     <tr key={row.id} className="border-b border-slate-50">
                       <td className="px-4 py-2 text-slate-500">{row.id}</td>
                       <td className="px-4 py-2 font-medium">{row.customer_code as string}</td>
+                      <td className="px-4 py-2 text-slate-600">{row.material_code as string}</td>
                       <td className="px-4 py-2 text-slate-600 max-w-[200px] truncate">{row.item_name as string}</td>
                       <td className="px-4 py-2 text-right">{(row.remaining_quantity as number).toLocaleString()}</td>
                       <td className="px-4 py-2 text-center">{row.status as string}</td>
