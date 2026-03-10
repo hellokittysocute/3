@@ -25,6 +25,8 @@ export default function App() {
   const [delayReasonFilter, setDelayReasonFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
+  const [cisManagerFilter, setCisManagerFilter] = useState('');
+  const [purchaseManagerFilter, setPurchaseManagerFilter] = useState('');
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export default function App() {
               merged[item.id] = editDataFromDb[item.id] || {
                 productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
                 revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
+                purchaseManager: '', note: '',
               };
             });
             return merged;
@@ -70,6 +73,7 @@ export default function App() {
       initial[item.id] = {
         productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
         revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
+        purchaseManager: '', note: '',
       };
     });
     return initial;
@@ -77,6 +81,13 @@ export default function App() {
 
   const [editData, setEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
+
+  const CIS_MANAGERS = useMemo(() => [...new Set(items.map(i => i.cisManager).filter(Boolean))].sort(), [items]);
+  const PURCHASE_MANAGERS = useMemo(() => {
+    const managers = new Set<string>();
+    Object.values(editData).forEach(ed => { if (ed?.purchaseManager) managers.add(ed.purchaseManager); });
+    return [...managers].sort();
+  }, [editData]);
 
   // 진도율: 매출 가능 수량 합계 / 미납잔량 합계 (editData 기준)
   const editProgressRates = useMemo(() => {
@@ -105,6 +116,7 @@ export default function App() {
         merged[item.id] = editDataFromDb[item.id] || {
           productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
           revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
+          productionSite: '', purchaseManager: '', note: '',
         };
       });
       setEditData(merged);
@@ -143,9 +155,11 @@ export default function App() {
       const row = editData[item.id];
       const matchesRevenuePossible = !revenuePossibleFilter || (row?.revenuePossible === revenuePossibleFilter);
       const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
-      return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay;
+      const matchesCisManager = !cisManagerFilter || item.cisManager === cisManagerFilter;
+      const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager === purchaseManagerFilter);
+      return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
     });
-  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, editData]);
+  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData]);
 
   // Chart data preparation
   const customerChartData = useMemo(() => {
@@ -399,43 +413,41 @@ export default function App() {
                   <h3 className="text-[18px] font-bold text-gray-900">관리구분별 진도 현황</h3>
                   <span className="text-[13px] font-semibold bg-gray-100 text-gray-500 px-2 py-1 rounded-full">실시간 분석</span>
                 </div>
-                <div className="space-y-8">
-                  {/* 중점관리품목 */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[15px] font-semibold text-gray-600">중점관리품목 (350억)</span>
-                      <span className={`text-[28px] font-bold ${editProgressRates.priority >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
-                        {editProgressRates.priority.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${editProgressRates.priority >= 100 ? 'bg-[#22C55E]' : 'bg-[#22C55E]'}`}
-                        style={{ width: `${Math.min(editProgressRates.priority, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[13px] text-gray-500">
-                      <span>가능: {formatCurrency(stats.priority.possibleRevenue)}</span>
-                      <span>{stats.priority.possibleCount} 품목</span>
-                    </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[15px] font-semibold text-gray-600">전체 진도 ({stats.overall.totalCount}건 / 480억)</span>
+                    <span className={`text-[28px] font-bold ${editProgressRates.overall >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                      {editProgressRates.overall.toFixed(1)}%
+                    </span>
                   </div>
-                  {/* 자재조정필요 */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[15px] font-semibold text-gray-600">자재조정필요 (130억)</span>
-                      <span className={`text-[28px] font-bold ${editProgressRates.material >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
-                        {editProgressRates.material.toFixed(1)}%
-                      </span>
+                  <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700 bg-[#22C55E]"
+                      style={{ width: `${Math.min(editProgressRates.overall, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[13px] text-gray-500">
+                    <span>가능: {formatCurrency(stats.overall.possibleRevenue)}</span>
+                    <span>{stats.overall.possibleCount} 품목</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div className="bg-slate-50 rounded-xl px-4 py-3">
+                      <div className="text-[11px] font-semibold text-gray-400 mb-1">중점관리품목</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-lg font-bold ${editProgressRates.priority >= 100 ? 'text-[#22C55E]' : 'text-gray-800'}`}>
+                          {editProgressRates.priority.toFixed(1)}%
+                        </span>
+                        <span className="text-[11px] text-gray-400">{stats.priority.totalCount}건</span>
+                      </div>
                     </div>
-                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${editProgressRates.material >= 100 ? 'bg-[#22C55E]' : 'bg-[#22C55E]'}`}
-                        style={{ width: `${Math.min(editProgressRates.material, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[13px] text-gray-500">
-                      <span>가능: {formatCurrency(stats.material.possibleRevenue)}</span>
-                      <span>{stats.material.possibleCount} 품목</span>
+                    <div className="bg-slate-50 rounded-xl px-4 py-3">
+                      <div className="text-[11px] font-semibold text-gray-400 mb-1">자재조정필요</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-lg font-bold ${editProgressRates.material >= 100 ? 'text-[#22C55E]' : 'text-gray-800'}`}>
+                          {editProgressRates.material.toFixed(1)}%
+                        </span>
+                        <span className="text-[11px] text-gray-400">{stats.material.totalCount}건</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -632,7 +644,7 @@ export default function App() {
             })()}
 
             {/* Image-style Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 bg-white p-8 border-y border-slate-200/60">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-8 gap-6 bg-white p-8 border-y border-slate-200/60">
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
                 <div className="relative">
@@ -679,6 +691,28 @@ export default function App() {
                   <option>전체</option>
                   <option>2026-03</option>
                   <option>2026-04</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                  value={cisManagerFilter}
+                  onChange={(e) => setCisManagerFilter(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  {CIS_MANAGERS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">구매담당</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                  value={purchaseManagerFilter}
+                  onChange={(e) => setPurchaseManagerFilter(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  {PURCHASE_MANAGERS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
             </div>

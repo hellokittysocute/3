@@ -83,16 +83,19 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[50px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[120px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[190px] z-20 bg-white">{item.materialCode}</td>
-      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[270px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+      <td className="px-1 py-1 border-r border-slate-100/60 sticky left-[120px] z-20 bg-white">
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
+      </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[200px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[270px] z-20 bg-white">{item.materialCode}</td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[350px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.originalDueDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.changedDueDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
@@ -108,20 +111,6 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20 text-center">
-        <select
-          className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]")}
-          value={item.materialSource}
-          onChange={(e) => onUpdateField(item.id, 'materialSource' as any, e.target.value)}
-        >
-          <option value="">선택</option>
-          <option value="자급">자급</option>
-          <option value="사급">사급</option>
-        </select>
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.purchaseManager ?? ''} onChange={(e) => onUpdateField(item.id, 'purchaseManager', e.target.value)} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20 text-center">
         <select
@@ -199,6 +188,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '자재코드': item.materialCode,
         '내역': item.itemName,
         'CIS담당': item.cisManager,
+        '구매담당': row?.purchaseManager ?? '',
         '중분류명': item.category,
         '고객약호': item.customerCode,
         '판매처이름': item.customerName,
@@ -212,7 +202,6 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '환산수량': item.totalQuantity,
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
-        '부자재 자급/사급': item.materialSource,
         '생산완료 요청일': row?.productionCompleteDate ?? '',
         '자재(일정)': row?.materialSettingDate ?? '',
         '제조': row?.manufacturingDate ?? '',
@@ -374,23 +363,22 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap">
               <th className="px-1 py-2 border-r border-slate-200 text-center w-[50px] sticky left-0 z-40 bg-slate-50">중요도</th>
               <th className="px-2 py-2 border-r border-slate-200 sticky left-[50px] z-40 bg-slate-50">CIS담당</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[120px] z-40 bg-slate-50">고객약호</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[190px] z-40 bg-slate-50">자재</th>
-              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[270px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
+              <th className="px-1 py-2 border-r border-slate-200 sticky left-[120px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[200px] z-40 bg-slate-50">고객약호</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[270px] z-40 bg-slate-50">자재</th>
+              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[350px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
 
               <th className="px-2 py-2 border-r border-slate-200">생성일</th>
               <th className="px-2 py-2 border-r border-slate-200">원납기일</th>
               <th className="px-2 py-2 border-r border-slate-200">변경납기일</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right">환산수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">총오더수량</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-right">환산수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">미납잔량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">자재</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">자사급<br/>구분</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능수량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
@@ -404,7 +392,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 25 : 23} />
+                <td colSpan={isAdmin ? 24 : 22} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -436,23 +424,22 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 25 : 23} />
+                <td colSpan={isAdmin ? 24 : 22} />
               </tr>
             )}
           </tbody>
           <tfoot className="sticky bottom-0 z-25 border-t-2 border-slate-300">
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sticky left-0 z-20 bg-slate-100">합계</td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[70px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[170px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[260px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[370px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[50px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[120px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[200px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[270px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[350px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
               <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
-              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
+              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
