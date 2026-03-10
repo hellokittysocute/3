@@ -99,7 +99,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.productionRequestDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{item.mfg1}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
       </td>
@@ -202,7 +202,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
         '생산완료 요청일': row?.productionCompleteDate ?? '',
-        '기존제조': item.productionRequestDate,
+        '기존제조': item.mfg1,
         '부자재(일정)': row?.materialSettingDate ?? '',
         '제조': row?.manufacturingDate ?? '',
         '충포장': row?.packagingDate ?? '',

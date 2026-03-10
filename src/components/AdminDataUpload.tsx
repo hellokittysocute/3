@@ -89,6 +89,7 @@ const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> =
   '부자재지연일수': { field: 'delay_days', type: 'number' },
   '제조 1차': { field: 'mfg1', type: 'string' },
   '제조1차': { field: 'mfg1', type: 'string' },
+  '기존제조': { field: 'mfg1', type: 'string' },
   '제조 최종': { field: 'mfg_final', type: 'string' },
   '제조최종': { field: 'mfg_final', type: 'string' },
   '충포장 1차': { field: 'pkg1', type: 'string' },
