@@ -123,14 +123,24 @@ function parseCSVToRows(csvText: string): ParseResult {
   const cleaned = csvText.replace(/^\uFEFF/, '');
   const lines = cleaned.split(/\r?\n/);
 
-  // 8행(index 7)이 헤더
-  const headerLine = lines[7] || '';
-  const headers = parseCSVLine(headerLine);
-  const headerMapping = findHeaderMapping(headers);
-
-  // 매핑 결과 추적
-  const mappedHeaders = headers.filter(h => HEADER_MAP[h.trim()]);
-  const unmappedHeaders = headers.filter(h => h.trim() && !HEADER_MAP[h.trim()]);
+  // 1~8행 전체를 스캔하여 헤더 매핑 (여러 행에 걸친 헤더 대응)
+  const headerMapping = new Map<string, number>();
+  const allHeaders: string[] = [];
+  for (let row = 0; row < Math.min(8, lines.length); row++) {
+    const cols = parseCSVLine(lines[row]);
+    cols.forEach((col, idx) => {
+      const trimmed = col.trim();
+      if (trimmed && HEADER_MAP[trimmed] && !headerMapping.has(trimmed)) {
+        headerMapping.set(trimmed, idx);
+      }
+    });
+  }
+  // 8행 기준으로 전체 헤더 목록 구성 (표시용)
+  const headers = parseCSVLine(lines[7] || '');
+  // 1~8행에서 찾은 모든 매핑된 헤더
+  const mappedHeaders = Array.from(headerMapping.keys());
+  // 8행에서 매핑 안 된 컬럼
+  const unmappedHeaders = headers.filter(h => h.trim() && !HEADER_MAP[h.trim()] && !mappedHeaders.includes(h.trim()));
 
   // 고객약호 컬럼 인덱스 찾기 (빈 행 필터용)
   const customerCodeIdx = headerMapping.get('고객약호');
