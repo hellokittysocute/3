@@ -229,10 +229,10 @@ export function AdminDataUpload() {
 
     try {
       // 기존 데이터 삭제 (edit_data → dashboard_items 순서: FK 제약조건)
-      const { error: delEditErr } = await supabase.from('edit_data').delete().gte('item_id', '');
+      const { error: delEditErr } = await supabase.from('edit_data').delete().not('item_id', 'is', null);
       if (delEditErr) throw new Error(`edit_data 삭제 실패: ${delEditErr.message}`);
 
-      const { error: delDashErr } = await supabase.from('dashboard_items').delete().gte('id', '');
+      const { error: delDashErr } = await supabase.from('dashboard_items').delete().not('id', 'is', null);
       if (delDashErr) throw new Error(`dashboard_items 삭제 실패: ${delDashErr.message}`);
 
       // dashboard_items 업로드
