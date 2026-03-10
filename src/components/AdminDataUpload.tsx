@@ -264,7 +264,8 @@ export function AdminDataUpload() {
         if (error) throw new Error(`edit_data 업로드 실패 (행 ${i}): ${error.message}`);
       }
 
-      setResult({ success: true, message: `${parsedRows.length}건 업로드 완료` });
+      setResult({ success: true, message: `${parsedRows.length}건 업로드 완료. 2초 후 새로고침합니다...` });
+      setTimeout(() => window.location.reload(), 2000);
     } catch (err: any) {
       setResult({ success: false, message: err.message });
     } finally {
