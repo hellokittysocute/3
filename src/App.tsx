@@ -155,8 +155,8 @@ export default function App() {
       const row = editData[item.id];
       const matchesRevenuePossible = !revenuePossibleFilter || (row?.revenuePossible === revenuePossibleFilter);
       const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
-      const matchesCisManager = !cisManagerFilter || item.cisManager === cisManagerFilter;
-      const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager === purchaseManagerFilter);
+      const matchesCisManager = !cisManagerFilter || item.cisManager.toLowerCase().includes(cisManagerFilter.toLowerCase());
+      const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager ?? '').toLowerCase().includes(purchaseManagerFilter.toLowerCase());
       return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
     });
   }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData]);
@@ -430,26 +430,6 @@ export default function App() {
                     <span>가능: {formatCurrency(stats.overall.possibleRevenue)}</span>
                     <span>{stats.overall.possibleCount} 품목</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-2">
-                    <div className="bg-slate-50 rounded-xl px-4 py-3">
-                      <div className="text-[11px] font-semibold text-gray-400 mb-1">중점관리품목</div>
-                      <div className="flex items-baseline gap-2">
-                        <span className={`text-lg font-bold ${editProgressRates.priority >= 100 ? 'text-[#22C55E]' : 'text-gray-800'}`}>
-                          {editProgressRates.priority.toFixed(1)}%
-                        </span>
-                        <span className="text-[11px] text-gray-400">{stats.priority.totalCount}건</span>
-                      </div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl px-4 py-3">
-                      <div className="text-[11px] font-semibold text-gray-400 mb-1">자재조정필요</div>
-                      <div className="flex items-baseline gap-2">
-                        <span className={`text-lg font-bold ${editProgressRates.material >= 100 ? 'text-[#22C55E]' : 'text-gray-800'}`}>
-                          {editProgressRates.material.toFixed(1)}%
-                        </span>
-                        <span className="text-[11px] text-gray-400">{stats.material.totalCount}건</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* 구분선 */}
@@ -695,25 +675,23 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                <input
+                  type="text"
+                  placeholder="이름 검색..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   value={cisManagerFilter}
                   onChange={(e) => setCisManagerFilter(e.target.value)}
-                >
-                  <option value="">전체</option>
-                  {CIS_MANAGERS.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">구매담당</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                <input
+                  type="text"
+                  placeholder="이름 검색..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   value={purchaseManagerFilter}
                   onChange={(e) => setPurchaseManagerFilter(e.target.value)}
-                >
-                  <option value="">전체</option>
-                  {PURCHASE_MANAGERS.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+                />
               </div>
             </div>
 
