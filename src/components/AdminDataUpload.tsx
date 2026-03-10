@@ -11,15 +11,33 @@ interface ParsedRow {
   [key: string]: unknown;
 }
 
-function parseCSVLine(line: string): string[] {
+// 구분자 자동 감지 (탭 vs 쉼표)
+let detectedDelimiter: string | null = null;
+
+function detectDelimiter(text: string): string {
+  if (detectedDelimiter) return detectedDelimiter;
+  // 첫 10줄에서 탭과 쉼표 수 비교
+  const sample = text.split(/\r?\n/).slice(0, 10).join('\n');
+  const tabs = (sample.match(/\t/g) || []).length;
+  const commas = (sample.match(/,/g) || []).length;
+  detectedDelimiter = tabs > commas ? '\t' : ',';
+  return detectedDelimiter;
+}
+
+function parseCSVLine(line: string, delimiter = ','): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++; // 이스케이프된 따옴표 ("") 처리
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
       result.push(current.trim());
       current = '';
     } else {
@@ -123,12 +141,16 @@ function parseCSVToRows(csvText: string): ParseResult {
   const cleaned = csvText.replace(/^\uFEFF/, '');
   const lines = cleaned.split(/\r?\n/);
 
+  // 구분자 자동 감지
+  detectedDelimiter = null; // 리셋
+  const delimiter = detectDelimiter(cleaned);
+
   // 8행(데이터 직전)을 우선 스캔하고, 못 찾은 헤더만 상위 행에서 보충
   const headerMapping = new Map<string, number>();
   const allHeaders: string[] = [];
   // 1단계: 8행 (index 7) 우선 스캔
   if (lines.length > 7) {
-    const cols = parseCSVLine(lines[7]);
+    const cols = parseCSVLine(lines[7], delimiter);
     cols.forEach((col, idx) => {
       const trimmed = col.trim();
       if (trimmed && HEADER_MAP[trimmed] && !headerMapping.has(trimmed)) {
@@ -138,7 +160,7 @@ function parseCSVToRows(csvText: string): ParseResult {
   }
   // 2단계: 1~7행에서 아직 매핑 안 된 헤더만 보충 (역순 — 데이터 행에 가까울수록 우선)
   for (let row = Math.min(6, lines.length - 1); row >= 0; row--) {
-    const cols = parseCSVLine(lines[row]);
+    const cols = parseCSVLine(lines[row], delimiter);
     cols.forEach((col, idx) => {
       const trimmed = col.trim();
       if (trimmed && HEADER_MAP[trimmed] && !headerMapping.has(trimmed)) {
@@ -147,7 +169,7 @@ function parseCSVToRows(csvText: string): ParseResult {
     });
   }
   // 8행 기준으로 전체 헤더 목록 구성 (표시용)
-  const headers = parseCSVLine(lines[7] || '');
+  const headers = parseCSVLine(lines[7] || '', delimiter);
   // 1~8행에서 찾은 모든 매핑된 헤더
   const mappedHeaders = Array.from(headerMapping.keys());
   // 8행에서 매핑 안 된 컬럼
@@ -157,7 +179,7 @@ function parseCSVToRows(csvText: string): ParseResult {
   const customerCodeIdx = headerMapping.get('고객약호');
 
   const dataLines = lines.slice(8).filter(line => {
-    const cols = parseCSVLine(line);
+    const cols = parseCSVLine(line, delimiter);
     if (customerCodeIdx !== undefined) {
       return cols[customerCodeIdx] && cols[customerCodeIdx].trim() !== '';
     }
@@ -165,7 +187,7 @@ function parseCSVToRows(csvText: string): ParseResult {
   });
 
   const rows = dataLines.map((line, index) => {
-    const cols = parseCSVLine(line);
+    const cols = parseCSVLine(line, delimiter);
 
     const status = getVal(cols, headerMapping, '매출 가능여부', '매출가능여부');
     const validStatuses = ['가능', '불가능', '확인중'];
@@ -234,7 +256,7 @@ function parseCSVToRows(csvText: string): ParseResult {
     const trimmed = h.trim();
     if (trimmed) row8Parts.push(`[${i}]=${trimmed}`);
   });
-  const headerDebug = `매핑: ${debugParts.join(', ')}\n8행: ${row8Parts.join(' | ')}`;
+  const headerDebug = `구분자: ${delimiter === '\t' ? 'TAB' : 'COMMA'} | 8행 총 ${headers.length}개 컬럼\n매핑: ${debugParts.join(', ')}\n8행: ${row8Parts.join(' | ')}`;
 
   return { rows, unmappedHeaders, mappedHeaders, headerDebug };
 }
