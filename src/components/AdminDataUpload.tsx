@@ -6,24 +6,6 @@ import { cn } from '../lib/utils';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// REST API로 직접 테이블 전체 삭제
-async function deleteAllRows(table: string, filterCol: string) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filterCol}=neq.___NONE___`, {
-    method: 'DELETE',
-    headers: {
-      'apikey': ANON_KEY,
-      'Authorization': `Bearer ${ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation',
-    },
-  });
-  const body = await res.text();
-  if (!res.ok) {
-    throw new Error(`${table} 삭제 실패: ${body}`);
-  }
-  return body;
-}
-
 interface ParsedRow {
   id: string;
   [key: string]: unknown;
@@ -255,11 +237,20 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제 (REST API 직접 호출)
-      const editResult = await deleteAllRows('edit_data', 'item_id');
-      console.log('edit_data 삭제 결과:', editResult);
-      const dashResult = await deleteAllRows('dashboard_items', 'id');
-      console.log('dashboard_items 삭제 결과:', dashResult);
+      // 기존 데이터 삭제 (DB 함수 호출)
+      const clearRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reset_dashboard`, {
+        method: 'POST',
+        headers: {
+          'apikey': ANON_KEY,
+          'Authorization': `Bearer ${ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      if (!clearRes.ok) {
+        const errText = await clearRes.text();
+        throw new Error(`데이터 삭제 실패: ${errText}`);
+      }
 
       // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
       for (let i = 0; i < parsedRows.length; i += 100) {
