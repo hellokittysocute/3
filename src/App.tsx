@@ -157,6 +157,11 @@ export default function App() {
       const matchesCisManager = !cisManagerFilter || item.cisManager.toLowerCase().includes(cisManagerFilter.toLowerCase());
       const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager ?? '').toLowerCase().includes(purchaseManagerFilter.toLowerCase());
       return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
+    }).sort((a, b) => {
+      const order: Record<string, number> = { '불가능': 0, '확인중': 1, '가능': 2 };
+      const aStatus = editData[a.id]?.revenuePossible || '확인중';
+      const bStatus = editData[b.id]?.revenuePossible || '확인중';
+      return (order[aStatus] ?? 1) - (order[bStatus] ?? 1);
     });
   }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData]);
 
@@ -409,26 +414,30 @@ export default function App() {
               {/* 관리구분별 진도 현황 */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-[18px] font-bold text-gray-900">관리구분별 진도 현황</h3>
+                  <h3 className="text-[18px] font-bold text-gray-900">진도현황</h3>
                   <span className="text-[13px] font-semibold bg-gray-100 text-gray-500 px-2 py-1 rounded-full">실시간 분석</span>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[15px] font-semibold text-gray-600">전체 진도 ({stats.overall.totalCount}건 / {(stats.overall.totalRevenue / 100000000).toFixed(0)}억)</span>
-                    <span className={`text-[28px] font-bold ${editProgressRates.overall >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
-                      {editProgressRates.overall.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700 bg-[#22C55E]"
-                      style={{ width: `${Math.min(editProgressRates.overall, 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[13px] text-gray-500">
-                    <span>가능: {formatCurrency(stats.overall.possibleRevenue)}</span>
-                    <span>{stats.overall.possibleCount} 품목</span>
-                  </div>
+                  {(() => {
+                    const goalRate = stats.overall.totalRevenue > 0 ? (stats.overall.possibleRevenue / stats.overall.totalRevenue) * 100 : 0;
+                    return (<>
+                      <div className="flex justify-between items-end">
+                        <span className="text-[15px] font-semibold text-gray-600">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
+                        <span className={`text-[28px] font-bold ${goalRate >= 100 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                          {goalRate.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700 bg-[#22C55E]"
+                          style={{ width: `${Math.min(goalRate, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[13px] text-gray-500">
+                        <span>가능 {stats.overall.possibleCount}건 · 확인중 {stats.overall.checkingCount}건 · 불가능 {stats.overall.impossibleCount}건</span>
+                      </div>
+                    </>);
+                  })()}
                 </div>
 
                 {/* 구분선 */}
