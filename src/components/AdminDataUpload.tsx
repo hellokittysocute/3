@@ -44,8 +44,10 @@ const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> =
   '생성일': { field: 'created_date', type: 'string' },
   '원납기일': { field: 'original_due_date', type: 'string' },
   '발주리드타임': { field: 'order_lead_time', type: 'number' },
+  '변경납기': { field: 'changed_due_date', type: 'string' },
   '변경납기일': { field: 'changed_due_date', type: 'string' },
   '변경납기월': { field: 'due_month', type: 'number' },
+  '중요도': { field: 'importance', type: 'string' },
   '자재': { field: 'material_code', type: 'string' },
   '내역': { field: 'item_name', type: 'string' },
   '총본품수량': { field: 'total_quantity', type: 'number' },
@@ -149,6 +151,9 @@ function parseCSVToRows(csvText: string): ParseResult {
 
     const materialCode = getVal(cols, headerMapping, '자재');
     const orderQty = getNumVal(cols, headerMapping, '총오더수량');
+    const importance = getVal(cols, headerMapping, '중요도');
+    const validImportance = ['상', '중', '하'];
+    const parsedImportance = validImportance.includes(importance) ? importance : '';
 
     return {
       id: `item-${index}`,
@@ -161,7 +166,7 @@ function parseCSVToRows(csvText: string): ParseResult {
       created_date: getVal(cols, headerMapping, '생성일'),
       original_due_date: getVal(cols, headerMapping, '원납기일'),
       order_lead_time: getNumVal(cols, headerMapping, '발주리드타임'),
-      changed_due_date: getVal(cols, headerMapping, '변경납기일'),
+      changed_due_date: getVal(cols, headerMapping, '변경납기', '변경납기일'),
       due_month: parseInt(getVal(cols, headerMapping, '변경납기월')) || 3,
       material_code: materialCode,
       item_name: getVal(cols, headerMapping, '내역'),
@@ -190,6 +195,7 @@ function parseCSVToRows(csvText: string): ParseResult {
       unit_price: getNumVal(cols, headerMapping, '단가'),
       sales_document: materialCode,
       original_order_quantity: orderQty,
+      _importance: parsedImportance,
     };
   });
 
@@ -252,6 +258,7 @@ export function AdminDataUpload() {
         revenue_possible: '',
         revenue_possible_quantity: row.remaining_quantity as number,
         delay_reason: '',
+        importance: (row._importance as string) || '',
       }));
 
       for (let i = 0; i < editRows.length; i += 100) {
