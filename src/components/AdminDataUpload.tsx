@@ -1,14 +1,27 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { Upload, FileSpreadsheet, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-// 관리자용 클라이언트 (service_role 키 - 데이터 삭제용)
-const serviceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
-const adminSupabase = serviceKey
-  ? createClient(import.meta.env.VITE_SUPABASE_URL, serviceKey)
-  : null;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
+
+// REST API로 직접 테이블 삭제
+async function deleteAllRows(table: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=neq.___NONE___`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SERVICE_KEY,
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`${table} 삭제 실패: ${body}`);
+  }
+}
 
 interface ParsedRow {
   id: string;
@@ -241,13 +254,10 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제 (service_role 키로 전체 권한)
-      if (!adminSupabase) throw new Error('관리자 키가 설정되지 않았습니다. 환경변수를 확인하세요.');
-      const { error: delEdit } = await adminSupabase.from('edit_data').delete().neq('item_id', '___NONE___');
-      if (delEdit) throw new Error(`edit_data 삭제 실패: ${delEdit.message}`);
-
-      const { error: delDash } = await adminSupabase.from('dashboard_items').delete().neq('id', '___NONE___');
-      if (delDash) throw new Error(`dashboard_items 삭제 실패: ${delDash.message}`);
+      // 기존 데이터 삭제 (REST API + service_role 키)
+      if (!SERVICE_KEY) throw new Error('관리자 키가 설정되지 않았습니다.');
+      await deleteAllRows('edit_data');
+      await deleteAllRows('dashboard_items');
 
       // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
       for (let i = 0; i < parsedRows.length; i += 100) {
