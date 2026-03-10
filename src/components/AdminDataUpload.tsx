@@ -238,14 +238,14 @@ export function AdminDataUpload() {
 
     try {
       // 기존 데이터 삭제 (DB 함수 호출)
-      const clearRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reset_dashboard`, {
+      const clearRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reset_data`, {
         method: 'POST',
         headers: {
           'apikey': ANON_KEY,
           'Authorization': `Bearer ${ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: '{}',
+        body: JSON.stringify({ confirm: 'yes' }),
       });
       if (!clearRes.ok) {
         const errText = await clearRes.text();
