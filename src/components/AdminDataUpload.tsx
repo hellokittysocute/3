@@ -234,9 +234,16 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제 (FK 제약조건 제거됨, 순서 무관)
-      await supabase.from('edit_data').delete().not('item_id', 'is', null);
-      await supabase.from('dashboard_items').delete().not('id', 'is', null);
+      // 기존 데이터 삭제
+      const { error: delEdit } = await supabase.from('edit_data').delete().gte('item_id', '');
+      console.log('edit_data 삭제:', delEdit ? delEdit.message : '성공');
+      const { error: delDash } = await supabase.from('dashboard_items').delete().gte('id', '');
+      console.log('dashboard_items 삭제:', delDash ? delDash.message : '성공');
+      if (delDash) {
+        // 필터 방식 2차 시도
+        const { error: delDash2 } = await supabase.from('dashboard_items').delete().neq('id', '___NONE___');
+        if (delDash2) throw new Error(`dashboard_items 삭제 실패: ${delDash2.message}`);
+      }
 
       // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
       for (let i = 0; i < parsedRows.length; i += 100) {
