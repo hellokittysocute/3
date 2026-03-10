@@ -203,7 +203,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
         '생산완료 요청일': row?.productionCompleteDate ?? '',
-        '자재(일정)': row?.materialSettingDate ?? '',
+        '부자재(일정)': row?.materialSettingDate ?? '',
         '제조': row?.manufacturingDate ?? '',
         '충포장': row?.packagingDate ?? '',
         '생산처': row?.productionSite ?? '',
@@ -375,7 +375,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-2 py-2 border-r border-slate-200 text-right">환산수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">미납잔량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">자재</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">부자재</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
