@@ -237,26 +237,26 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제 (DB 함수 호출)
-      const clearRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reset_data`, {
-        method: 'POST',
-        headers: {
-          'apikey': ANON_KEY,
-          'Authorization': `Bearer ${ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ confirm: 'yes' }),
-      });
-      if (!clearRes.ok) {
-        const errText = await clearRes.text();
-        throw new Error(`데이터 삭제 실패: ${errText}`);
-      }
+      // 1단계: 기존 데이터 수 확인
+      const { count: oldCount } = await supabase
+        .from('dashboard_items')
+        .select('*', { count: 'exact', head: true });
 
-      // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
+      // 2단계: 새 데이터 upsert (기존 ID 덮어쓰기)
       for (let i = 0; i < parsedRows.length; i += 100) {
         const batch = parsedRows.slice(i, i + 100).map(({ _importance, ...rest }) => rest);
         const { error } = await supabase.from('dashboard_items').upsert(batch);
         if (error) throw new Error(`dashboard_items 업로드 실패 (행 ${i}): ${error.message}`);
+      }
+
+      // 3단계: 초과 old 행 무효화 (customer_code를 비워서 필터링)
+      if (oldCount && oldCount > parsedRows.length) {
+        for (let i = parsedRows.length; i < oldCount; i++) {
+          await supabase
+            .from('dashboard_items')
+            .update({ customer_code: '', item_name: '[삭제됨]' })
+            .eq('id', `item-${i}`);
+        }
       }
 
       // edit_data 초기화

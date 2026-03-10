@@ -75,6 +75,7 @@ export async function fetchDashboardItems(): Promise<DashboardItem[]> {
   const { data, error } = await supabase
     .from('dashboard_items')
     .select('*')
+    .neq('customer_code', '')
     .order('id');
 
   if (error) {
