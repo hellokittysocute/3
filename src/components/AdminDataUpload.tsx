@@ -1,7 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { Upload, FileSpreadsheet, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
+
+// 관리자용 클라이언트 (service_role 키 - 모든 권한)
+const adminSupabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_KEY
+);
 
 interface ParsedRow {
   id: string;
@@ -234,16 +241,12 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제
-      const { error: delEdit } = await supabase.from('edit_data').delete().gte('item_id', '');
-      console.log('edit_data 삭제:', delEdit ? delEdit.message : '성공');
-      const { error: delDash } = await supabase.from('dashboard_items').delete().gte('id', '');
-      console.log('dashboard_items 삭제:', delDash ? delDash.message : '성공');
-      if (delDash) {
-        // 필터 방식 2차 시도
-        const { error: delDash2 } = await supabase.from('dashboard_items').delete().neq('id', '___NONE___');
-        if (delDash2) throw new Error(`dashboard_items 삭제 실패: ${delDash2.message}`);
-      }
+      // 기존 데이터 삭제 (service_role 키로 전체 권한)
+      const { error: delEdit } = await adminSupabase.from('edit_data').delete().neq('item_id', '___NONE___');
+      if (delEdit) throw new Error(`edit_data 삭제 실패: ${delEdit.message}`);
+
+      const { error: delDash } = await adminSupabase.from('dashboard_items').delete().neq('id', '___NONE___');
+      if (delDash) throw new Error(`dashboard_items 삭제 실패: ${delDash.message}`);
 
       // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
       for (let i = 0; i < parsedRows.length; i += 100) {
