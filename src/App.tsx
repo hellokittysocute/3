@@ -183,21 +183,20 @@ export default function App() {
   // 고객사별 관리구분 달성률 (매출가능수량 / 미납잔량)
   const customerRateData = useMemo(() => {
     const calcRate = (filtered: DashboardItem[]) => {
-      const totalRemaining = filtered.reduce((s, i) => s + i.remainingQuantity, 0);
-      const totalPossibleQty = filtered.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity), 0);
-      return totalRemaining > 0 ? (totalPossibleQty / totalRemaining) * 100 : 0;
+      const totalRevenue = filtered.reduce((s, i) => s + getRevenue(i), 0);
+      const possibleItems = filtered.filter(i => {
+        const v = (editData[i.id]?.revenuePossible || '').trim().toLowerCase();
+        return v === '가능' || v === 'o';
+      });
+      const possibleRevenue = possibleItems.reduce((s, i) => s + getRevenue(i), 0);
+      return totalRevenue > 0 ? (possibleRevenue / totalRevenue) * 100 : 0;
     };
     const customerCodes = customerChartData.map(c => c.name);
     return customerCodes.map(code => {
       const cItems = items.filter(i => i.customerCode === code);
-      const priorityItems = cItems.filter(i => i.managementType === '중점관리품목');
-      const materialItems = cItems.filter(i => i.managementType === '자재조정필요');
       return {
         name: code,
-        priorityRate: calcRate(priorityItems),
-        materialRate: calcRate(materialItems),
-        priorityCount: priorityItems.length,
-        materialCount: materialItems.length,
+        rate: calcRate(cItems),
       };
     });
   }, [items, editData, customerChartData]);
@@ -384,12 +383,7 @@ export default function App() {
                     const total = c.가능 + c.확인중 + c.불가능;
                     const maxTotal = customerChartData[0] ? customerChartData[0].가능 + customerChartData[0].확인중 + customerChartData[0].불가능 : 1;
                     const barWidth = (total / maxTotal) * 100;
-                    const rateInfo = customerRateData[idx];
-                    const overallRate = rateInfo ? (
-                      (rateInfo.priorityCount + rateInfo.materialCount) > 0
-                        ? ((rateInfo.priorityRate * rateInfo.priorityCount + rateInfo.materialRate * rateInfo.materialCount) / (rateInfo.priorityCount + rateInfo.materialCount))
-                        : 0
-                    ) : 0;
+                    const overallRate = customerRateData[idx]?.rate ?? 0;
                     return (
                       <div key={c.name} className="flex items-center gap-3" style={{ height: 52 }}>
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0 ${idx < 3 ? 'bg-[#22C55E] text-white' : 'bg-gray-100 text-gray-500'}`}>
