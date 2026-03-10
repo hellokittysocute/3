@@ -4,23 +4,24 @@ import { Upload, FileSpreadsheet, CheckCircle, AlertTriangle, Trash2 } from 'luc
 import { cn } from '../lib/utils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// REST API로 직접 테이블 삭제
-async function deleteAllRows(table: string) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=neq.___NONE___`, {
+// REST API로 직접 테이블 전체 삭제
+async function deleteAllRows(table: string, filterCol: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filterCol}=neq.___NONE___`, {
     method: 'DELETE',
     headers: {
-      'apikey': SERVICE_KEY,
-      'Authorization': `Bearer ${SERVICE_KEY}`,
+      'apikey': ANON_KEY,
+      'Authorization': `Bearer ${ANON_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': 'return=minimal',
+      'Prefer': 'return=representation',
     },
   });
+  const body = await res.text();
   if (!res.ok) {
-    const body = await res.text();
     throw new Error(`${table} 삭제 실패: ${body}`);
   }
+  return body;
 }
 
 interface ParsedRow {
@@ -254,10 +255,11 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제 (REST API + service_role 키)
-      if (!SERVICE_KEY) throw new Error('관리자 키가 설정되지 않았습니다.');
-      await deleteAllRows('edit_data');
-      await deleteAllRows('dashboard_items');
+      // 기존 데이터 삭제 (REST API 직접 호출)
+      const editResult = await deleteAllRows('edit_data', 'item_id');
+      console.log('edit_data 삭제 결과:', editResult);
+      const dashResult = await deleteAllRows('dashboard_items', 'id');
+      console.log('dashboard_items 삭제 결과:', dashResult);
 
       // dashboard_items 업로드 (_importance는 edit_data용이므로 제외)
       for (let i = 0; i < parsedRows.length; i += 100) {
