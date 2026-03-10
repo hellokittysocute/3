@@ -234,22 +234,9 @@ export function AdminDataUpload() {
     setResult(null);
 
     try {
-      // 기존 데이터 삭제 (REST API로 직접 TRUNCATE 함수 호출)
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const clearRes = await fetch(`${supabaseUrl}/rest/v1/rpc/clear_all_data`, {
-        method: 'POST',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: '{}',
-      });
-      if (!clearRes.ok) {
-        const errBody = await clearRes.text();
-        throw new Error(`데이터 삭제 실패: ${errBody}`);
-      }
+      // 기존 데이터 삭제 (FK 제약조건 제거됨, 순서 무관)
+      await supabase.from('edit_data').delete().not('item_id', 'is', null);
+      await supabase.from('dashboard_items').delete().not('id', 'is', null);
 
       // dashboard_items 업로드
       for (let i = 0; i < parsedRows.length; i += 100) {
