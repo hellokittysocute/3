@@ -33,69 +33,174 @@ function parseNum(val: string | undefined): number {
   return parseFloat(cleaned) || 0;
 }
 
-function parseCSVToRows(csvText: string): ParsedRow[] {
+// CSV 헤더명 → DB 컬럼 매핑 (헤더명에 포함된 키워드로 매칭)
+const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> = {
+  'CIS담당': { field: 'cis_manager', type: 'string' },
+  '중분류명': { field: 'category', type: 'string' },
+  '고객약호': { field: 'customer_code', type: 'string' },
+  '판매처이름': { field: 'customer_name', type: 'string' },
+  '영업팀명': { field: 'team_name', type: 'string' },
+  '영업담당자명': { field: 'sales_manager', type: 'string' },
+  '생성일': { field: 'created_date', type: 'string' },
+  '원납기일': { field: 'original_due_date', type: 'string' },
+  '발주리드타임': { field: 'order_lead_time', type: 'number' },
+  '변경납기일': { field: 'changed_due_date', type: 'string' },
+  '변경납기월': { field: 'due_month', type: 'number' },
+  '자재': { field: 'material_code', type: 'string' },
+  '내역': { field: 'item_name', type: 'string' },
+  '총본품수량': { field: 'total_quantity', type: 'number' },
+  '환산수량': { field: 'total_quantity', type: 'number' },
+  '총오더수량': { field: 'order_quantity', type: 'number' },
+  '납품수량': { field: 'delivered_quantity', type: 'number' },
+  '미납잔량': { field: 'remaining_quantity', type: 'number' },
+  '부자재 자급/사급': { field: 'material_source', type: 'string' },
+  '자급사급': { field: 'material_source', type: 'string' },
+  '생산완료 요청일': { field: 'production_request_date', type: 'string' },
+  '생산완료요청일': { field: 'production_request_date', type: 'string' },
+  '자재 1차': { field: 'material_status', type: 'string' },
+  '자재1차': { field: 'material_status', type: 'string' },
+  '1주차': { field: 'week1', type: 'string' },
+  '2주차': { field: 'week2', type: 'string' },
+  '3주차': { field: 'week3', type: 'string' },
+  '부자재 지연일수': { field: 'delay_days', type: 'number' },
+  '부자재지연일수': { field: 'delay_days', type: 'number' },
+  '제조 1차': { field: 'mfg1', type: 'string' },
+  '제조1차': { field: 'mfg1', type: 'string' },
+  '제조 최종': { field: 'mfg_final', type: 'string' },
+  '제조최종': { field: 'mfg_final', type: 'string' },
+  '충포장 1차': { field: 'pkg1', type: 'string' },
+  '충포장1차': { field: 'pkg1', type: 'string' },
+  '충포장 최종': { field: 'pkg_final', type: 'string' },
+  '충포장최종': { field: 'pkg_final', type: 'string' },
+  '생산처': { field: 'production_site', type: 'string' },
+  '생산리드타임': { field: 'lead_time', type: 'string' },
+  '매출 가능여부': { field: 'status', type: 'string' },
+  '매출가능여부': { field: 'status', type: 'string' },
+  '진도율': { field: 'progress_rate', type: 'string' },
+  '지연사유': { field: 'delay_reason', type: 'string' },
+  '관리구분': { field: 'management_type', type: 'string' },
+  '내용': { field: 'management_type', type: 'string' },
+  '중점관리사항': { field: 'management_note', type: 'string' },
+  '단가': { field: 'unit_price', type: 'number' },
+};
+
+function findHeaderMapping(headers: string[]): Map<string, number> {
+  const mapping = new Map<string, number>();
+  headers.forEach((header, index) => {
+    const trimmed = header.trim();
+    if (HEADER_MAP[trimmed]) {
+      mapping.set(trimmed, index);
+    }
+  });
+  return mapping;
+}
+
+function getVal(cols: string[], headerMapping: Map<string, number>, ...headerNames: string[]): string {
+  for (const name of headerNames) {
+    const idx = headerMapping.get(name);
+    if (idx !== undefined && cols[idx]) return cols[idx].trim();
+  }
+  return '';
+}
+
+function getNumVal(cols: string[], headerMapping: Map<string, number>, ...headerNames: string[]): number {
+  return parseNum(getVal(cols, headerMapping, ...headerNames));
+}
+
+interface ParseResult {
+  rows: ParsedRow[];
+  unmappedHeaders: string[];
+  mappedHeaders: string[];
+}
+
+function parseCSVToRows(csvText: string): ParseResult {
   const cleaned = csvText.replace(/^\uFEFF/, '');
   const lines = cleaned.split(/\r?\n/);
-  const dataLines = lines.slice(5).filter(line => {
+
+  // 8행(index 7)이 헤더
+  const headerLine = lines[7] || '';
+  const headers = parseCSVLine(headerLine);
+  const headerMapping = findHeaderMapping(headers);
+
+  // 매핑 결과 추적
+  const mappedHeaders = headers.filter(h => HEADER_MAP[h.trim()]);
+  const unmappedHeaders = headers.filter(h => h.trim() && !HEADER_MAP[h.trim()]);
+
+  // 고객약호 컬럼 인덱스 찾기 (빈 행 필터용)
+  const customerCodeIdx = headerMapping.get('고객약호');
+
+  const dataLines = lines.slice(8).filter(line => {
     const cols = parseCSVLine(line);
-    return cols[3] && cols[3].trim() !== '';
+    if (customerCodeIdx !== undefined) {
+      return cols[customerCodeIdx] && cols[customerCodeIdx].trim() !== '';
+    }
+    return cols.some(c => c.trim() !== '');
   });
 
-  return dataLines.map((line, index) => {
+  const rows = dataLines.map((line, index) => {
     const cols = parseCSVLine(line);
-    const status = (cols[31] || '').trim();
+
+    const status = getVal(cols, headerMapping, '매출 가능여부', '매출가능여부');
     const validStatuses = ['가능', '불가능', '확인중'];
     const parsedStatus = validStatuses.includes(status) ? status : '확인중';
-    const mgmtType = (cols[34] || '').trim();
+
+    const mgmtType = getVal(cols, headerMapping, '관리구분', '내용');
     const parsedMgmt = mgmtType === '자재조정필요' ? '자재조정필요' : '중점관리품목';
+
+    const materialCode = getVal(cols, headerMapping, '자재');
+    const orderQty = getNumVal(cols, headerMapping, '총오더수량');
 
     return {
       id: `item-${index}`,
-      cis_manager: cols[1] || '',
-      category: cols[2] || '',
-      customer_code: cols[3] || '',
-      customer_name: cols[4] || '',
-      team_name: cols[5] || '',
-      sales_manager: cols[6] || '',
-      created_date: cols[7] || '',
-      original_due_date: cols[8] || '',
-      order_lead_time: parseNum(cols[9]),
-      changed_due_date: cols[10] || '',
-      due_month: parseInt(cols[11]) || 3,
-      material_code: cols[12] || '',
-      item_name: cols[13] || '',
-      total_quantity: parseNum(cols[14]),
-      order_quantity: parseNum(cols[15]),
-      delivered_quantity: parseNum(cols[16]),
-      remaining_quantity: parseNum(cols[17]),
-      material_source: cols[18] || '',
-      production_request_date: cols[19] || '',
-      material_status: cols[20] || '',
-      week1: cols[21] || '',
-      week2: cols[22] || '',
-      week3: cols[23] || '',
-      delay_days: parseNum(cols[24]),
-      mfg1: cols[25] || '',
-      mfg_final: cols[26] || '',
-      pkg1: cols[27] || '',
-      pkg_final: cols[28] || '',
-      production_site: cols[29] || '',
-      lead_time: cols[30] || '',
+      cis_manager: getVal(cols, headerMapping, 'CIS담당'),
+      category: getVal(cols, headerMapping, '중분류명'),
+      customer_code: getVal(cols, headerMapping, '고객약호'),
+      customer_name: getVal(cols, headerMapping, '판매처이름'),
+      team_name: getVal(cols, headerMapping, '영업팀명'),
+      sales_manager: getVal(cols, headerMapping, '영업담당자명'),
+      created_date: getVal(cols, headerMapping, '생성일'),
+      original_due_date: getVal(cols, headerMapping, '원납기일'),
+      order_lead_time: getNumVal(cols, headerMapping, '발주리드타임'),
+      changed_due_date: getVal(cols, headerMapping, '변경납기일'),
+      due_month: parseInt(getVal(cols, headerMapping, '변경납기월')) || 3,
+      material_code: materialCode,
+      item_name: getVal(cols, headerMapping, '내역'),
+      total_quantity: getNumVal(cols, headerMapping, '총본품수량', '환산수량'),
+      order_quantity: orderQty,
+      delivered_quantity: getNumVal(cols, headerMapping, '납품수량'),
+      remaining_quantity: getNumVal(cols, headerMapping, '미납잔량'),
+      material_source: getVal(cols, headerMapping, '부자재 자급/사급', '자급사급'),
+      production_request_date: getVal(cols, headerMapping, '생산완료 요청일', '생산완료요청일'),
+      material_status: getVal(cols, headerMapping, '자재 1차', '자재1차'),
+      week1: getVal(cols, headerMapping, '1주차'),
+      week2: getVal(cols, headerMapping, '2주차'),
+      week3: getVal(cols, headerMapping, '3주차'),
+      delay_days: getNumVal(cols, headerMapping, '부자재 지연일수', '부자재지연일수'),
+      mfg1: getVal(cols, headerMapping, '제조 1차', '제조1차'),
+      mfg_final: getVal(cols, headerMapping, '제조 최종', '제조최종'),
+      pkg1: getVal(cols, headerMapping, '충포장 1차', '충포장1차'),
+      pkg_final: getVal(cols, headerMapping, '충포장 최종', '충포장최종'),
+      production_site: getVal(cols, headerMapping, '생산처'),
+      lead_time: getVal(cols, headerMapping, '생산리드타임'),
       status: parsedStatus,
-      progress_rate: cols[32] || '',
-      delay_reason: cols[33] || '',
+      progress_rate: getVal(cols, headerMapping, '진도율'),
+      delay_reason: getVal(cols, headerMapping, '지연사유'),
       management_type: parsedMgmt,
-      management_note: cols[35] || '',
-      unit_price: parseNum(cols[36]),
-      sales_document: cols[12] || '',
-      original_order_quantity: parseNum(cols[15]),
+      management_note: getVal(cols, headerMapping, '중점관리사항'),
+      unit_price: getNumVal(cols, headerMapping, '단가'),
+      sales_document: materialCode,
+      original_order_quantity: orderQty,
     };
   });
+
+  return { rows, unmappedHeaders, mappedHeaders };
 }
 
 export function AdminDataUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [unmapped, setUnmapped] = useState<string[]>([]);
+  const [mapped, setMapped] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,8 +214,10 @@ export function AdminDataUpload() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      const rows = parseCSVToRows(text);
+      const { rows, unmappedHeaders, mappedHeaders } = parseCSVToRows(text);
       setParsedRows(rows);
+      setUnmapped(unmappedHeaders);
+      setMapped(mappedHeaders);
     };
     reader.readAsText(f, 'UTF-8');
   };
@@ -164,6 +271,8 @@ export function AdminDataUpload() {
   const handleReset = () => {
     setFile(null);
     setParsedRows([]);
+    setUnmapped([]);
+    setMapped([]);
     setResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -209,6 +318,22 @@ export function AdminDataUpload() {
             </div>
           )}
         </div>
+
+        {/* Header Mapping Info */}
+        {parsedRows.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+              <p className="text-xs font-bold text-emerald-700 mb-1">매핑 완료 ({mapped.length}개 컬럼)</p>
+              <p className="text-xs text-emerald-600">{mapped.join(', ')}</p>
+            </div>
+            {unmapped.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-xs font-bold text-amber-700 mb-1">매핑 안 됨 ({unmapped.length}개 컬럼) — 무시됩니다</p>
+                <p className="text-xs text-amber-600">{unmapped.join(', ')}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Preview */}
         {parsedRows.length > 0 && (
@@ -292,7 +417,7 @@ export function AdminDataUpload() {
           <p className="font-bold mb-1">주의사항</p>
           <ul className="list-disc list-inside space-y-1 text-amber-600">
             <li>업로드 시 기존 데이터와 편집 내용이 모두 초기화됩니다.</li>
-            <li>CSV 파일은 기존 양식과 동일한 형식이어야 합니다 (상위 5행 헤더 포함).</li>
+            <li>CSV 파일의 8행이 컬럼 헤더, 9행부터 데이터여야 합니다. 컬럼 순서는 자유입니다.</li>
           </ul>
         </div>
       </div>
