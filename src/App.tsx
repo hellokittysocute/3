@@ -139,8 +139,8 @@ export default function App() {
       await saveAllEditData(editData);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (err) {
-      console.error('저장 실패:', err);
+    } catch (err: any) {
+      alert(`저장 실패: ${err.message}`);
       setSaveStatus('idle');
     }
   }, [editData]);

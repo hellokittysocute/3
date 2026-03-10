@@ -153,7 +153,7 @@ export async function saveAllEditData(allData: Record<string, EditableData>): Pr
     const batch = rows.slice(i, i + 100);
     const { error } = await supabase.from('edit_data').upsert(batch);
     if (error) {
-      console.error(`edit_data 일괄 저장 오류 (${i}-${i + batch.length}):`, error.message);
+      throw new Error(`edit_data 일괄 저장 오류 (${i}-${i + batch.length}): ${error.message}`);
     }
   }
 }
