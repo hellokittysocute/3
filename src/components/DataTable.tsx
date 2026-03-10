@@ -99,6 +99,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
       </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.productionRequestDate)}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
       </td>
@@ -201,6 +202,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
         '생산완료 요청일': row?.productionCompleteDate ?? '',
+        '기존제조': item.productionRequestDate,
         '부자재(일정)': row?.materialSettingDate ?? '',
         '제조': row?.manufacturingDate ?? '',
         '충포장': row?.packagingDate ?? '',
@@ -352,11 +354,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
       {/* 상단 스크롤바 */}
       <div ref={topScrollRef} className="overflow-x-auto" style={{ height: '16px' }}>
-        <div style={{ width: '2870px', height: '1px' }} />
+        <div style={{ width: '2950px', height: '1px' }} />
       </div>
 
       <div ref={tableScrollRef} className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-left border-collapse min-w-[2870px]">
+        <table className="w-full text-left border-collapse min-w-[2950px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap">
               <th className="px-1 py-2 border-r border-slate-200 text-center w-[50px] sticky left-0 z-40 bg-slate-50">중요도</th>
@@ -374,6 +376,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-2 py-2 border-r border-slate-200 text-right">환산수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">미납잔량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-center">기존제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">부자재</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
@@ -391,7 +394,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 24 : 22} />
+                <td colSpan={isAdmin ? 25 : 23} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -423,7 +426,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 24 : 22} />
+                <td colSpan={isAdmin ? 25 : 23} />
               </tr>
             )}
           </tbody>
@@ -440,6 +443,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
