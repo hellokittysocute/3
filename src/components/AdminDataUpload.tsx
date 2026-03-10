@@ -123,10 +123,21 @@ function parseCSVToRows(csvText: string): ParseResult {
   const cleaned = csvText.replace(/^\uFEFF/, '');
   const lines = cleaned.split(/\r?\n/);
 
-  // 1~8행 전체를 스캔하여 헤더 매핑 (여러 행에 걸친 헤더 대응)
+  // 8행(데이터 직전)을 우선 스캔하고, 못 찾은 헤더만 상위 행에서 보충
   const headerMapping = new Map<string, number>();
   const allHeaders: string[] = [];
-  for (let row = 0; row < Math.min(8, lines.length); row++) {
+  // 1단계: 8행 (index 7) 우선 스캔
+  if (lines.length > 7) {
+    const cols = parseCSVLine(lines[7]);
+    cols.forEach((col, idx) => {
+      const trimmed = col.trim();
+      if (trimmed && HEADER_MAP[trimmed] && !headerMapping.has(trimmed)) {
+        headerMapping.set(trimmed, idx);
+      }
+    });
+  }
+  // 2단계: 1~7행에서 아직 매핑 안 된 헤더만 보충 (역순 — 데이터 행에 가까울수록 우선)
+  for (let row = Math.min(6, lines.length - 1); row >= 0; row--) {
     const cols = parseCSVLine(lines[row]);
     cols.forEach((col, idx) => {
       const trimmed = col.trim();
@@ -213,13 +224,17 @@ function parseCSVToRows(csvText: string): ParseResult {
     };
   });
 
-  // 디버깅: 헤더 이름과 인덱스 매핑
+  // 디버깅: 매핑된 헤더 → 컬럼 인덱스 + 8행 전체 헤더
   const debugParts: string[] = [];
+  headerMapping.forEach((idx, name) => {
+    debugParts.push(`${name}→[${idx}]`);
+  });
+  const row8Parts: string[] = [];
   headers.forEach((h, i) => {
     const trimmed = h.trim();
-    if (trimmed) debugParts.push(`[${i}]=${trimmed}`);
+    if (trimmed) row8Parts.push(`[${i}]=${trimmed}`);
   });
-  const headerDebug = debugParts.join(' | ');
+  const headerDebug = `매핑: ${debugParts.join(', ')}\n8행: ${row8Parts.join(' | ')}`;
 
   return { rows, unmappedHeaders, mappedHeaders, headerDebug };
 }
