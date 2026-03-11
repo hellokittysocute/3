@@ -270,7 +270,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] font-sans text-slate-900">
+    <div className="min-h-screen bg-[#f5f6fa] font-sans text-slate-900">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-8 h-24 flex items-center justify-between">
@@ -374,12 +374,12 @@ export default function App() {
           const normalPct = (normalRevenue / totalComposition) * 100;     // 96.7%
           const additionalPct = (additionalRevenue / totalComposition) * 100; // 3.3%
 
-          const cardStyle: React.CSSProperties = { borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)' };
+          const cardStyle: React.CSSProperties = { borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03)' };
 
           return (
-          <div style={{ gap: 14, display: 'flex', flexDirection: 'column' as const }}>
+          <div style={{ gap: 20, display: 'flex', flexDirection: 'column' as const }}>
             {/* 1행 — KPI 카드 4개 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 14 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
               <KPICard title="매출금액" value={stats.overall.totalRevenue} count={stats.overall.totalCount} type="target" subText={`총 ${stats.overall.totalCount}건 · ${(stats.overall.totalRevenue / 100000000).toFixed(0)}억`} delay={0} />
               <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} totalCount={stats.overall.totalCount} type="possible" trend={`+${(stats.overall.possibleRevenue / 100000000).toFixed(0)}억`} delay={100} />
               <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} totalCount={stats.overall.totalCount} type="checking" trend={`-${(stats.overall.checkingRevenue / 100000000).toFixed(0)}억`} delay={200} />
@@ -387,61 +387,61 @@ export default function App() {
             </div>
 
             {/* 2행 — 매출구성 + 진도현황 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 14 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
               {/* 매출구성 */}
-              <div className="bg-white p-5 flex flex-col" style={{ ...cardStyle, borderLeft: '3px solid #34d399' }}>
-                <h3 className="text-[15px] font-bold text-gray-800 mb-4">매출구성</h3>
-                <div className="space-y-3 flex-1">
+              <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
+                <h3 className="text-[14px] font-bold text-gray-800 mb-5">매출구성</h3>
+                <div className="space-y-4 flex-1">
                   {/* 정상매출 바 */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-medium text-gray-600">정상매출</span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[13px] font-medium text-gray-500">정상매출</span>
                       <span className="text-[13px] font-semibold text-gray-800">{formatCurrency(normalRevenue)} <span className="text-gray-400 font-normal">({normalPct.toFixed(1)}%)</span></span>
                     </div>
                     <div className="w-full h-5 bg-gray-50 rounded-md overflow-hidden">
-                      <div className="h-full rounded-md transition-all duration-700" style={{ width: `${normalPct}%`, backgroundColor: '#34d399' }} />
+                      <div className="h-full rounded-md transition-all duration-700" style={{ width: `${normalPct}%`, backgroundColor: '#6366f1' }} />
                     </div>
                   </div>
                   {/* 추가매출 바 */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-medium text-gray-600">추가매출 <span className="text-gray-400">(중점관리품목)</span></span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[13px] font-medium text-gray-500">추가매출 <span className="text-gray-400">(중점관리품목)</span></span>
                       <span className="text-[13px] font-semibold text-gray-800">{formatCurrency(additionalRevenue)} <span className="text-gray-400 font-normal">({additionalPct.toFixed(1)}%)</span></span>
                     </div>
                     <div className="w-full h-5 bg-gray-50 rounded-md overflow-hidden">
-                      <div className="h-full rounded-md transition-all duration-700" style={{ width: `${additionalPct}%`, backgroundColor: '#a7f3d0' }} />
+                      <div className="h-full rounded-md transition-all duration-700" style={{ width: `${additionalPct}%`, backgroundColor: '#a5b4fc' }} />
                     </div>
                   </div>
                 </div>
                 {/* 하단 합계 + 추가매출 비중 */}
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] text-gray-400">합계</span>
-                    <span className="text-[15px] font-bold text-gray-900 ml-2">{formatCurrency(totalComposition)}</span>
+                    <span className="text-[18px] font-extrabold text-gray-900 ml-2">{formatCurrency(totalComposition)}</span>
                   </div>
                   <div className="text-right">
                     <span className="text-[12px] text-gray-400 mr-2">추가매출 비중</span>
-                    <span className="text-[15px] font-bold" style={{ color: '#5b8ad9' }}>{additionalPct.toFixed(1)}%</span>
+                    <span className="text-[18px] font-extrabold" style={{ color: '#6366f1' }}>{additionalPct.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
 
               {/* 진도현황 */}
-              <div className="bg-white p-5 flex flex-col" style={cardStyle}>
+              <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[15px] font-bold text-gray-800">진도현황</h3>
+                  <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
                   <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">실시간</span>
                 </div>
                 {/* 목표 대비 가능금액 */}
                 <div className="mb-3">
                   <div className="flex justify-between items-end mb-1.5">
                     <span className="text-[12px] font-medium text-gray-400">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
-                    <span className={`text-[22px] font-bold ${goalRate >= 100 ? 'text-emerald-500' : 'text-red-400'}`}>
+                    <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
                       {goalRate.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700 bg-emerald-400" style={{ width: `${Math.min(goalRate, 100)}%` }} />
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
                   </div>
                 </div>
 
@@ -451,7 +451,7 @@ export default function App() {
                     <span className="text-[13px] font-semibold text-gray-700">진도율 추이</span>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
                         <span className="text-[11px] text-gray-400">진도율</span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -463,40 +463,40 @@ export default function App() {
                   <div style={{ height: 130 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} dy={4} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-4} />
                         <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
                         <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
-                        <Line type="monotone" dataKey="rate" stroke="#34d399" strokeWidth={2} dot={{ r: 3, fill: '#34d399', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
+                        <Line type="monotone" dataKey="rate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
                 {/* 하단 3개 스탯 박스 */}
-                <div className="grid grid-cols-3 mt-3" style={{ gap: 6 }}>
-                  <div className="text-center py-2 px-2" style={{ backgroundColor: '#f0fdf4', borderRadius: 8 }}>
+                <div className="grid grid-cols-3 mt-3" style={{ gap: 8 }}>
+                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
-                    <div className="text-[17px] font-bold text-emerald-500">{editProgressRates.overall.toFixed(0)}%</div>
+                    <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.overall.toFixed(0)}%</div>
                   </div>
-                  <div className="text-center py-2 px-2" style={{ backgroundColor: '#f9fafb', borderRadius: 8 }}>
+                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
-                    <div className="text-[17px] font-bold text-gray-800">{(stats.overall.totalRevenue / 100000000).toFixed(0)}억</div>
+                    <div className="text-[18px] font-extrabold text-gray-800">{(stats.overall.totalRevenue / 100000000).toFixed(0)}억</div>
                   </div>
-                  <div className="text-center py-2 px-2" style={{ backgroundColor: '#f9fafb', borderRadius: 8 }}>
+                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
-                    <div className="text-[17px] font-bold text-gray-800">{formatCurrency(stats.overall.possibleRevenue)}</div>
+                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.possibleRevenue)}</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 3행 — Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 14 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
               {/* Top10 고객사 */}
-              <div className="bg-white p-5" style={cardStyle}>
-                <h3 className="text-[15px] font-bold text-gray-800 mb-3">Top 10 고객사</h3>
+              <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
+                <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
                 <div className="space-y-0.5">
                   {customerChartData.slice(0, 10).map((c, idx) => {
                     const total = c.가능 + c.확인중 + c.불가능;
@@ -505,9 +505,9 @@ export default function App() {
                     return (
                       <div key={c.name} className="flex items-center gap-2.5" style={{ height: 36 }}>
                         <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                           style={{
-                            backgroundColor: idx < 3 ? '#93b4f0' : '#f1f3f5',
+                            backgroundColor: idx < 3 ? '#6366f1' : '#f1f3f5',
                             color: idx < 3 ? '#fff' : '#9ca3af',
                           }}
                         >
@@ -517,10 +517,10 @@ export default function App() {
                         <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
                           <div
                             className="h-full rounded transition-all duration-500"
-                            style={{ width: `${barWidth}%`, backgroundColor: idx < 3 ? '#93b4f0' : '#cbd5e1' }}
+                            style={{ width: `${barWidth}%`, backgroundColor: idx < 3 ? '#818cf8' : '#cbd5e1' }}
                           />
                         </div>
-                        <span className="text-[12px] font-semibold text-gray-600 w-14 text-right shrink-0">{formatCurrency(total)}</span>
+                        <span className="text-[13px] font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
                       </div>
                     );
                   })}
@@ -528,9 +528,9 @@ export default function App() {
               </div>
 
               {/* 귀책부서별 지연현황 */}
-              <div className="bg-white p-5" style={cardStyle}>
+              <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[15px] font-bold text-gray-800">귀책부서별 지연현황</h3>
+                  <h3 className="text-[14px] font-bold text-gray-800">귀책부서별 지연현황</h3>
                   <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">
                     총 {delayByDeptData.reduce((s, d) => s + d.count, 0)}건
                   </span>
@@ -554,8 +554,8 @@ export default function App() {
                               style={{ width: `${barWidth}%`, backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length], opacity: 0.75 }}
                             />
                           </div>
-                          <span className="text-[12px] font-semibold text-gray-600 w-8 text-right">{dept.count}건</span>
-                          <span className="text-[11px] text-gray-400 w-14 text-right">{formatCurrency(dept.revenue)}</span>
+                          <span className="text-[13px] font-bold text-gray-600 w-8 text-right">{dept.count}건</span>
+                          <span className="text-[11px] text-gray-400 w-16 text-right">{formatCurrency(dept.revenue)}</span>
                         </div>
                       );
                     })}
