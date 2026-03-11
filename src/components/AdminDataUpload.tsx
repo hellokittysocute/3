@@ -237,7 +237,7 @@ function parseCSVToRows(csvText: string): ParseResult {
       week2: getVal(cols, headerMapping, '2주차'),
       week3: getVal(cols, headerMapping, '3주차'),
       delay_days: getNumVal(cols, headerMapping, '부자재 지연일수', '부자재지연일수'),
-      mfg1: getVal(cols, headerMapping, '제조 1차', '제조1차'),
+      mfg1: getVal(cols, headerMapping, '제조 1차', '제조1차', '기존제조', '기존 제조'),
       mfg_final: getVal(cols, headerMapping, '제조 최종', '제조최종'),
       pkg1: getVal(cols, headerMapping, '충포장 1차', '충포장1차'),
       pkg_final: getVal(cols, headerMapping, '충포장 최종', '충포장최종'),
@@ -329,20 +329,25 @@ export function AdminDataUpload() {
         if (error) throw new Error(`dashboard_items 업로드 실패 (행 ${i}): ${error.message}`);
       }
 
-      // 3단계: 초과 old 행 무효화 (customer_code를 비워서 필터링)
+      // 3단계: 초과 old 행 일괄 무효화
       if (oldCount && oldCount > parsedRows.length) {
-        for (let i = parsedRows.length; i < oldCount; i++) {
+        const excessIds = Array.from(
+          { length: oldCount - parsedRows.length },
+          (_, i) => `item-${parsedRows.length + i}`
+        );
+        for (let i = 0; i < excessIds.length; i += 100) {
+          const batch = excessIds.slice(i, i + 100);
           await supabase
             .from('dashboard_items')
             .update({ customer_code: '', item_name: '[삭제됨]' })
-            .eq('id', `item-${i}`);
+            .in('id', batch);
         }
       }
 
       // edit_data: CSV 값으로 초기화
       const editRows = parsedRows.map(row => ({
         item_id: row.id,
-        production_complete_date: '',
+        production_complete_date: (row.production_request_date as string) || '',
         material_setting_date: (row._material_setting_date as string) || '',
         manufacturing_date: (row._manufacturing_date as string) || '',
         packaging_date: (row._packaging_date as string) || '',

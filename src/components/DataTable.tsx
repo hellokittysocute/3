@@ -90,7 +90,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[420px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
+      <td className="pl-6 pr-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.originalDueDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.changedDueDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
@@ -99,10 +99,10 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{item.mfg1}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
       </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{item.mfg1}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} />
       </td>
@@ -202,7 +202,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
         '생산완료 요청일': row?.productionCompleteDate ?? '',
-        '기존제조': item.mfg1,
+        '현재제조': item.mfg1,
         '부자재(일정)': row?.materialSettingDate ?? '',
         '제조': row?.manufacturingDate ?? '',
         '충포장': row?.packagingDate ?? '',
@@ -369,15 +369,15 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-2 py-2 border-r border-slate-200 sticky left-[340px] z-40 bg-slate-50">자재</th>
               <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[420px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
 
-              <th className="px-2 py-2 border-r border-slate-200">생성일</th>
+              <th className="pl-6 pr-2 py-2 border-r border-slate-200">생성일</th>
               <th className="px-2 py-2 border-r border-slate-200">원납기일</th>
               <th className="px-2 py-2 border-r border-slate-200">변경납기일</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">총오더수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">환산수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right">미납잔량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-center">기존제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">부자재</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-center">현재제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
