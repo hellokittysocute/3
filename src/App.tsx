@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
-import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchSalesSettings, SalesSettings } from './services/supabaseDataService';
+import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData } from './services/supabaseDataService';
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
@@ -30,23 +30,16 @@ export default function App() {
   const [midCategoryFilter, setMidCategoryFilter] = useState('');
 
   const [items, setItems] = useState<DashboardItem[]>([]);
-  const [salesSettings, setSalesSettings] = useState<SalesSettings>({
-    salesTarget: 48000000000,
-    normalRevenue: 116000000000,
-    additionalRevenue: 4000000000,
-  });
   const [loading, setLoading] = useState(true);
   // Supabase에서 데이터 로드
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        const [dashboardItems, editDataFromDb, settings] = await Promise.all([
+        const [dashboardItems, editDataFromDb] = await Promise.all([
           fetchDashboardItems(),
           fetchAllEditData(),
-          fetchSalesSettings(),
         ]);
-        setSalesSettings(settings);
         setItems(dashboardItems);
         // DB에서 가져온 편집 데이터가 있으면 병합
         if (Object.keys(editDataFromDb).length > 0) {
@@ -117,10 +110,8 @@ export default function App() {
       const [dashboardItems, editDataFromDb, settings] = await Promise.all([
         fetchDashboardItems(),
         fetchAllEditData(),
-        fetchSalesSettings(),
       ]);
       setItems(dashboardItems);
-      setSalesSettings(settings);
       const merged: Record<string, EditableData> = {};
       dashboardItems.forEach(item => {
         merged[item.id] = editDataFromDb[item.id] || {
@@ -295,7 +286,7 @@ export default function App() {
                 📊 3월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {(salesSettings.salesTarget / 100000000).toFixed(0)}억</span>
+                <span className="text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {(stats.overall.totalRevenue / 100000000).toFixed(0)}억</span>
                 <div className="w-1 h-1 rounded-full bg-slate-300" />
                 <p className="text-[13px] text-slate-400 font-medium italic">3월 중점관리 품목 실시간 현황</p>
               </div>
@@ -379,9 +370,9 @@ export default function App() {
       <main className="max-w-[1600px] mx-auto p-10">
         {activeTab === 'summary' && (() => {
           const goalRate = stats.overall.totalRevenue > 0 ? (stats.overall.possibleRevenue / stats.overall.totalRevenue) * 100 : 0;
-          // 매출구성: Supabase settings에서 로드
-          const normalRevenue = salesSettings.normalRevenue;
-          const additionalRevenue = salesSettings.additionalRevenue;
+          // 매출구성: 고정값
+          const normalRevenue = 116000000000;   // 1,160억
+          const additionalRevenue = 4000000000; // 40억 (중점관리품목)
           const totalComposition = normalRevenue + additionalRevenue;
           const normalPct = (normalRevenue / totalComposition) * 100;     // 96.7%
           const additionalPct = (additionalRevenue / totalComposition) * 100; // 3.3%
