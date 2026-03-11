@@ -129,6 +129,48 @@ export async function updateEditData(itemId: string, editableData: EditableData)
   }
 }
 
+// ── 설정값 조회 (settings 테이블) ──
+export interface SalesSettings {
+  salesTarget: number;       // 매출 목표 (예: 48000000000 = 480억)
+  normalRevenue: number;     // 정상매출 (예: 116000000000 = 1,160억)
+  additionalRevenue: number; // 추가매출 (예: 4000000000 = 40억)
+}
+
+const DEFAULT_SETTINGS: SalesSettings = {
+  salesTarget: 48000000000,
+  normalRevenue: 116000000000,
+  additionalRevenue: 4000000000,
+};
+
+export async function fetchSalesSettings(): Promise<SalesSettings> {
+  const { data, error } = await supabase
+    .from('settings')
+    .select('key, value')
+    .in('key', ['sales_target', 'normal_revenue', 'additional_revenue']);
+
+  if (error) {
+    console.error('settings 조회 오류:', error.message);
+    return DEFAULT_SETTINGS;
+  }
+
+  const map = new Map((data || []).map((r: any) => [r.key, r.value]));
+  return {
+    salesTarget: Number(map.get('sales_target')) || DEFAULT_SETTINGS.salesTarget,
+    normalRevenue: Number(map.get('normal_revenue')) || DEFAULT_SETTINGS.normalRevenue,
+    additionalRevenue: Number(map.get('additional_revenue')) || DEFAULT_SETTINGS.additionalRevenue,
+  };
+}
+
+export async function updateSalesSetting(key: string, value: number): Promise<void> {
+  const { error } = await supabase
+    .from('settings')
+    .upsert({ key, value: value.toString(), updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('settings 업데이트 오류:', error.message);
+  }
+}
+
 // ── 전체 편집 데이터 저장 (POST /api/edit-data/save-all 대체) ──
 export async function saveAllEditData(allData: Record<string, EditableData>): Promise<void> {
   const rows = Object.entries(allData).map(([itemId, d]) => ({
