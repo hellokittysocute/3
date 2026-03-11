@@ -27,6 +27,7 @@ export default function App() {
   const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
   const [cisManagerFilter, setCisManagerFilter] = useState('');
   const [purchaseManagerFilter, setPurchaseManagerFilter] = useState('');
+  const [midCategoryFilter, setMidCategoryFilter] = useState('');
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
   const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
 
+  const MID_CATEGORIES = useMemo(() => [...new Set(items.map(i => i.category).filter(Boolean))].sort(), [items]);
   const CIS_MANAGERS = useMemo(() => [...new Set(items.map(i => i.cisManager).filter(Boolean))].sort(), [items]);
   const PURCHASE_MANAGERS = useMemo(() => {
     const managers = new Set<string>();
@@ -153,20 +155,21 @@ export default function App() {
         item.salesDocument?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.customerCode.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !categoryFilter || item.managementType === categoryFilter;
+      const matchesMidCategory = !midCategoryFilter || item.category === midCategoryFilter;
       const row = editData[item.id];
       const actualRevenuePossible = row?.revenuePossible || '확인중';
       const matchesRevenuePossible = !revenuePossibleFilter || (actualRevenuePossible === revenuePossibleFilter);
       const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
       const matchesCisManager = !cisManagerFilter || item.cisManager.toLowerCase().includes(cisManagerFilter.toLowerCase());
       const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager ?? '').toLowerCase().includes(purchaseManagerFilter.toLowerCase());
-      return matchesSearch && matchesCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
+      return matchesSearch && matchesCategory && matchesMidCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
     }).sort((a, b) => {
       const order: Record<string, number> = { '불가능': 0, '확인중': 1, '가능': 2 };
       const aStatus = savedEditData[a.id]?.revenuePossible || '확인중';
       const bStatus = savedEditData[b.id]?.revenuePossible || '확인중';
       return (order[aStatus] ?? 1) - (order[bStatus] ?? 1);
     });
-  }, [items, searchTerm, categoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData, savedEditData]);
+  }, [items, searchTerm, categoryFilter, midCategoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData, savedEditData]);
 
   // Chart data preparation
   const customerChartData = useMemo(() => {
@@ -675,7 +678,7 @@ export default function App() {
             })()}
 
             {/* Image-style Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-8 gap-6 bg-white p-8 border-y border-slate-200/60">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-9 gap-6 bg-white p-8 border-y border-slate-200/60">
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
                 <div className="relative">
@@ -688,6 +691,19 @@ export default function App() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                  value={midCategoryFilter}
+                  onChange={(e) => setMidCategoryFilter(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  {MID_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>
