@@ -706,6 +706,26 @@ export default function App() {
                 </select>
               </div>
               <div className="space-y-2">
+                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
+                <input
+                  type="text"
+                  placeholder="이름 검색..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  value={cisManagerFilter}
+                  onChange={(e) => setCisManagerFilter(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">구매담당</label>
+                <input
+                  type="text"
+                  placeholder="이름 검색..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  value={purchaseManagerFilter}
+                  onChange={(e) => setPurchaseManagerFilter(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>
                 <select
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
@@ -740,26 +760,6 @@ export default function App() {
                   <option>2026-03</option>
                   <option>2026-04</option>
                 </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
-                <input
-                  type="text"
-                  placeholder="이름 검색..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  value={cisManagerFilter}
-                  onChange={(e) => setCisManagerFilter(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">구매담당</label>
-                <input
-                  type="text"
-                  placeholder="이름 검색..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  value={purchaseManagerFilter}
-                  onChange={(e) => setPurchaseManagerFilter(e.target.value)}
-                />
               </div>
             </div>
 
