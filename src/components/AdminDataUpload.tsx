@@ -238,7 +238,7 @@ function parseCSVToRows(csvText: string): ParseResult {
       week2: getVal(cols, headerMapping, '2주차'),
       week3: getVal(cols, headerMapping, '3주차'),
       delay_days: getNumVal(cols, headerMapping, '부자재 지연일수', '부자재지연일수'),
-      mfg1: getVal(cols, headerMapping, '제조 1차', '제조1차', '기존제조', '기존 제조'),
+      mfg1: getVal(cols, headerMapping, '제조 1차', '제조1차', '기존제조', '기존 제조', '현재제조'),
       mfg_final: getVal(cols, headerMapping, '제조 최종', '제조최종'),
       pkg1: getVal(cols, headerMapping, '충포장 1차', '충포장1차'),
       pkg_final: getVal(cols, headerMapping, '충포장 최종', '충포장최종'),
