@@ -617,9 +617,9 @@ export default function App() {
                       {/* 상/중/하 달성률 */}
                       <div className="col-span-2 flex flex-col gap-3">
                         {[
-                          { label: '상 달성률', sub: `${sangItems.length}건 긴급`, rate: avgRate(sangItems), gradient: 'linear-gradient(90deg, #e8354a, #f87171)', color: '#f87171', dot: '🔴' },
-                          { label: '중 달성률', sub: `${jungItems.length}건 주의`, rate: avgRate(jungItems), gradient: 'linear-gradient(90deg, #d4880a, #fbbf24)', color: '#fbbf24', dot: '🟡' },
-                          { label: '하 달성률', sub: `${haItems.length}건 양호`, rate: avgRate(haItems), gradient: 'linear-gradient(90deg, #16a34a, #4ade80)', color: '#4ade80', dot: '🟢' },
+                          { label: '상 달성률', sub: `${sangItems.length}건 긴급`, rate: avgRate(sangItems), revenue: sangItems.reduce((s, i) => s + getRevenue(i), 0), gradient: 'linear-gradient(90deg, #e8354a, #f87171)', color: '#f87171', dot: '🔴' },
+                          { label: '중 달성률', sub: `${jungItems.length}건 주의`, rate: avgRate(jungItems), revenue: jungItems.reduce((s, i) => s + getRevenue(i), 0), gradient: 'linear-gradient(90deg, #d4880a, #fbbf24)', color: '#fbbf24', dot: '🟡' },
+                          { label: '하 달성률', sub: `${haItems.length}건 양호`, rate: avgRate(haItems), revenue: haItems.reduce((s, i) => s + getRevenue(i), 0), gradient: 'linear-gradient(90deg, #16a34a, #4ade80)', color: '#4ade80', dot: '🟢' },
                         ].map((bar, idx) => (
                           <div key={idx} className="rounded-xl px-5 py-3 flex-1 flex flex-col justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
                             <div className="flex items-center justify-between mb-2">
@@ -627,7 +627,10 @@ export default function App() {
                                 <div className="text-[14px] font-bold text-white/90">{bar.dot} {bar.label}</div>
                                 <div className="text-[12px] font-semibold text-white/40">{bar.sub}</div>
                               </div>
-                              <span className="text-[22px] font-black" style={{ color: bar.color }}>{bar.rate.toFixed(1)}%</span>
+                              <div className="text-right">
+                                <span className="text-[22px] font-black" style={{ color: bar.color }}>{bar.rate.toFixed(1)}%</span>
+                                <div className="text-[12px] font-semibold text-white/50">{formatCurrency(bar.revenue)}</div>
+                              </div>
                             </div>
                             <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                               <div
