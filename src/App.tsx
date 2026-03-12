@@ -552,8 +552,9 @@ export default function App() {
               const haItems = filteredItems.filter(i => getImportance(i) === '하');
               const avgRate = (arr: DashboardItem[]) => {
                 if (arr.length === 0) return 0;
-                const possibleCount = arr.filter(isRevenuePossible).length;
-                return (possibleCount / arr.length) * 100;
+                const totalRev = arr.reduce((s, i) => s + getRevenue(i), 0);
+                const possibleRev = arr.filter(isRevenuePossible).reduce((s, i) => s + getRevenue(i), 0);
+                return totalRev > 0 ? (possibleRev / totalRev) * 100 : 0;
               };
               const totalRemaining = filteredItems.reduce((s, i) => s + i.remainingQuantity, 0);
               const possibleRemaining = filteredItems.filter(isRevenuePossible).reduce((s, i) => s + i.remainingQuantity, 0);
