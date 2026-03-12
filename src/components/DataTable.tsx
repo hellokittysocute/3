@@ -82,12 +82,12 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="하">하</option>
         </select>
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[50px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[120px] z-20 whitespace-nowrap bg-white">{row?.purchaseManager ?? ''}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[200px] z-20 whitespace-nowrap bg-white">{item.category}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[270px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[340px] z-20 bg-white">{item.materialCode}</td>
-      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[420px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[44px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[102px] z-20 whitespace-nowrap bg-white">{row?.purchaseManager ?? ''}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[160px] z-20 whitespace-nowrap bg-white">{item.category}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[230px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[292px] z-20 bg-white">{item.materialCode}</td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[402px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
       <td className="pl-6 pr-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
@@ -354,27 +354,27 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
       {/* 상단 스크롤바 */}
       <div ref={topScrollRef} className="overflow-x-auto" style={{ height: '16px' }}>
-        <div style={{ width: '2950px', height: '1px' }} />
+        <div style={{ width: '2900px', height: '1px' }} />
       </div>
 
       <div ref={tableScrollRef} className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-left border-collapse min-w-[2950px]">
+        <table className="w-full text-left border-collapse min-w-[2900px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap">
-              <th className="px-1 py-2 border-r border-slate-200 text-center w-[50px] sticky left-0 z-40 bg-slate-50">중요도</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[50px] z-40 bg-slate-50">CIS담당</th>
-              <th className="px-1 py-2 border-r border-slate-200 sticky left-[120px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[200px] z-40 bg-slate-50">중분류</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[270px] z-40 bg-slate-50">고객약호</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[340px] z-40 bg-slate-50">자재</th>
-              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[420px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sticky left-0 z-40 bg-slate-50">중요도</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[44px] z-40 bg-slate-50">CIS담당</th>
+              <th className="px-1 py-2 border-r border-slate-200 sticky left-[102px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[160px] z-40 bg-slate-50">중분류</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[230px] z-40 bg-slate-50">고객약호</th>
+              <th className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50">자재</th>
+              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
 
               <th className="pl-6 pr-2 py-2 border-r border-slate-200">생성일</th>
               <th className="px-2 py-2 border-r border-slate-200">원납기일</th>
               <th className="px-2 py-2 border-r border-slate-200">변경납기일</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right">총오더수량</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right">환산수량</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right">미납잔량</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">부자재</th>
               <th className="px-2 py-2 border-r border-slate-200 text-center">현재제조</th>
@@ -433,12 +433,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           <tfoot className="sticky bottom-0 z-25 border-t-2 border-slate-300">
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sticky left-0 z-20 bg-slate-100">합계</td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[50px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[120px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[200px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[270px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[340px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[420px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[44px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[102px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[160px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[230px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sticky left-[292px] z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[402px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
               <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
