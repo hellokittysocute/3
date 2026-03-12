@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3월 중점관리 품목 매출 현황</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
+      max-width: 520px;
+      width: 100%;
+    }
+
+    .card-header { padding: 20px 24px 14px; }
+    .card-header h2 { font-size: 14px; font-weight: 700; color: #1f2937; }
+    .card-header p  { font-size: 12px; font-weight: 400; color: #9ca3af; margin-top: 3px; }
+
+    .divider { height: 1px; background: #f1f5f9; margin: 0 24px; }
+
+    .card-body {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 24px 24px 28px;
+    }
+
+    /* ── 도넛 ── */
+    .chart-wrap { position: relative; flex-shrink: 0; width: 180px; height: 180px; }
+    .chart-wrap svg { transform: rotate(-90deg); width: 180px; height: 180px; }
+
+    .donut-bg   { fill: none; stroke: #f1f5f9; stroke-width: 22; }
+    .donut-seg  { fill: none; stroke-width: 22; stroke-linecap: round;
+                  animation: draw 1.2s cubic-bezier(0.33,1,0.68,1) forwards; }
+
+    @keyframes draw {
+      from { stroke-dashoffset: var(--c); }
+      to   { stroke-dashoffset: var(--o); }
+    }
+
+    .center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .center-label  { font-size: 11px; font-weight: 500; color: #9ca3af; }
+    .center-amount { font-size: 24px; font-weight: 800; color: #111827; letter-spacing: -0.03em; line-height: 1.2; margin-top: 2px; }
+    .center-count  { font-size: 12px; font-weight: 500; color: #9ca3af; margin-top: 2px; }
+
+    /* ── 범례 ── */
+    .legend { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+    .legend-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 12px;
+      background: #f9fafb;
+      transition: background 0.2s, transform 0.2s;
+      cursor: default;
+    }
+    .legend-item:hover { background: #f1f5f9; transform: translateX(3px); }
+
+    .legend-dot   { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legend-label { font-size: 13px; font-weight: 500; color: #4b5563; white-space: nowrap; }
+    .legend-value { font-size: 14px; font-weight: 700; color: #111827; margin-left: auto; white-space: nowrap; }
+    .legend-badge { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <h2>매출 현황</h2>
+    <p>비율과 수치를 동시에 파악</p>
+  </div>
+  <div class="divider"></div>
+
+  <div class="card-body">
+    <div class="chart-wrap">
+      <svg viewBox="0 0 180 180" id="donut"></svg>
+      <div class="center">
+        <span class="center-label">총 매출</span>
+        <span class="center-amount" id="cAmt"></span>
+        <span class="center-count" id="cCnt"></span>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+
+<script>
+const data = [
+  { label: '매출금액', value: 490000000, count: 15, color: '#6366f1' },
+  { label: '확인중',   value: 490000000, count: 15, color: '#f59e0b' },
+  { label: '가능',     value: 0,         count: 0,  color: '#10b981' },
+  { label: '불가능',   value: 0,         count: 0,  color: '#f43f5e' },
+];
+
+const badgeBg = { '#6366f1':'#eef2ff','#f59e0b':'#fefce8','#10b981':'#ecfdf5','#f43f5e':'#fff1f2' };
+const salesItem = data[0];
+const statuses = data.slice(1);
+const statusTotal = statuses.reduce((s,d) => s + d.value, 0);
+
+function fmt(v) {
+  if (!v) return '0';
+  const e = v / 1e8;
+  if (e >= 1) return (e % 1 === 0 ? e : e.toFixed(1)) + '억';
+  return (v / 1e4).toLocaleString() + '만';
+}
+
+/* ── 도넛 ── */
+const R = 68, C = 2 * Math.PI * R, GAP = 4;
+const svg = document.getElementById('donut');
+const NS = 'http://www.w3.org/2000/svg';
+
+const bg = document.createElementNS(NS, 'circle');
+bg.setAttribute('cx',90); bg.setAttribute('cy',90); bg.setAttribute('r',R);
+bg.classList.add('donut-bg');
+svg.appendChild(bg);
+
+const active = statuses.filter(d => d.value > 0);
+let off = 0;
+
+if (active.length === 1) {
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('cx',90); c.setAttribute('cy',90); c.setAttribute('r',R);
+  c.classList.add('donut-seg');
+  c.style.stroke = active[0].color;
+  c.style.strokeDasharray = `${C} 0`;
+  c.style.setProperty('--c', C); c.style.setProperty('--o', 0);
+  svg.appendChild(c);
+} else if (active.length > 1) {
+  active.forEach((d, i) => {
+    const seg = (d.value / statusTotal) * C - GAP;
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx',90); c.setAttribute('cy',90); c.setAttribute('r',R);
+    c.classList.add('donut-seg');
+    c.style.stroke = d.color;
+    c.style.strokeDasharray = `${seg} ${C - seg}`;
+    c.style.strokeDashoffset = -off;
+    c.style.setProperty('--c', C); c.style.setProperty('--o', -off);
+    c.style.animationDelay = `${i * 0.15}s`;
+    svg.appendChild(c);
+    off += seg + GAP;
+  });
+}
+
+/* ── 중앙 ── */
+document.getElementById('cAmt').textContent = fmt(salesItem.value);
+document.getElementById('cCnt').textContent = salesItem.count + '건';
+
+/* ── 범례 ── */
+const legend = document.getElementById('legend');
+data.forEach((d, i) => {
+  const isTotal = i === 0;
+  const badge = isTotal ? d.count + '건' : (statusTotal > 0 ? Math.round((d.value / statusTotal) * 100) + '%' : '0%');
+  const el = document.createElement('div');
+  el.className = 'legend-item';
+  el.innerHTML = `
+    <span class="legend-dot" style="background:${d.color}"></span>
+    <span class="legend-label">${d.label}</span>
+    <span class="legend-value">${fmt(d.value)}</span>
+    <span class="legend-badge" style="background:${badgeBg[d.color]};color:${d.color}">${badge}</span>`;
+  legend.appendChild(el);
+});
+</script>
+</body>
+</html>

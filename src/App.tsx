@@ -6,6 +6,7 @@ import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData 
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
+import { DonutChart } from './components/DonutChart';
 import { PriorityKanban } from './components/PriorityKanban';
 import { LoginPage } from './components/LoginPage';
 import { InactivePage } from './components/InactivePage';
@@ -381,53 +382,19 @@ export default function App() {
 
           return (
           <div style={{ gap: 20, display: 'flex', flexDirection: 'column' as const }}>
-            {/* 1행 — KPI 카드 4개 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
-              <KPICard title="매출금액" value={stats.overall.totalRevenue} count={stats.overall.totalCount} type="target" subText={`총 ${stats.overall.totalCount}건 · ${(stats.overall.totalRevenue / 100000000).toFixed(0)}억`} delay={0} />
-              <KPICard title="가능" value={stats.overall.possibleRevenue} count={stats.overall.possibleCount} totalCount={stats.overall.totalCount} type="possible" trend={`+${(stats.overall.possibleRevenue / 100000000).toFixed(0)}억`} delay={100} />
-              <KPICard title="확인중" value={stats.overall.checkingRevenue} count={stats.overall.checkingCount} totalCount={stats.overall.totalCount} type="checking" trend={`-${(stats.overall.checkingRevenue / 100000000).toFixed(0)}억`} delay={200} />
-              <KPICard title="불가능" value={stats.overall.impossibleRevenue} count={stats.overall.impossibleCount} totalCount={stats.overall.totalCount} type="impossible" trend={`-${(stats.overall.impossibleRevenue / 100000000).toFixed(0)}억`} delay={300} />
-            </div>
-
-            {/* 2행 — 매출구성 + 진도현황 (1:1) */}
+            {/* 1행 — 매출현황(도넛) + 진도현황 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
-              {/* 매출구성 */}
-              <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
-                <h3 className="text-[14px] font-bold text-gray-800 mb-5">매출구성</h3>
-                <div className="space-y-4 flex-1">
-                  {/* 정상매출 바 */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] font-medium text-gray-500">정상매출</span>
-                      <span className="text-[13px] font-semibold text-gray-800">{formatCurrency(normalRevenue)} <span className="text-gray-400 font-normal">({normalPct.toFixed(1)}%)</span></span>
-                    </div>
-                    <div className="w-full h-5 bg-gray-50 rounded-md overflow-hidden">
-                      <div className="h-full rounded-md transition-all duration-700" style={{ width: `${normalPct}%`, backgroundColor: '#6366f1' }} />
-                    </div>
-                  </div>
-                  {/* 추가매출 바 */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] font-medium text-gray-500">추가매출 <span className="text-gray-400">(중점관리품목)</span></span>
-                      <span className="text-[13px] font-semibold text-gray-800">{formatCurrency(additionalRevenue)} <span className="text-gray-400 font-normal">({additionalPct.toFixed(1)}%)</span></span>
-                    </div>
-                    <div className="w-full h-5 bg-gray-50 rounded-md overflow-hidden">
-                      <div className="h-full rounded-md transition-all duration-700" style={{ width: `${additionalPct}%`, backgroundColor: '#a5b4fc' }} />
-                    </div>
-                  </div>
-                </div>
-                {/* 하단 합계 + 추가매출 비중 */}
-                <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-[12px] text-gray-400">합계</span>
-                    <span className="text-[18px] font-extrabold text-gray-900 ml-2">{formatCurrency(totalComposition)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[12px] text-gray-400 mr-2">추가매출 비중</span>
-                    <span className="text-[18px] font-extrabold" style={{ color: '#6366f1' }}>{additionalPct.toFixed(1)}%</span>
-                  </div>
-                </div>
-              </div>
+              {/* 매출현황 도넛 차트 */}
+              <DonutChart
+                totalRevenue={stats.overall.totalRevenue}
+                totalCount={stats.overall.totalCount}
+                checkingRevenue={stats.overall.checkingRevenue}
+                checkingCount={stats.overall.checkingCount}
+                possibleRevenue={stats.overall.possibleRevenue}
+                possibleCount={stats.overall.possibleCount}
+                impossibleRevenue={stats.overall.impossibleRevenue}
+                impossibleCount={stats.overall.impossibleCount}
+              />
 
               {/* 진도현황 */}
               <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
