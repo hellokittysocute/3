@@ -15,7 +15,7 @@ export function LoginPage() {
           </div>
 
           <h1 className="text-2xl font-black tracking-tight text-slate-900 mb-2">
-            중점관리 품목 대시보드
+            3월 중점관리 품목 대시보드
           </h1>
           <p className="text-sm text-slate-400 font-medium mb-8">
             서비스를 이용하려면 Google 계정으로 로그인하세요
