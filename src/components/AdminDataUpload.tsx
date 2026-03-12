@@ -90,6 +90,7 @@ const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> =
   '제조 1차': { field: 'mfg1', type: 'string' },
   '제조1차': { field: 'mfg1', type: 'string' },
   '기존제조': { field: 'mfg1', type: 'string' },
+  '현재제조': { field: 'mfg1', type: 'string' },
   '제조 최종': { field: 'mfg_final', type: 'string' },
   '제조최종': { field: 'mfg_final', type: 'string' },
   '충포장 1차': { field: 'pkg1', type: 'string' },
@@ -277,7 +278,13 @@ function parseCSVToRows(csvText: string): ParseResult {
   return { rows, unmappedHeaders, mappedHeaders, headerDebug };
 }
 
-export function AdminDataUpload() {
+interface AdminDataUploadProps {
+  selectedMonth?: string;
+  onMonthUploaded?: (month: string) => void;
+}
+
+export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUploadProps) {
+  const [uploadMonth, setUploadMonth] = useState(selectedMonth || new Date().toISOString().slice(0, 7));
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [unmapped, setUnmapped] = useState<string[]>([]);
@@ -310,15 +317,22 @@ export function AdminDataUpload() {
     setUploading(true);
     setResult(null);
 
+    // ID에 월 prefix 추가 (월간 충돌 방지)
+    const monthPrefix = uploadMonth !== '2026-03' ? `${uploadMonth}-` : '';
+    const rowsWithMonth = parsedRows.map((row, idx) => ({
+      ...row,
+      id: `${monthPrefix}item-${idx}`,
+    }));
+
     try {
-      // 1단계: 기존 데이터 수 확인
+      // 1단계: 해당 월의 기존 데이터 수 확인
       const { count: oldCount } = await supabase
         .from('dashboard_items')
         .select('*', { count: 'exact', head: true });
 
-      // 2단계: 새 데이터 upsert (기존 ID 덮어쓰기)
-      for (let i = 0; i < parsedRows.length; i += 100) {
-        const batch = parsedRows.slice(i, i + 100).map((row) => {
+      // 2단계: 새 데이터 upsert (month 제외 — PostgREST 캐시 이슈 우회, DEFAULT 사용)
+      for (let i = 0; i < rowsWithMonth.length; i += 100) {
+        const batch = rowsWithMonth.slice(i, i + 100).map((row) => {
           const clean: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(row)) {
             if (!k.startsWith('_')) clean[k] = v;
@@ -330,10 +344,10 @@ export function AdminDataUpload() {
       }
 
       // 3단계: 초과 old 행 일괄 무효화
-      if (oldCount && oldCount > parsedRows.length) {
+      if (oldCount && oldCount > rowsWithMonth.length) {
         const excessIds = Array.from(
-          { length: oldCount - parsedRows.length },
-          (_, i) => `item-${parsedRows.length + i}`
+          { length: oldCount - rowsWithMonth.length },
+          (_, i) => `${monthPrefix}item-${rowsWithMonth.length + i}`
         );
         for (let i = 0; i < excessIds.length; i += 100) {
           const batch = excessIds.slice(i, i + 100);
@@ -345,7 +359,7 @@ export function AdminDataUpload() {
       }
 
       // edit_data: CSV 값으로 초기화
-      const editRows = parsedRows.map(row => ({
+      const editRows = rowsWithMonth.map(row => ({
         item_id: row.id,
         production_complete_date: (row.production_request_date as string) || '',
         material_setting_date: (row._material_setting_date as string) || '',
@@ -365,7 +379,8 @@ export function AdminDataUpload() {
         if (error) throw new Error(`edit_data 업로드 실패 (행 ${i}): ${error.message}`);
       }
 
-      setResult({ success: true, message: `${parsedRows.length}건 업로드 완료. 2초 후 새로고침합니다...` });
+      onMonthUploaded?.(uploadMonth);
+      setResult({ success: true, message: `${parseInt(uploadMonth.split('-')[1])}월 데이터 ${rowsWithMonth.length}건 업로드 완료. 2초 후 새로고침합니다...` });
       setTimeout(() => window.location.reload(), 2000);
     } catch (err: any) {
       setResult({ success: false, message: err.message });
@@ -386,9 +401,20 @@ export function AdminDataUpload() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-black text-slate-900">데이터 업로드</h2>
-        <p className="text-sm text-slate-400 mt-1">CSV 파일을 업로드하여 대시보드 데이터를 갱신합니다. 기존 데이터는 교체됩니다.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900">데이터 업로드</h2>
+          <p className="text-sm text-slate-400 mt-1">CSV 파일을 업로드하여 대시보드 데이터를 갱신합니다. 해당 월의 기존 데이터는 교체됩니다.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-bold text-slate-500">업로드 월:</label>
+          <input
+            type="month"
+            value={uploadMonth}
+            onChange={(e) => setUploadMonth(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+          />
+        </div>
       </div>
 
       {/* Upload Area */}

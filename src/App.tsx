@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
-import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData } from './services/supabaseDataService';
+import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths } from './services/supabaseDataService';
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
@@ -32,14 +32,34 @@ export default function App() {
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
-  // Supabase에서 데이터 로드
+
+  // 월 관리
+  const [availableMonths, setAvailableMonths] = useState<string[]>(['2026-03']);
+  const [selectedMonth, setSelectedMonth] = useState<string>('2026-03');
+  const currentMonth = new Date().toISOString().slice(0, 7); // e.g. '2026-03'
+  const isReadOnly = selectedMonth < currentMonth;
+
+  // 월 목록 로드
+  useEffect(() => {
+    fetchAvailableMonths().then(months => {
+      setAvailableMonths(months);
+      // 현재 월이 목록에 있으면 선택, 아니면 최신 월
+      if (months.includes(currentMonth)) {
+        setSelectedMonth(currentMonth);
+      } else {
+        setSelectedMonth(months[months.length - 1]);
+      }
+    });
+  }, []);
+
+  // Supabase에서 월별 데이터 로드
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
         const [dashboardItems, editDataFromDb] = await Promise.all([
-          fetchDashboardItems(),
-          fetchAllEditData(),
+          fetchDashboardItems(selectedMonth),
+          fetchAllEditData(selectedMonth),
         ]);
         setItems(dashboardItems);
         // DB에서 가져온 편집 데이터가 있으면 병합
@@ -62,7 +82,7 @@ export default function App() {
       }
     }
     loadData();
-  }, []);
+  }, [selectedMonth]);
 
 
 
@@ -108,9 +128,9 @@ export default function App() {
   const refreshEditData = useCallback(async () => {
     setLoading(true);
     try {
-      const [dashboardItems, editDataFromDb, settings] = await Promise.all([
-        fetchDashboardItems(),
-        fetchAllEditData(),
+      const [dashboardItems, editDataFromDb] = await Promise.all([
+        fetchDashboardItems(selectedMonth),
+        fetchAllEditData(selectedMonth),
       ]);
       setItems(dashboardItems);
       const merged: Record<string, EditableData> = {};
@@ -124,12 +144,15 @@ export default function App() {
       setEditData(merged);
       setSavedEditData(merged);
       setSaveStatus('idle');
+      // 월 목록도 갱신
+      const months = await fetchAvailableMonths();
+      setAvailableMonths(months);
     } catch (err) {
       console.error('데이터 갱신 실패:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedMonth]);
 
   const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
     setSaveStatus('idle');
@@ -139,7 +162,7 @@ export default function App() {
   const handleSave = useCallback(async () => {
     setSaveStatus('loading');
     try {
-      await saveAllEditData(editData);
+      await saveAllEditData(editData, selectedMonth);
       setSavedEditData(editData);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -284,12 +307,13 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-[30px] font-black tracking-tighter text-slate-900">
-                📊 3월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
+                📊 {parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {(stats.overall.totalRevenue / 100000000).toFixed(0)}억</span>
                 <div className="w-1 h-1 rounded-full bg-slate-300" />
-                <p className="text-[13px] text-slate-400 font-medium italic">3월 중점관리 품목 실시간 현황</p>
+                <p className="text-[13px] text-slate-400 font-medium italic">{parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 실시간 현황</p>
+                {isReadOnly && <span className="text-[11px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">읽기전용</span>}
               </div>
             </div>
           </div>
@@ -365,6 +389,32 @@ export default function App() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* 월별 시트 탭 (엑셀 스타일) */}
+        <div className="max-w-[1600px] mx-auto px-8 flex items-center gap-1 pt-2 pb-0">
+          {availableMonths.map(month => {
+            const m = parseInt(month.split('-')[1]);
+            const isActive = month === selectedMonth;
+            const isPast = month < currentMonth;
+            return (
+              <button
+                key={month}
+                onClick={() => setSelectedMonth(month)}
+                className={cn(
+                  "px-4 py-2 text-[13px] font-bold rounded-t-lg border border-b-0 transition-all relative",
+                  isActive
+                    ? "bg-white text-slate-900 border-slate-200 z-10 -mb-px"
+                    : isPast
+                      ? "bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100"
+                      : "bg-slate-50 text-slate-500 border-slate-100 hover:bg-white"
+                )}
+              >
+                {m}월 중점관리품목
+                {isPast && <span className="ml-1 text-[10px] text-amber-500">📋</span>}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -734,7 +784,7 @@ export default function App() {
             </div>
 
             <div className="bg-white overflow-hidden">
-              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} isAdmin={isAdmin} />
+              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly} />
             </div>
           </div>
         )}
@@ -744,7 +794,12 @@ export default function App() {
         )}
 
         {activeTab === 'admin-upload' && isAdmin && (
-          <AdminDataUpload />
+          <AdminDataUpload selectedMonth={selectedMonth} onMonthUploaded={(month) => {
+            if (!availableMonths.includes(month)) {
+              setAvailableMonths(prev => [...prev, month].sort());
+            }
+            setSelectedMonth(month);
+          }} />
         )}
       </main>
 

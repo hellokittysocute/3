@@ -70,8 +70,15 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
   };
 }
 
-// ── 전체 대시보드 아이템 조회 (CSV 파싱 대체) ──
-export async function fetchDashboardItems(): Promise<DashboardItem[]> {
+// ── 가용 월 목록 조회 ──
+export async function fetchAvailableMonths(): Promise<string[]> {
+  // PostgREST 캐시가 month 컬럼을 인식할 때까지 기본값 반환
+  return ['2026-03'];
+}
+
+// ── 월별 대시보드 아이템 조회 ──
+export async function fetchDashboardItems(month?: string): Promise<DashboardItem[]> {
+  // PostgREST 캐시 이슈로 month 필터 임시 비활성화
   const { data, error } = await supabase
     .from('dashboard_items')
     .select('*')
@@ -86,11 +93,10 @@ export async function fetchDashboardItems(): Promise<DashboardItem[]> {
   return (data || []).map(rowToItem);
 }
 
-// ── 전체 편집 데이터 조회 (GET /api/edit-data 대체) ──
-export async function fetchAllEditData(): Promise<Record<string, EditableData>> {
-  const { data, error } = await supabase
-    .from('edit_data')
-    .select('*');
+// ── 월별 편집 데이터 조회 ──
+export async function fetchAllEditData(month?: string): Promise<Record<string, EditableData>> {
+  // PostgREST 캐시 이슈로 month 필터 임시 비활성화
+  const { data, error } = await supabase.from('edit_data').select('*');
 
   if (error) {
     console.error('edit_data 조회 오류:', error.message);
@@ -105,8 +111,8 @@ export async function fetchAllEditData(): Promise<Record<string, EditableData>> 
   return result;
 }
 
-// ── 단일 아이템 편집 데이터 업데이트 (PUT /api/edit-data/:id 대체) ──
-export async function updateEditData(itemId: string, editableData: EditableData): Promise<void> {
+// ── 단일 아이템 편집 데이터 업데이트 ──
+export async function updateEditData(itemId: string, editableData: EditableData, month?: string): Promise<void> {
   const { error } = await supabase
     .from('edit_data')
     .upsert({
@@ -142,11 +148,12 @@ const DEFAULT_SETTINGS: SalesSettings = {
   additionalRevenue: 4000000000,
 };
 
-export async function fetchSalesSettings(): Promise<SalesSettings> {
+export async function fetchSalesSettings(month?: string): Promise<SalesSettings> {
+  const prefix = month ? `${month}_` : '';
   const { data, error } = await supabase
     .from('settings')
     .select('key, value')
-    .in('key', ['sales_target', 'normal_revenue', 'additional_revenue']);
+    .in('key', [`${prefix}sales_target`, `${prefix}normal_revenue`, `${prefix}additional_revenue`]);
 
   if (error) {
     console.error('settings 조회 오류:', error.message);
@@ -154,10 +161,15 @@ export async function fetchSalesSettings(): Promise<SalesSettings> {
   }
 
   const map = new Map((data || []).map((r: any) => [r.key, r.value]));
+  // 월별 키가 없으면 기본 키로 fallback
+  const getVal = (key: string, fallback: number) => {
+    return Number(map.get(`${prefix}${key}`)) || fallback;
+  };
+
   return {
-    salesTarget: Number(map.get('sales_target')) || DEFAULT_SETTINGS.salesTarget,
-    normalRevenue: Number(map.get('normal_revenue')) || DEFAULT_SETTINGS.normalRevenue,
-    additionalRevenue: Number(map.get('additional_revenue')) || DEFAULT_SETTINGS.additionalRevenue,
+    salesTarget: getVal('sales_target', DEFAULT_SETTINGS.salesTarget),
+    normalRevenue: getVal('normal_revenue', DEFAULT_SETTINGS.normalRevenue),
+    additionalRevenue: getVal('additional_revenue', DEFAULT_SETTINGS.additionalRevenue),
   };
 }
 
@@ -171,8 +183,8 @@ export async function updateSalesSetting(key: string, value: number): Promise<vo
   }
 }
 
-// ── 전체 편집 데이터 저장 (POST /api/edit-data/save-all 대체) ──
-export async function saveAllEditData(allData: Record<string, EditableData>): Promise<void> {
+// ── 전체 편집 데이터 저장 ──
+export async function saveAllEditData(allData: Record<string, EditableData>, month?: string): Promise<void> {
   const rows = Object.entries(allData).map(([itemId, d]) => ({
     item_id: itemId,
     production_complete_date: d.productionCompleteDate,

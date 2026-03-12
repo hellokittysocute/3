@@ -23,6 +23,7 @@ interface DataTableProps {
   onSave: () => void;
   saveStatus: 'idle' | 'saved' | 'loading';
   isAdmin?: boolean;
+  readOnly?: boolean;
 }
 
 type Tier = '전체' | '상' | '중' | '하';
@@ -62,10 +63,11 @@ interface TableRowProps {
   color: typeof TIER_COLORS['상'];
   rate: number;
   isAdmin?: boolean;
+  readOnly?: boolean;
   onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
 }
 
-const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, onUpdateField }) => {
+const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, readOnly, onUpdateField }) => {
   return (
     <>
       {/* 중요도 컬럼 - 드롭다운 (고정) */}
@@ -75,6 +77,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
           value={row?.importance || ''}
           onChange={(e) => onUpdateField(item.id, 'importance', e.target.value)}
+          disabled={readOnly}
         >
           <option value="">선택</option>
           <option value="상">상</option>
@@ -97,20 +100,20 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{item.mfg1}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20 text-center">
         <select
@@ -121,6 +124,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           )}
           value={row?.revenuePossible || '확인중'}
           onChange={(e) => onUpdateField(item.id, 'revenuePossible', e.target.value)}
+          disabled={readOnly}
         >
           <option value="확인중">확인중</option>
           <option value="가능">가능</option>
@@ -128,7 +132,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
-        <input type="number" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ?? item.remainingQuantity} min={0} onChange={(e) => onUpdateField(item.id, 'revenuePossibleQuantity', Number(e.target.value))} />
+        <input type="number" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ?? item.remainingQuantity} min={0} onChange={(e) => onUpdateField(item.id, 'revenuePossibleQuantity', Number(e.target.value))} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <span className="text-[13px] font-bold" style={{ color: color.text }}>
@@ -142,6 +146,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           )}
           value={row?.delayReason ?? ''}
           onChange={(e) => onUpdateField(item.id, 'delayReason', e.target.value)}
+          disabled={readOnly}
         >
           <option value="">선택</option>
           <option value="구매">구매</option>
@@ -154,7 +159,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
       {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrency(getRevenue(item))}</td>}
       <td className="px-1 py-1">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} disabled={readOnly} />
       </td>
     </>
   );
@@ -162,7 +167,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
 
 const ROW_HEIGHT = 40;
 
-export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin }) => {
+export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin, readOnly }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
@@ -326,21 +331,23 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           >
             <Download className="w-4 h-4" /> 다운로드
           </button>
-          <button
-            onClick={onSave}
-            className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg",
-              saveStatus === 'saved'
-                ? "bg-emerald-500 text-white shadow-emerald-200"
-                : "bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200"
-            )}
-          >
-            {saveStatus === 'saved' ? (
-              <><Check className="w-4 h-4" /> 저장 완료</>
-            ) : (
-              <><Save className="w-4 h-4" /> 저장</>
-            )}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={onSave}
+              className={cn(
+                "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg",
+                saveStatus === 'saved'
+                  ? "bg-emerald-500 text-white shadow-emerald-200"
+                  : "bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200"
+              )}
+            >
+              {saveStatus === 'saved' ? (
+                <><Check className="w-4 h-4" /> 저장 완료</>
+              ) : (
+                <><Save className="w-4 h-4" /> 저장</>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -418,6 +425,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                     color={color}
                     rate={rate}
                     isAdmin={isAdmin}
+                    readOnly={readOnly}
                     onUpdateField={onUpdateField}
                   />
                 </tr>
