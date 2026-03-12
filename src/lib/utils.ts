@@ -6,13 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number) {
-  if (value >= 100000000) {
-    return `${(value / 100000000).toFixed(1)}억`;
-  }
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(0)}만`;
-  }
-  return value.toLocaleString();
+  const eok = value / 100000000;
+  if (eok >= 10) return `${Math.round(eok)}억`;
+  if (eok >= 1) return `${eok.toFixed(1)}억`;
+  return `${eok.toFixed(2)}억`;
 }
 
 export function formatNumber(value: number) {
