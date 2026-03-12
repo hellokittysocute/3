@@ -358,23 +358,28 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
         }
       }
 
-      // edit_data: CSV 값으로 초기화
-      const editRows = rowsWithMonth.map(row => ({
-        item_id: row.id,
-        production_complete_date: (row.production_request_date as string) || '',
-        material_setting_date: (row._material_setting_date as string) || '',
-        manufacturing_date: (row._manufacturing_date as string) || '',
-        packaging_date: (row._packaging_date as string) || '',
-        revenue_possible: (row._revenue_possible as string) || '확인중',
-        revenue_possible_quantity: row.remaining_quantity as number,
-        delay_reason: '',
-        importance: (row._importance as string) || '',
-        purchase_manager: (row._purchase_manager as string) || '',
-        note: (row._note as string) || '',
-      }));
+      // edit_data: 기존 저장값 보존, 없는 항목만 CSV 값으로 초기화
+      const { data: existingEditData } = await supabase.from('edit_data').select('item_id');
+      const existingIds = new Set((existingEditData || []).map((r: any) => r.item_id));
 
-      for (let i = 0; i < editRows.length; i += 100) {
-        const batch = editRows.slice(i, i + 100);
+      const newEditRows = rowsWithMonth
+        .filter(row => !existingIds.has(row.id))
+        .map(row => ({
+          item_id: row.id,
+          production_complete_date: (row.production_request_date as string) || '',
+          material_setting_date: (row._material_setting_date as string) || '',
+          manufacturing_date: (row._manufacturing_date as string) || '',
+          packaging_date: (row._packaging_date as string) || '',
+          revenue_possible: (row._revenue_possible as string) || '확인중',
+          revenue_possible_quantity: row.remaining_quantity as number,
+          delay_reason: '',
+          importance: (row._importance as string) || '',
+          purchase_manager: (row._purchase_manager as string) || '',
+          note: (row._note as string) || '',
+        }));
+
+      for (let i = 0; i < newEditRows.length; i += 100) {
+        const batch = newEditRows.slice(i, i + 100);
         const { error } = await supabase.from('edit_data').upsert(batch);
         if (error) throw new Error(`edit_data 업로드 실패 (행 ${i}): ${error.message}`);
       }
