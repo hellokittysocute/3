@@ -8,12 +8,19 @@ import { formatCurrency, cn } from '../lib/utils';
 
 function formatDateShort(dateStr: string): string {
   if (!dateStr) return '';
+  // "m/d", "mm/dd", "mm/d", "m/dd" 형식 → 앞의 0 제거
+  const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (slashMatch) return `${Number(slashMatch[1])}/${Number(slashMatch[2])}`;
+  // "mm.dd", "m.dd" 형식
+  const dotMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})$/);
+  if (dotMatch) return `${Number(dotMatch[1])}/${Number(dotMatch[2])}`;
+  // "03월18일", "3월18일" 형식
+  const korMatch = dateStr.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  if (korMatch) return `${Number(korMatch[1])}/${Number(korMatch[2])}`;
+  // ISO or standard date → Date 파싱
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const yy = String(d.getFullYear()).slice(-2);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}/${mm}/${dd}`;
+  if (!isNaN(d.getTime())) return `${d.getMonth() + 1}/${d.getDate()}`;
+  return dateStr;
 }
 
 interface DataTableProps {
@@ -93,9 +100,9 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[402px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
-      <td className="pl-6 pr-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.createdDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.originalDueDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px]">{formatDateShort(item.changedDueDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.createdDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.originalDueDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.changedDueDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
@@ -105,7 +112,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{item.mfg1}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.mfg1)}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
       </td>
@@ -132,7 +139,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
-        <input type="number" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ?? item.remainingQuantity} min={0} onChange={(e) => onUpdateField(item.id, 'revenuePossibleQuantity', Number(e.target.value))} disabled={readOnly} />
+        <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={(row?.revenuePossibleQuantity ?? item.remainingQuantity).toLocaleString()} onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <span className="text-[13px] font-bold" style={{ color: color.text }}>
@@ -364,7 +371,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <div style={{ width: '2900px', height: '1px' }} />
       </div>
 
-      <div ref={tableScrollRef} className="overflow-auto max-h-[60vh]">
+      <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]">
         <table className="w-full text-left border-collapse min-w-[2900px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap">
@@ -376,20 +383,20 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50">자재</th>
               <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
 
-              <th className="pl-6 pr-2 py-2 border-r border-slate-200">생성일</th>
-              <th className="px-2 py-2 border-r border-slate-200">원납기일</th>
-              <th className="px-2 py-2 border-r border-slate-200">변경납기일</th>
+              <th className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">생성일</th>
+              <th className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">원납기일</th>
+              <th className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">변경납기일</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</th>
               <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산완료<br/>요청일</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">부자재</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-center">현재제조</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">제조</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">충포장</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600">생산처</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px]">생산완료<br/>요청일</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">부자재</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">현재제조</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">제조</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px]">충포장</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px]">생산처</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능수량</th>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px]">매출<br/>가능수량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</th>
               {isAdmin && <th className="px-2 py-2 border-r border-slate-200 text-right">단가</th>}
