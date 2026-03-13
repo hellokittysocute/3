@@ -12,6 +12,8 @@ import { LoginPage } from './components/LoginPage';
 import { InactivePage } from './components/InactivePage';
 import { AdminUserManagement } from './components/AdminUserManagement';
 import { AdminDataUpload } from './components/AdminDataUpload';
+import { DelayByDeptCard } from './components/DelayByDeptCard';
+import { NoReplyCard } from './components/NoReplyCard';
 import { useAuth } from './contexts/AuthContext';
 import { cn, formatCurrency } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -259,8 +261,22 @@ export default function App() {
       .sort((a, b) => b.count - a.count);
   }, [items, editData]);
 
-  // 구매, 품질, 연구소, 물류, 영업 순서
-  const DELAY_DEPT_COLORS = ['#10b981', '#f43f5e', '#6366f1', '#f59e0b', '#8b5cf6'];
+  const noReplyData = useMemo(() => {
+    let purchaseCount = 0;
+    let productionCount = 0;
+    items.forEach(item => {
+      const ed = editData[item.id];
+      // 부자재칸 공란 → 구매팀 귀책
+      if (!(ed?.materialSettingDate ?? '').trim()) purchaseCount++;
+      // 제조 또는 충포장칸 공란 → 운영팀 귀책
+      if (!(ed?.manufacturingDate ?? '').trim() || !(ed?.packagingDate ?? '').trim()) productionCount++;
+    });
+    return [
+      { dept: '구매', count: purchaseCount },
+      { dept: '생산', count: productionCount },
+    ].filter(d => d.count > 0);
+  }, [items, editData]);
+
 
   const trendData = [
     { date: '02/27', rate: 0 },
@@ -513,7 +529,7 @@ export default function App() {
             </div>
 
             {/* 3행 — Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
               {/* Top10 고객사 */}
               <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
                 <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
@@ -547,40 +563,10 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 귀책부서별 지연현황 */}
-              <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[14px] font-bold text-gray-800">귀책부서별 지연현황</h3>
-                  <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">
-                    총 {delayByDeptData.reduce((s, d) => s + d.count, 0)}건
-                  </span>
-                </div>
-                {delayByDeptData.length === 0 || delayByDeptData.reduce((s, d) => s + d.count, 0) === 0 ? (
-                  <div className="flex flex-col items-center justify-center" style={{ height: 240 }}>
-                    <span className="text-[48px] font-bold text-gray-200">0</span>
-                    <span className="text-[13px] text-gray-400 mt-1">지연 없음</span>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {delayByDeptData.map((dept, idx) => {
-                      const maxCount = delayByDeptData[0]?.count || 1;
-                      const barWidth = (dept.count / maxCount) * 100;
-                      return (
-                        <div key={dept.name} className="flex items-center gap-2.5">
-                          <span className="text-[12px] font-medium text-gray-500 w-10 shrink-0">{dept.name}</span>
-                          <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
-                            <div
-                              className="h-full rounded transition-all duration-500"
-                              style={{ width: `${barWidth}%`, backgroundColor: DELAY_DEPT_COLORS[idx % DELAY_DEPT_COLORS.length], opacity: 0.75 }}
-                            />
-                          </div>
-                          <span className="text-[13px] font-bold text-gray-600 w-8 text-right">{dept.count}건</span>
-                          <span className="text-[11px] text-gray-400 w-16 text-right">{formatCurrency(dept.revenue)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              {/* 귀책부서별 지연현황 + 미회신 건수 */}
+              <div className="grid grid-cols-2 items-stretch h-full" style={{ gap: 12 }}>
+                <DelayByDeptCard data={delayByDeptData} />
+                <NoReplyCard data={noReplyData} />
               </div>
             </div>
           </div>
@@ -697,94 +683,93 @@ export default function App() {
               );
             })()}
 
-            {/* Image-style Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-9 gap-6 bg-white p-8 border-y border-slate-200/60">
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="검색어 입력..."
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
-                  value={midCategoryFilter}
-                  onChange={(e) => setMidCategoryFilter(e.target.value)}
-                >
-                  <option value="">전체</option>
-                  {MID_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
-                <input
-                  type="text"
-                  placeholder="이름 검색..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  value={cisManagerFilter}
-                  onChange={(e) => setCisManagerFilter(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">구매담당</label>
-                <input
-                  type="text"
-                  placeholder="이름 검색..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  value={purchaseManagerFilter}
-                  onChange={(e) => setPurchaseManagerFilter(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
-                  value={revenuePossibleFilter}
-                  onChange={(e) => setRevenuePossibleFilter(e.target.value)}
-                >
-                  <option value="">전체</option>
-                  <option value="가능">가능</option>
-                  <option value="불가능">불가능</option>
-                  <option value="확인중">확인중</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">지연사유</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
-                  value={delayReasonFilter}
-                  onChange={(e) => setDelayReasonFilter(e.target.value)}
-                >
-                  <option value="">전체</option>
-                  <option value="구매">구매</option>
-                  <option value="품질">품질</option>
-                  <option value="연구소">연구소</option>
-                  <option value="물류">물류</option>
-                  <option value="영업">영업</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">납기일</label>
-                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
-                  <option>전체</option>
-                  <option>2026-03</option>
-                  <option>2026-04</option>
-                </select>
-              </div>
-            </div>
-
             <div className="bg-white overflow-hidden">
-              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly} />
+              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly}>
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-9 gap-6 bg-white px-8 py-4 border-b border-slate-200/60">
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">검색 (자재/내역/고객약호)</label>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="검색어 입력..."
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                      value={midCategoryFilter}
+                      onChange={(e) => setMidCategoryFilter(e.target.value)}
+                    >
+                      <option value="">전체</option>
+                      {MID_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
+                    <input
+                      type="text"
+                      placeholder="이름 검색..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      value={cisManagerFilter}
+                      onChange={(e) => setCisManagerFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">구매담당</label>
+                    <input
+                      type="text"
+                      placeholder="이름 검색..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      value={purchaseManagerFilter}
+                      onChange={(e) => setPurchaseManagerFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                      value={revenuePossibleFilter}
+                      onChange={(e) => setRevenuePossibleFilter(e.target.value)}
+                    >
+                      <option value="">전체</option>
+                      <option value="가능">가능</option>
+                      <option value="불가능">불가능</option>
+                      <option value="확인중">확인중</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">지연사유</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                      value={delayReasonFilter}
+                      onChange={(e) => setDelayReasonFilter(e.target.value)}
+                    >
+                      <option value="">전체</option>
+                      <option value="구매">구매</option>
+                      <option value="품질">품질</option>
+                      <option value="연구소">연구소</option>
+                      <option value="물류">물류</option>
+                      <option value="영업">영업</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">납기일</label>
+                    <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
+                      <option>전체</option>
+                      <option>2026-03</option>
+                      <option>2026-04</option>
+                    </select>
+                  </div>
+                </div>
+              </DataTable>
             </div>
           </div>
         )}

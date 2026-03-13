@@ -31,6 +31,7 @@ interface DataTableProps {
   saveStatus: 'idle' | 'saved' | 'loading';
   isAdmin?: boolean;
   readOnly?: boolean;
+  children?: React.ReactNode;
 }
 
 type Tier = '전체' | '상' | '중' | '하';
@@ -174,7 +175,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
 
 const ROW_HEIGHT = 40;
 
-export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin, readOnly }) => {
+export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin, readOnly, children }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
@@ -358,13 +359,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         </div>
       </div>
 
-      {/* 기준 안내 */}
-      <div className="px-8 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4 text-[13px] text-slate-400 font-medium">
-        <span>중요도 기준:</span>
-        <span className="flex items-center gap-1"><span style={{ color: '#e8354a' }}>●</span> 상: 상위 40%</span>
-        <span className="flex items-center gap-1"><span style={{ color: '#d4880a' }}>●</span> 중: 중간 30%</span>
-        <span className="flex items-center gap-1"><span style={{ color: '#16a34a' }}>●</span> 하: 하위 30%</span>
-      </div>
+      {/* 탭과 테이블 사이 슬롯 (검색 필터 등) */}
+      {children}
 
       {/* 상단 스크롤바 */}
       <div ref={topScrollRef} className="overflow-x-auto" style={{ height: '16px' }}>
