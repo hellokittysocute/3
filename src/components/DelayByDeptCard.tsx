@@ -14,15 +14,16 @@ interface DelayByDeptCardProps {
   data: DelayDeptItem[];
 }
 
-// 매출현황과 동일한 4색
 const DEPT_COLORS: Record<string, string> = {
   '구매': '#6366f1',
+  '생산': '#3b82f6',
   '품질': '#f43f5e',
-  '영업': '#10b981',
+  '연구소': '#8b5cf6',
   '물류': '#f59e0b',
+  '영업': '#10b981',
 };
 
-const COLOR_POOL = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b'];
+const COLOR_POOL = ['#6366f1', '#3b82f6', '#f43f5e', '#8b5cf6', '#f59e0b', '#10b981'];
 
 function getDeptColor(name: string, idx: number): string {
   return DEPT_COLORS[name] || COLOR_POOL[idx % COLOR_POOL.length];
