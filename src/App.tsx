@@ -277,7 +277,6 @@ export default function App() {
     ].filter(d => d.count > 0);
   }, [items, editData]);
 
-
   const trendData = [
     { date: '02/27', rate: 0 },
     { date: '02/28', rate: 5.2 },
@@ -754,6 +753,7 @@ export default function App() {
                     >
                       <option value="">전체</option>
                       <option value="구매">구매</option>
+                      <option value="생산">생산</option>
                       <option value="품질">품질</option>
                       <option value="연구소">연구소</option>
                       <option value="물류">물류</option>

@@ -158,6 +158,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         >
           <option value="">선택</option>
           <option value="구매">구매</option>
+          <option value="생산">생산</option>
           <option value="품질">품질</option>
           <option value="연구소">연구소</option>
           <option value="물류">물류</option>
