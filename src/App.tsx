@@ -177,7 +177,8 @@ export default function App() {
   }, [editData]);
 
   const handleSnapshot = useCallback(async () => {
-    const label = prompt('스냅샷 이름을 입력하세요:', `${selectedMonth} 마감`);
+    const today = new Date().toISOString().slice(0, 10);
+    const label = today;
     if (!label) return;
     setSnapshotStatus('saving');
     try {
@@ -191,9 +192,6 @@ export default function App() {
       if (result) {
         setSnapshotStatus('saved');
         setTimeout(() => setSnapshotStatus('idle'), 2000);
-      } else {
-        alert('스냅샷 저장에 실패했습니다.');
-        setSnapshotStatus('idle');
       }
     } catch (err: any) {
       alert(`스냅샷 저장 실패: ${err.message}`);

@@ -249,8 +249,8 @@ export async function createSnapshot(
     .single();
 
   if (error) {
-    console.error('스냅샷 생성 오류:', error.message);
-    return null;
+    console.error('스냅샷 생성 오류:', error.message, error.details, error.hint);
+    throw new Error(error.message);
   }
   return result;
 }
