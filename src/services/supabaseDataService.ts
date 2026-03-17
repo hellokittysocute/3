@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DashboardItem, EditableData, Status, ManagementType } from '../types';
+import { DashboardItem, EditableData, Status, ManagementType, SnapshotMeta, SnapshotRow } from '../types';
 
 // ── DB row → DashboardItem 변환 ──
 function rowToItem(row: Record<string, unknown>): DashboardItem {
@@ -208,4 +208,103 @@ export async function saveAllEditData(allData: Record<string, EditableData>, mon
       throw new Error(`edit_data 일괄 저장 오류 (${i}-${i + batch.length}): ${error.message}`);
     }
   }
+}
+
+// ── 스냅샷 관련 ──
+
+/** 스냅샷 생성: 현재 dashboard_items + edit_data를 JSONB로 저장 */
+export async function createSnapshot(
+  month: string,
+  label: string,
+  items: DashboardItem[],
+  editData: Record<string, EditableData>,
+  createdBy: string,
+): Promise<{ id: number } | null> {
+  const data: SnapshotRow[] = items.map(item => ({
+    item,
+    edit: editData[item.id] || {
+      productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '',
+      packagingDate: '', revenuePossible: '확인중' as const, revenuePossibleQuantity: 0,
+      delayReason: '', importance: '' as const, productionSite: '', purchaseManager: '', note: '',
+    },
+  }));
+
+  const totalRevenue = items.reduce((s, i) => {
+    const ed = editData[i.id];
+    const qty = ed?.revenuePossibleQuantity || i.remainingQuantity;
+    return s + qty * i.unitPrice;
+  }, 0);
+
+  const { data: result, error } = await supabase
+    .from('monthly_snapshots')
+    .insert({
+      month,
+      label,
+      created_by: createdBy,
+      item_count: items.length,
+      total_revenue: totalRevenue,
+      data,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('스냅샷 생성 오류:', error.message);
+    return null;
+  }
+  return result;
+}
+
+/** 스냅샷 목록 조회 (data 제외, 메타만) */
+export async function fetchSnapshots(): Promise<SnapshotMeta[]> {
+  const { data, error } = await supabase
+    .from('monthly_snapshots')
+    .select('id, month, label, created_at, created_by, item_count, total_revenue')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('스냅샷 목록 조회 오류:', error.message);
+    return [];
+  }
+  return (data || []) as SnapshotMeta[];
+}
+
+/** 스냅샷 상세 데이터 조회 */
+export async function fetchSnapshotData(id: number): Promise<SnapshotRow[]> {
+  const { data, error } = await supabase
+    .from('monthly_snapshots')
+    .select('data')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('스냅샷 데이터 조회 오류:', error.message);
+    return [];
+  }
+  return (data?.data || []) as SnapshotRow[];
+}
+
+/** 스냅샷 삭제 */
+export async function deleteSnapshot(id: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('monthly_snapshots')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('스냅샷 삭제 오류:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/** 특정 월의 스냅샷 존재 여부 확인 */
+export async function hasSnapshotForMonth(month: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('monthly_snapshots')
+    .select('id', { count: 'exact', head: true })
+    .eq('month', month);
+
+  if (error) return false;
+  return (count || 0) > 0;
 }

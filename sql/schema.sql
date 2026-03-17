@@ -79,3 +79,22 @@ CREATE POLICY "Allow all reads on edit_data" ON edit_data FOR SELECT USING (true
 CREATE POLICY "Allow all inserts on edit_data" ON edit_data FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow all updates on edit_data" ON edit_data FOR UPDATE USING (true);
 CREATE POLICY "Allow all deletes on edit_data" ON edit_data FOR DELETE USING (true);
+
+-- 4. monthly_snapshots 테이블 (월별 마감 스냅샷)
+CREATE TABLE IF NOT EXISTS monthly_snapshots (
+  id BIGSERIAL PRIMARY KEY,
+  month TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by TEXT DEFAULT '',
+  item_count INTEGER DEFAULT 0,
+  total_revenue NUMERIC DEFAULT 0,
+  data JSONB DEFAULT '[]'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_month ON monthly_snapshots(month);
+
+ALTER TABLE monthly_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all reads on monthly_snapshots" ON monthly_snapshots FOR SELECT USING (true);
+CREATE POLICY "Allow all inserts on monthly_snapshots" ON monthly_snapshots FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all deletes on monthly_snapshots" ON monthly_snapshots FOR DELETE USING (true);

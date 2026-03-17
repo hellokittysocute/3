@@ -71,7 +71,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
 
     const svg = svgRef.current;
     const NS = 'http://www.w3.org/2000/svg';
-    const GAP = 4;
+    const GAP = 6;
 
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
@@ -103,7 +103,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
       circle.style.setProperty('--final-offset', '0');
       svg.appendChild(circle);
     } else {
-      let offset = 0;
+      let offset = GAP / 2;
       active.forEach((d, i) => {
         const pct = d.value / statusTotal;
         const segLen = pct * C - GAP;
@@ -114,7 +114,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         circle.setAttribute('fill', 'none');
         circle.setAttribute('stroke', COLORS[d.colorKey]);
         circle.setAttribute('stroke-width', '22');
-        circle.setAttribute('stroke-linecap', 'round');
+        circle.setAttribute('stroke-linecap', 'butt');
         circle.setAttribute('stroke-dasharray', `${segLen} ${C - segLen}`);
         circle.setAttribute('stroke-dashoffset', String(-offset));
         circle.style.animation = 'donut-draw 1.2s cubic-bezier(0.33,1,0.68,1) forwards';
@@ -158,10 +158,10 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         <div style={{ height: 1, background: '#f1f5f9', margin: '0 24px' }} />
 
         {/* Body */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '24px 24px 28px', flex: 1 }}>
-          {/* Donut 180×180 */}
-          <div style={{ position: 'relative', flexShrink: 0, width: 180, height: 180 }}>
-            <svg ref={svgRef} viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)', width: 180, height: 180 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '24px 24px 28px', flex: 1, minWidth: 0 }}>
+          {/* Donut */}
+          <div style={{ position: 'relative', flexShrink: 0, width: 'min(180px, 35%)', aspectRatio: '1' }}>
+            <svg ref={svgRef} viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }} />
             <div style={{
               position: 'absolute', inset: 0,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -178,7 +178,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
           </div>
 
           {/* Legend */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
             {legendItems.map((item) => (
               <div
                 key={item.label}

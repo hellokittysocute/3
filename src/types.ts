@@ -57,6 +57,21 @@ export interface EditableData {
   note: string;
 }
 
+export interface SnapshotMeta {
+  id: number;
+  month: string;
+  label: string;
+  created_at: string;
+  created_by: string;
+  item_count: number;
+  total_revenue: number;
+}
+
+export interface SnapshotRow {
+  item: DashboardItem;
+  edit: EditableData;
+}
+
 export interface SummaryStats {
   totalRevenue: number;
   totalCount: number;

@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
-import { Save, Check, Download } from 'lucide-react';
+import { Save, Check, Download, Camera } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
@@ -28,6 +28,8 @@ interface DataTableProps {
   editData: Record<string, EditableData>;
   onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
   onSave: () => void;
+  onSnapshot?: () => void;
+  snapshotStatus?: 'idle' | 'saving' | 'saved';
   saveStatus: 'idle' | 'saved' | 'loading';
   isAdmin?: boolean;
   readOnly?: boolean;
@@ -176,7 +178,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
 
 const ROW_HEIGHT = 40;
 
-export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, saveStatus, isAdmin, readOnly, children }) => {
+export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, children }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
@@ -340,6 +342,23 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           >
             <Download className="w-4 h-4" /> 다운로드
           </button>
+          {onSnapshot && (
+            <button
+              onClick={onSnapshot}
+              disabled={snapshotStatus === 'saving'}
+              className={cn(
+                "flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg",
+                snapshotStatus === 'saved'
+                  ? "bg-indigo-500 text-white shadow-indigo-200"
+                  : snapshotStatus === 'saving'
+                  ? "bg-indigo-300 text-white shadow-indigo-100 cursor-wait"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
+              )}
+            >
+              <Camera className="w-4 h-4" />
+              {snapshotStatus === 'saved' ? '저장 완료' : snapshotStatus === 'saving' ? '저장 중...' : '스냅샷'}
+            </button>
+          )}
           {!readOnly && (
             <button
               onClick={onSave}
