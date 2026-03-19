@@ -58,6 +58,8 @@ function parseNum(val: string | undefined): number {
 const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> = {
   'CIS담당': { field: 'cis_manager', type: 'string' },
   '중분류명': { field: 'category', type: 'string' },
+  '중분류': { field: 'category', type: 'string' },
+  '설명1': { field: 'category', type: 'string' },
   '고객약호': { field: 'customer_code', type: 'string' },
   '판매처이름': { field: 'customer_name', type: 'string' },
   '영업팀명': { field: 'team_name', type: 'string' },
