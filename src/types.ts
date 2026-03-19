@@ -27,7 +27,8 @@ export interface DashboardItem {
   week2: string;                // [22] 2주차
   week3: string;                // [23] 3주차
   delayDays: number;            // [24] 부자재 지연일수
-  mfg1: string;                 // [25] 제조 1차
+  productionRequestYn: string;  // [24.5] 제조요청여부
+  mfg1: string;                 // [25] 제조 1차 (현재 제조계획)
   mfgFinal: string;             // [26] 제조 최종
   pkg1: string;                 // [27] 충포장 1차
   pkgFinal: string;             // [28] 충포장 최종

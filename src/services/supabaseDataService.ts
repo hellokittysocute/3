@@ -36,6 +36,7 @@ function rowToItem(row: Record<string, unknown>): DashboardItem {
     week2: (row.week2 as string) || '',
     week3: (row.week3 as string) || '',
     delayDays: Number(row.delay_days) || 0,
+    productionRequestYn: (row.production_request_yn as string) || '',
     mfg1: (row.mfg1 as string) || '',
     mfgFinal: (row.mfg_final as string) || '',
     pkg1: (row.pkg1 as string) || '',

@@ -115,6 +115,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
       </td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center whitespace-nowrap">{item.productionRequestYn}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.mfg1)}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
@@ -218,8 +219,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '납품수량': item.deliveredQuantity,
         '미납잔량': item.remainingQuantity,
         '생산완료 요청일': row?.productionCompleteDate ?? '',
-        '현재제조': item.mfg1,
         '부자재(일정)': row?.materialSettingDate ?? '',
+        '제조요청여부': item.productionRequestYn,
+        '현재 제조계획': item.mfg1,
         '제조': row?.manufacturingDate ?? '',
         '충포장': row?.packagingDate ?? '',
         '생산처': row?.productionSite ?? '',
@@ -407,7 +409,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px]">생산완료<br/>요청일</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">부자재</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">현재제조</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">제조<br/>요청</th>
+              <th className="px-2 py-2 border-r border-slate-200 text-center w-[72px]">현재<br/>제조계획</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">제조</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px]">충포장</th>
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px]">생산처</th>
@@ -424,7 +427,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 25 : 23} />
+                <td colSpan={isAdmin ? 26 : 24} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -457,7 +460,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 25 : 23} />
+                <td colSpan={isAdmin ? 26 : 24} />
               </tr>
             )}
           </tbody>

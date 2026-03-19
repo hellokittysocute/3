@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS dashboard_items (
   week2 TEXT DEFAULT '',
   week3 TEXT DEFAULT '',
   delay_days NUMERIC DEFAULT 0,
+  production_request_yn TEXT DEFAULT '',
   mfg1 TEXT DEFAULT '',
   mfg_final TEXT DEFAULT '',
   pkg1 TEXT DEFAULT '',
@@ -66,14 +67,15 @@ CREATE TABLE IF NOT EXISTS edit_data (
 -- Realtime 활성화
 ALTER PUBLICATION supabase_realtime ADD TABLE edit_data;
 
--- 3. RLS 정책 (내부 도구 - 전체 허용)
+-- 3. RLS 정책 (모든 사용자 허용)
 ALTER TABLE dashboard_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE edit_data ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all reads on dashboard_items" ON dashboard_items FOR SELECT USING (true);
-CREATE POLICY "Allow all inserts on dashboard_items" ON dashboard_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow all updates on dashboard_items" ON dashboard_items FOR UPDATE USING (true);
-CREATE POLICY "Allow all deletes on dashboard_items" ON dashboard_items FOR DELETE USING (true);
+-- dashboard_items: 인증된 사용자만 CRUD
+CREATE POLICY "dashboard_items_select" ON dashboard_items FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "dashboard_items_insert" ON dashboard_items FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "dashboard_items_update" ON dashboard_items FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY "dashboard_items_delete" ON dashboard_items FOR DELETE USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Allow all reads on edit_data" ON edit_data FOR SELECT USING (true);
 CREATE POLICY "Allow all inserts on edit_data" ON edit_data FOR INSERT WITH CHECK (true);
