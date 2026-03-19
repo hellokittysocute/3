@@ -389,6 +389,21 @@ export default function App() {
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", saveStatus === 'loading' ? "animate-spin" : "group-hover:rotate-180")} />
               데이터 갱신
             </button>
+            <button
+              onClick={handleSnapshot}
+              disabled={snapshotStatus === 'saving'}
+              className={cn(
+                "flex items-center gap-2 pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 shadow-xl",
+                snapshotStatus === 'saved'
+                  ? "bg-indigo-500 text-white shadow-indigo-200"
+                  : snapshotStatus === 'saving'
+                  ? "bg-indigo-300 text-white shadow-indigo-100 cursor-wait"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
+              )}
+            >
+              <Camera className="w-4 h-4" />
+              {snapshotStatus === 'saved' ? '저장 완료' : snapshotStatus === 'saving' ? '저장 중...' : '스냅샷'}
+            </button>
             <div className="h-10 w-px bg-slate-200" />
             {/* 사용자 정보 + 로그아웃 */}
             <div className="flex items-center gap-3">
