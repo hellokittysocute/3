@@ -95,7 +95,7 @@ export function calculateStats(items: DashboardItem[], editData?: Record<string,
     const impossible = filteredItems.filter(i => getStatus(i) === '불가능');
 
     const possibleRevenue = possible.reduce((sum, item) => sum + getPossibleRevenue(item), 0);
-    const checkingRevenue = checking.reduce((sum, item) => sum + getUnpossibleRevenue(item), 0);
+    const checkingRevenue = checking.reduce((sum, item) => sum + getRevenue(item), 0);
     const impossibleRevenue = impossible.reduce((sum, item) => sum + getUnpossibleRevenue(item), 0);
 
     return {
