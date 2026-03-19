@@ -1,13 +1,79 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Camera, ArrowLeft, Trash2, Download, Calendar, Database, Clock } from 'lucide-react';
+import { Camera, ArrowLeft, Trash2, Download, Calendar, Database, Clock, LayoutDashboard, Table } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { SnapshotMeta, SnapshotRow, EditableData } from '../types';
+import { DashboardItem, SnapshotMeta, SnapshotRow, EditableData } from '../types';
 import { fetchSnapshots, fetchSnapshotData, deleteSnapshot } from '../services/supabaseDataService';
 import { getRevenue, calculateStats } from '../services/dataService';
 import { formatCurrency } from '../lib/utils';
+import { DonutChart } from './DonutChart';
+import { DelayByDeptCard, DelayDeptItem } from './DelayByDeptCard';
+import { NoReplyCard, NoReplyDeptItem } from './NoReplyCard';
 
 interface SnapshotHistoryProps {
   isAdmin?: boolean;
+}
+
+type DetailTab = 'summary' | 'table';
+
+// 스냅샷 데이터로 종합현황에 필요한 파생 데이터 계산
+function computeDerivedData(items: DashboardItem[], editMap: Record<string, EditableData>) {
+  const stats = calculateStats(items, editMap);
+
+  // Top10 고객사
+  const customerChartData = (() => {
+    const codes = [...new Set(items.map(i => i.customerCode))];
+    return codes.map(code => {
+      const cItems = items.filter(i => i.customerCode === code);
+      const getStatus = (i: DashboardItem) => {
+        const edited = editMap[i.id]?.revenuePossible;
+        if (edited === '가능' || edited === '확인중' || edited === '불가능') return edited;
+        return i.status;
+      };
+      return {
+        name: code,
+        가능: cItems.filter(i => getStatus(i) === '가능').reduce((s, i) => s + getRevenue(i), 0),
+        확인중: cItems.filter(i => getStatus(i) === '확인중').reduce((s, i) => s + getRevenue(i), 0),
+        불가능: cItems.filter(i => getStatus(i) === '불가능').reduce((s, i) => s + getRevenue(i), 0),
+      };
+    }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능)).slice(0, 10);
+  })();
+
+  // 귀책부서별 지연현황
+  const delayByDeptData: DelayDeptItem[] = (() => {
+    const deptMap: Record<string, { count: number; revenue: number }> = {};
+    items.forEach(item => {
+      const dept = (editMap[item.id]?.delayReason || '').trim();
+      if (!dept) return;
+      if (!deptMap[dept]) deptMap[dept] = { count: 0, revenue: 0 };
+      deptMap[dept].count += 1;
+      deptMap[dept].revenue += getRevenue(item);
+    });
+    return Object.entries(deptMap)
+      .map(([name, v]) => ({ name, count: v.count, revenue: v.revenue }))
+      .sort((a, b) => b.count - a.count);
+  })();
+
+  // 미회신 건수
+  const noReplyData: NoReplyDeptItem[] = (() => {
+    let purchaseCount = 0;
+    let productionCount = 0;
+    items.forEach(item => {
+      const ed = editMap[item.id];
+      if (!(ed?.materialSettingDate ?? '').trim()) purchaseCount++;
+      if (!(ed?.manufacturingDate ?? '').trim() || !(ed?.packagingDate ?? '').trim()) productionCount++;
+    });
+    return [
+      { dept: '구매', count: purchaseCount },
+      { dept: '생산', count: productionCount },
+    ].filter(d => d.count > 0);
+  })();
+
+  // 진도율
+  const totalRemaining = items.reduce((s, i) => s + i.remainingQuantity, 0);
+  const totalPossibleQty = items.reduce((s, i) => s + (editMap[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity), 0);
+  const progressRate = totalRemaining > 0 ? (totalPossibleQty / totalRemaining) * 100 : 0;
+
+  return { stats, customerChartData, delayByDeptData, noReplyData, progressRate };
 }
 
 export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => {
@@ -16,6 +82,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
   const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotMeta | null>(null);
   const [snapshotRows, setSnapshotRows] = useState<SnapshotRow[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>('summary');
 
   const loadSnapshots = useCallback(async () => {
     setLoading(true);
@@ -29,6 +96,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
   const handleSelect = async (snap: SnapshotMeta) => {
     setDetailLoading(true);
     setSelectedSnapshot(snap);
+    setDetailTab('summary');
     const rows = await fetchSnapshotData(snap.id);
     setSnapshotRows(rows);
     setDetailLoading(false);
@@ -95,15 +163,20 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [snapshots]);
 
-  // Detail view: show snapshot data in a read-only table
+  // 스냅샷 파생 데이터
+  const derived = useMemo(() => {
+    if (snapshotRows.length === 0) return null;
+    const items = snapshotRows.map(r => r.item);
+    const editMap: Record<string, EditableData> = {};
+    snapshotRows.forEach(r => { editMap[r.item.id] = r.edit; });
+    return computeDerivedData(items, editMap);
+  }, [snapshotRows]);
+
+  // Detail view
   if (selectedSnapshot) {
-    // 스냅샷 데이터로 종합현황 계산
-    const snapshotItems = snapshotRows.map(r => r.item);
-    const snapshotEditMap: Record<string, EditableData> = {};
-    snapshotRows.forEach(r => { snapshotEditMap[r.item.id] = r.edit; });
-    const snapshotStats = snapshotRows.length > 0 ? calculateStats(snapshotItems, snapshotEditMap) : null;
-    const goalRate = snapshotStats && snapshotStats.overall.totalRevenue > 0
-      ? (snapshotStats.overall.possibleRevenue / snapshotStats.overall.totalRevenue) * 100 : 0;
+    const cardStyle: React.CSSProperties = { borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03)' };
+    const goalRate = derived && derived.stats.overall.totalRevenue > 0
+      ? (derived.stats.overall.possibleRevenue / derived.stats.overall.totalRevenue) * 100 : 0;
 
     return (
       <div className="space-y-4 animate-in fade-in duration-500">
@@ -124,53 +197,138 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleExcelDownload}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
-            >
-              <Download className="w-4 h-4" /> 다운로드
-            </button>
+            <div className="flex items-center gap-3">
+              {/* 종합현황 / 상세데이터 탭 */}
+              <div className="flex bg-slate-100 rounded-xl p-0.5">
+                <button
+                  onClick={() => setDetailTab('summary')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-colors ${
+                    detailTab === 'summary' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" /> 종합현황
+                </button>
+                <button
+                  onClick={() => setDetailTab('table')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-colors ${
+                    detailTab === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <Table className="w-3.5 h-3.5" /> 상세데이터
+                </button>
+              </div>
+              <button
+                onClick={handleExcelDownload}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                <Download className="w-4 h-4" /> 다운로드
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* 종합현황 요약 카드 */}
-        {snapshotStats && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 px-6 py-5">
-            <h3 className="text-[14px] font-bold text-slate-700 mb-4">종합현황</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="text-center py-3 px-3 rounded-xl bg-slate-50">
-                <div className="text-[11px] font-medium text-slate-400 mb-1">총 건수</div>
-                <div className="text-[20px] font-extrabold text-slate-800">{snapshotStats.overall.totalCount}건</div>
-              </div>
-              <div className="text-center py-3 px-3 rounded-xl bg-slate-50">
-                <div className="text-[11px] font-medium text-slate-400 mb-1">총 매출액</div>
-                <div className="text-[20px] font-extrabold text-slate-800">{formatCurrency(snapshotStats.overall.totalRevenue)}</div>
-              </div>
-              <div className="text-center py-3 px-3 rounded-xl bg-emerald-50">
-                <div className="text-[11px] font-medium text-emerald-500 mb-1">가능 ({snapshotStats.overall.possibleCount}건)</div>
-                <div className="text-[20px] font-extrabold text-emerald-600">{formatCurrency(snapshotStats.overall.possibleRevenue)}</div>
-              </div>
-              <div className="text-center py-3 px-3 rounded-xl bg-amber-50">
-                <div className="text-[11px] font-medium text-amber-500 mb-1">확인중 ({snapshotStats.overall.checkingCount}건)</div>
-                <div className="text-[20px] font-extrabold text-amber-600">{formatCurrency(snapshotStats.overall.checkingRevenue)}</div>
-              </div>
-              <div className="text-center py-3 px-3 rounded-xl bg-indigo-50">
-                <div className="text-[11px] font-medium text-indigo-400 mb-1">달성률</div>
-                <div className={`text-[20px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>{goalRate.toFixed(1)}%</div>
+        {detailLoading ? (
+          <div className="flex items-center justify-center py-20 text-slate-400 text-[14px]">불러오는 중...</div>
+        ) : detailTab === 'summary' && derived ? (
+          /* ── 종합현황 탭 ── */
+          <div style={{ gap: 20, display: 'flex', flexDirection: 'column' }}>
+            {/* 1행: 매출현황(도넛) + 진도현황 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
+              <DonutChart
+                totalRevenue={derived.stats.overall.totalRevenue}
+                totalCount={derived.stats.overall.totalCount}
+                checkingRevenue={derived.stats.overall.checkingRevenue}
+                checkingCount={derived.stats.overall.checkingCount}
+                possibleRevenue={derived.stats.overall.possibleRevenue}
+                possibleCount={derived.stats.overall.possibleCount}
+                impossibleRevenue={derived.stats.overall.impossibleRevenue}
+                impossibleCount={derived.stats.overall.impossibleCount}
+              />
+
+              {/* 진도현황 */}
+              <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
+                  <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">스냅샷</span>
+                </div>
+                {/* 목표 대비 가능금액 */}
+                <div className="mb-3">
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-[12px] font-medium text-gray-400">
+                      목표 대비 가능금액 ({formatCurrency(derived.stats.overall.possibleRevenue)} / {formatCurrency(derived.stats.overall.totalRevenue)})
+                    </span>
+                    <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
+                      {goalRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
+                  </div>
+                </div>
+
+                {/* 하단 3개 스탯 */}
+                <div className="grid grid-cols-3 mt-auto" style={{ gap: 8 }}>
+                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
+                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
+                    <div className="text-[18px] font-extrabold text-indigo-500">{derived.progressRate.toFixed(0)}%</div>
+                  </div>
+                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
+                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
+                    <div className="text-[18px] font-extrabold text-gray-800">{(derived.stats.overall.totalRevenue / 100000000).toFixed(0)}억</div>
+                  </div>
+                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
+                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
+                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(derived.stats.overall.possibleRevenue)}</div>
+                  </div>
+                </div>
               </div>
             </div>
-            {/* 달성률 바 */}
-            <div className="mt-3 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
+
+            {/* 2행: Top10 고객사 + 귀책부서별 지연현황/미회신 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
+              {/* Top10 고객사 */}
+              <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
+                <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
+                <div className="space-y-0.5">
+                  {derived.customerChartData.slice(0, 10).map((c, idx) => {
+                    const total = c.가능 + c.확인중 + c.불가능;
+                    const maxTotal = derived.customerChartData[0] ? derived.customerChartData[0].가능 + derived.customerChartData[0].확인중 + derived.customerChartData[0].불가능 : 1;
+                    const barWidth = (total / maxTotal) * 100;
+                    return (
+                      <div key={c.name} className="flex items-center gap-2.5" style={{ height: 36 }}>
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                          style={{
+                            backgroundColor: idx < 3 ? '#6366f1' : '#f1f3f5',
+                            color: idx < 3 ? '#fff' : '#9ca3af',
+                          }}
+                        >
+                          {idx + 1}
+                        </div>
+                        <span className="text-[12px] font-medium text-gray-600 w-12 shrink-0 truncate">{c.name}</span>
+                        <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
+                          <div
+                            className="h-full rounded transition-all duration-500"
+                            style={{ width: `${barWidth}%`, backgroundColor: idx < 3 ? '#818cf8' : '#cbd5e1' }}
+                          />
+                        </div>
+                        <span className="text-[13px] font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 귀책부서별 지연현황 + 미회신 건수 */}
+              <div className="grid grid-cols-2 items-stretch h-full" style={{ gap: 12 }}>
+                <DelayByDeptCard data={derived.delayByDeptData} />
+                <NoReplyCard data={derived.noReplyData} />
+              </div>
             </div>
           </div>
-        )}
-
-        {/* Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-          {detailLoading ? (
-            <div className="flex items-center justify-center py-20 text-slate-400 text-[14px]">불러오는 중...</div>
-          ) : (
+        ) : (
+          /* ── 상세데이터 탭 ── */
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
                 <thead>
@@ -220,8 +378,8 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }

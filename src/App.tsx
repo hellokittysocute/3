@@ -177,8 +177,9 @@ export default function App() {
   }, [editData]);
 
   const handleSnapshot = useCallback(async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const label = today;
+    const [y, m] = selectedMonth.split('-');
+    const defaultLabel = `${y}년 ${parseInt(m)}월 마감`;
+    const label = prompt('스냅샷 이름을 입력하세요:', defaultLabel);
     if (!label) return;
     setSnapshotStatus('saving');
     try {
