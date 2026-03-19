@@ -8,17 +8,21 @@ import { formatCurrency, cn } from '../lib/utils';
 
 function formatDateShort(dateStr: string): string {
   if (!dateStr) return '';
-  // "m/d", "mm/dd", "mm/d", "m/dd" 형식 → 앞의 0 제거
-  const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+  const s = dateStr.trim();
+  // "~4/24" 접두사 보존
+  const prefixMatch = s.match(/^(~\s*)(\d{1,2})\/(\d{1,2})$/);
+  if (prefixMatch) return `~${Number(prefixMatch[2])}/${Number(prefixMatch[3])}`;
+  // "m/d", "mm/dd" 형식 → 앞의 0 제거
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})$/);
   if (slashMatch) return `${Number(slashMatch[1])}/${Number(slashMatch[2])}`;
   // "mm.dd", "m.dd" 형식
-  const dotMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})$/);
+  const dotMatch = s.match(/^(\d{1,2})\.(\d{1,2})$/);
   if (dotMatch) return `${Number(dotMatch[1])}/${Number(dotMatch[2])}`;
   // "03월18일", "3월18일" 형식
-  const korMatch = dateStr.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  const korMatch = s.match(/(\d{1,2})월\s*(\d{1,2})일/);
   if (korMatch) return `${Number(korMatch[1])}/${Number(korMatch[2])}`;
   // ISO or standard date → Date 파싱
-  const d = new Date(dateStr);
+  const d = new Date(s);
   if (!isNaN(d.getTime())) return `${d.getMonth() + 1}/${d.getDate()}`;
   return dateStr;
 }
@@ -110,18 +114,18 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={formatDateShort(row?.productionCompleteDate ?? '')} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={formatDateShort(row?.materialSettingDate ?? '')} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center whitespace-nowrap">{item.productionRequestYn}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.mfg1)}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={formatDateShort(row?.manufacturingDate ?? '')} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={formatDateShort(row?.packagingDate ?? '')} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} disabled={readOnly} />
