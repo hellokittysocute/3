@@ -79,7 +79,6 @@ export async function fetchAvailableMonths(): Promise<string[]> {
 
 // ── 월별 대시보드 아이템 조회 ──
 export async function fetchDashboardItems(month?: string): Promise<DashboardItem[]> {
-  // PostgREST 캐시 이슈로 month 필터 임시 비활성화
   const { data, error } = await supabase
     .from('dashboard_items')
     .select('*')
@@ -91,12 +90,21 @@ export async function fetchDashboardItems(month?: string): Promise<DashboardItem
     return [];
   }
 
-  return (data || []).map(rowToItem);
+  const items = (data || []).map(rowToItem);
+
+  // 클라이언트에서 월별 필터링 (ID prefix 기반)
+  if (month && month !== '2026-03') {
+    const prefix = `${month}-`;
+    return items.filter(item => item.id.startsWith(prefix));
+  } else if (month === '2026-03') {
+    // 3월은 prefix 없는 item-* 형태
+    return items.filter(item => !item.id.includes('-item-') || item.id.startsWith('item-'));
+  }
+  return items;
 }
 
 // ── 월별 편집 데이터 조회 ──
 export async function fetchAllEditData(month?: string): Promise<Record<string, EditableData>> {
-  // PostgREST 캐시 이슈로 month 필터 임시 비활성화
   const { data, error } = await supabase.from('edit_data').select('*');
 
   if (error) {
@@ -107,6 +115,14 @@ export async function fetchAllEditData(month?: string): Promise<Record<string, E
   const result: Record<string, EditableData> = {};
   (data || []).forEach((row: Record<string, unknown>) => {
     const itemId = row.item_id as string;
+
+    // 클라이언트에서 월별 필터링
+    if (month && month !== '2026-03') {
+      if (!itemId.startsWith(`${month}-`)) return;
+    } else if (month === '2026-03') {
+      if (itemId.includes('-item-') && !itemId.startsWith('item-')) return;
+    }
+
     result[itemId] = rowToEditData(row);
   });
   return result;
