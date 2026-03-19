@@ -3,7 +3,7 @@ import { Camera, ArrowLeft, Trash2, Download, Calendar, Database, Clock } from '
 import * as XLSX from 'xlsx';
 import { SnapshotMeta, SnapshotRow, EditableData } from '../types';
 import { fetchSnapshots, fetchSnapshotData, deleteSnapshot } from '../services/supabaseDataService';
-import { getRevenue } from '../services/dataService';
+import { getRevenue, calculateStats } from '../services/dataService';
 import { formatCurrency } from '../lib/utils';
 
 interface SnapshotHistoryProps {
@@ -97,6 +97,14 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
 
   // Detail view: show snapshot data in a read-only table
   if (selectedSnapshot) {
+    // 스냅샷 데이터로 종합현황 계산
+    const snapshotItems = snapshotRows.map(r => r.item);
+    const snapshotEditMap: Record<string, EditableData> = {};
+    snapshotRows.forEach(r => { snapshotEditMap[r.item.id] = r.edit; });
+    const snapshotStats = snapshotRows.length > 0 ? calculateStats(snapshotItems, snapshotEditMap) : null;
+    const goalRate = snapshotStats && snapshotStats.overall.totalRevenue > 0
+      ? (snapshotStats.overall.possibleRevenue / snapshotStats.overall.totalRevenue) * 100 : 0;
+
     return (
       <div className="space-y-4 animate-in fade-in duration-500">
         {/* Header */}
@@ -124,6 +132,39 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
             </button>
           </div>
         </div>
+
+        {/* 종합현황 요약 카드 */}
+        {snapshotStats && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 px-6 py-5">
+            <h3 className="text-[14px] font-bold text-slate-700 mb-4">종합현황</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="text-center py-3 px-3 rounded-xl bg-slate-50">
+                <div className="text-[11px] font-medium text-slate-400 mb-1">총 건수</div>
+                <div className="text-[20px] font-extrabold text-slate-800">{snapshotStats.overall.totalCount}건</div>
+              </div>
+              <div className="text-center py-3 px-3 rounded-xl bg-slate-50">
+                <div className="text-[11px] font-medium text-slate-400 mb-1">총 매출액</div>
+                <div className="text-[20px] font-extrabold text-slate-800">{formatCurrency(snapshotStats.overall.totalRevenue)}</div>
+              </div>
+              <div className="text-center py-3 px-3 rounded-xl bg-emerald-50">
+                <div className="text-[11px] font-medium text-emerald-500 mb-1">가능 ({snapshotStats.overall.possibleCount}건)</div>
+                <div className="text-[20px] font-extrabold text-emerald-600">{formatCurrency(snapshotStats.overall.possibleRevenue)}</div>
+              </div>
+              <div className="text-center py-3 px-3 rounded-xl bg-amber-50">
+                <div className="text-[11px] font-medium text-amber-500 mb-1">확인중 ({snapshotStats.overall.checkingCount}건)</div>
+                <div className="text-[20px] font-extrabold text-amber-600">{formatCurrency(snapshotStats.overall.checkingRevenue)}</div>
+              </div>
+              <div className="text-center py-3 px-3 rounded-xl bg-indigo-50">
+                <div className="text-[11px] font-medium text-indigo-400 mb-1">달성률</div>
+                <div className={`text-[20px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>{goalRate.toFixed(1)}%</div>
+              </div>
+            </div>
+            {/* 달성률 바 */}
+            <div className="mt-3 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
