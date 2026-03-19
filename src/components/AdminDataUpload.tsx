@@ -221,7 +221,7 @@ function parseCSVToRows(csvText: string): ParseResult {
     return {
       id: `item-${index}`,
       cis_manager: getVal(cols, headerMapping, 'CIS담당'),
-      category: getVal(cols, headerMapping, '중분류명'),
+      category: getVal(cols, headerMapping, '중분류명', '중분류', '설명1'),
       customer_code: getVal(cols, headerMapping, '고객약호'),
       customer_name: getVal(cols, headerMapping, '판매처이름'),
       team_name: getVal(cols, headerMapping, '영업팀명'),
