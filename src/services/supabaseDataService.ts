@@ -71,10 +71,28 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
   };
 }
 
-// ── 가용 월 목록 조회 ──
+// ── 가용 월 목록 조회 (ID prefix 기반) ──
 export async function fetchAvailableMonths(): Promise<string[]> {
-  // PostgREST 캐시가 month 컬럼을 인식할 때까지 기본값 반환
-  return ['2026-03'];
+  const { data, error } = await supabase
+    .from('dashboard_items')
+    .select('id')
+    .neq('customer_code', '');
+
+  if (error || !data) return ['2026-03'];
+
+  const months = new Set<string>();
+  data.forEach((row: { id: string }) => {
+    // 2026-04-item-0 → 2026-04, item-0 → 2026-03
+    const match = row.id.match(/^(\d{4}-\d{2})-item-/);
+    if (match) {
+      months.add(match[1]);
+    } else if (row.id.startsWith('item-')) {
+      months.add('2026-03');
+    }
+  });
+
+  const sorted = [...months].sort();
+  return sorted.length > 0 ? sorted : ['2026-03'];
 }
 
 // ── 월별 대시보드 아이템 조회 ──
