@@ -367,6 +367,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
       const { data: existingEditData } = await supabase.from('edit_data').select('item_id');
       const existingIds = new Set((existingEditData || []).map((r: any) => r.item_id));
 
+      // 신규 항목: 전체 초기화
       const newEditRows = rowsWithMonth
         .filter(row => !existingIds.has(row.id))
         .map(row => ({
@@ -387,6 +388,23 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
         const batch = newEditRows.slice(i, i + 100);
         const { error } = await supabase.from('edit_data').upsert(batch);
         if (error) throw new Error(`edit_data 업로드 실패 (행 ${i}): ${error.message}`);
+      }
+
+      // 기존 항목: CSV에서 오는 구매담당/중요도만 업데이트 (수동 입력값 보존)
+      const existingUpdateRows = rowsWithMonth
+        .filter(row => existingIds.has(row.id))
+        .filter(row => (row._purchase_manager as string) || (row._importance as string))
+        .map(row => {
+          const update: Record<string, unknown> = { item_id: row.id };
+          if (row._purchase_manager) update.purchase_manager = row._purchase_manager;
+          if (row._importance) update.importance = row._importance;
+          return update;
+        });
+
+      for (let i = 0; i < existingUpdateRows.length; i += 100) {
+        const batch = existingUpdateRows.slice(i, i + 100);
+        const { error } = await supabase.from('edit_data').upsert(batch, { onConflict: 'item_id', ignoreDuplicates: false });
+        if (error) throw new Error(`edit_data 업데이트 실패 (행 ${i}): ${error.message}`);
       }
 
       onMonthUploaded?.(uploadMonth);
