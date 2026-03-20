@@ -1,8 +1,4 @@
 import React, { useMemo } from 'react';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
-
-ChartJS.register(ArcElement, Tooltip, Legend);
 
 export interface DelayDeptItem {
   name: string;
@@ -10,131 +6,155 @@ export interface DelayDeptItem {
   revenue: number;
 }
 
+interface DeptDelay {
+  deptName: string;
+  count: number;
+}
+
 interface DelayByDeptCardProps {
   data: DelayDeptItem[];
+  onDeptClick?: (deptName: string) => void;
 }
 
-const DEPT_COLORS: Record<string, string> = {
-  '구매': '#6366f1',
-  '생산': '#3b82f6',
-  '품질': '#f43f5e',
-  '연구소': '#8b5cf6',
-  '물류': '#f59e0b',
-  '영업': '#10b981',
-};
+const ALL_DEPTS = ['영업', '고객', '구매(원)', '구매(부)', '생산', '품질', '물류', '연구'];
 
-const COLOR_POOL = ['#6366f1', '#3b82f6', '#f43f5e', '#8b5cf6', '#f59e0b', '#10b981'];
-
-function getDeptColor(name: string, idx: number): string {
-  return DEPT_COLORS[name] || COLOR_POOL[idx % COLOR_POOL.length];
+// 부서명 매핑: 데이터의 name → 칩에 표시할 부서명
+function mapDeptName(name: string): string {
+  const map: Record<string, string> = {
+    '구매': '구매(원)',
+    '연구소': '연구',
+  };
+  return map[name] || name;
 }
 
-export const DelayByDeptCard: React.FC<DelayByDeptCardProps> = ({ data }) => {
-  const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
+function getChipStyle(count: number) {
+  if (count === 0) {
+    return {
+      bg: '#f5f6fa',
+      border: '#f5f6fa',
+      color: '#9ca3af',
+      badgeBg: '#e5e7eb',
+      badgeColor: '#9ca3af',
+    };
+  }
+  if (count <= 5) {
+    return {
+      bg: '#EEEDFE',
+      border: '#AFA9EC',
+      color: '#3C3489',
+      badgeBg: '#AFA9EC',
+      badgeColor: '#26215C',
+    };
+  }
+  if (count <= 12) {
+    return {
+      bg: '#AFA9EC',
+      border: '#7F77DD',
+      color: '#26215C',
+      badgeBg: '#534AB7',
+      badgeColor: '#fff',
+    };
+  }
+  return {
+    bg: '#534AB7',
+    border: '#3C3489',
+    color: '#fff',
+    badgeBg: 'rgba(0,0,0,0.18)',
+    badgeColor: '#fff',
+  };
+}
 
-  // 건수 내림차순 정렬
-  const sorted = useMemo(() => [...data].sort((a, b) => b.count - a.count), [data]);
+export const DelayByDeptCard: React.FC<DelayByDeptCardProps> = ({ data, onDeptClick }) => {
+  const chips: DeptDelay[] = useMemo(() => {
+    // 데이터를 부서명 기준으로 매핑
+    const countMap: Record<string, number> = {};
+    data.forEach(d => {
+      const mapped = mapDeptName(d.name);
+      countMap[mapped] = (countMap[mapped] || 0) + d.count;
+    });
 
-  const chartData = useMemo(() => ({
-    labels: sorted.map(d => d.name),
-    datasets: [{
-      data: sorted.map(d => d.count),
-      backgroundColor: sorted.map((d, i) => getDeptColor(d.name, i)),
-      borderWidth: 0,
-      hoverOffset: 2,
-    }],
-  }), [sorted]);
+    // 8개 부서 기준으로 생성
+    const allChips = ALL_DEPTS.map(dept => ({
+      deptName: dept,
+      count: countMap[dept] || 0,
+    }));
 
-  const chartOptions = useMemo(() => ({
-    cutout: '68%',
-    responsive: true,
-    maintainAspectRatio: true,
-    devicePixelRatio: 3,
-    plugins: {
-      tooltip: { enabled: false },
-      legend: { display: false },
-    },
-  } as const), []);
+    // count > 0 내림차순 먼저, count === 0 뒤에
+    const active = allChips.filter(c => c.count > 0).sort((a, b) => b.count - a.count);
+    const inactive = allChips.filter(c => c.count === 0);
+    return [...active, ...inactive];
+  }, [data]);
 
-  const centerPlugin = useMemo(() => ({
-    id: 'centerText',
-    afterDraw(chart: ChartJS) {
-      const { ctx, width, height } = chart;
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const cx = width / 2;
-      const cy = height / 2;
-
-      ctx.font = '700 18px "Noto Sans KR", sans-serif';
-      ctx.fillStyle = '#111827';
-      ctx.fillText(`${totalCount}`, cx, cy - 6);
-
-      ctx.font = '500 9px "Noto Sans KR", sans-serif';
-      ctx.fillStyle = '#9ca3af';
-      ctx.fillText('총 지연', cx, cy + 10);
-
-      ctx.restore();
-    },
-  }), [totalCount]);
-
-  const isEmpty = totalCount === 0;
+  const activeDeptCount = useMemo(() => chips.filter(c => c.count > 0).length, [chips]);
 
   return (
-    <div className="bg-white" style={{ borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03)', padding: 20, height: '100%' }}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[14px] font-bold text-gray-800">귀책부서별 지연현황</h3>
-        <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">
-          총 {totalCount}건
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: 14,
+        border: '0.5px solid #e5e7eb',
+        padding: 20,
+      }}
+    >
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', margin: 0 }}>귀책부서별 지연현황</h3>
+        <span style={{ fontSize: 11, fontWeight: 500, color: '#9ca3af' }}>
+          {activeDeptCount > 0 ? `지연 발생 ${activeDeptCount}개 부서` : '지연 없음'}
         </span>
       </div>
 
-      {isEmpty ? (
-        <div className="flex flex-col items-center justify-center" style={{ height: 240 }}>
-          <span className="text-[48px] font-bold text-gray-200">0</span>
-          <span className="text-[13px] text-gray-400 mt-1">지연 없음</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-5">
-          <div className="shrink-0" style={{ width: 90, height: 90 }}>
-            <Doughnut
-              data={chartData}
-              options={chartOptions}
-              plugins={[centerPlugin]}
-            />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <table className="w-full" style={{ fontSize: 12 }}>
-              <thead>
-                <tr className="text-gray-400" style={{ borderBottom: '0.5px solid #e5e7eb' }}>
-                  <th className="text-left font-medium pb-1.5">부서</th>
-                  <th className="text-right font-medium pb-1.5">건수</th>
-                  <th className="text-right font-medium pb-1.5 w-[50px]">비율</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((dept, idx) => {
-                  const pct = totalCount > 0 ? (dept.count / totalCount) * 100 : 0;
-                  const color = getDeptColor(dept.name, idx);
-                  return (
-                    <tr key={dept.name} className="border-b border-gray-50 last:border-0">
-                      <td className="py-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="shrink-0" style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: color }} />
-                          <span className="text-gray-700 font-medium">{dept.name}</span>
-                        </div>
-                      </td>
-                      <td className="text-right text-gray-700 font-semibold">{dept.count}건</td>
-                      <td className="text-right font-bold" style={{ color }}>{pct.toFixed(1)}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* 칩 그리드 */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 7,
+        }}
+      >
+        {chips.map(chip => {
+          const s = getChipStyle(chip.count);
+          return (
+            <div
+              key={chip.deptName}
+              onClick={() => chip.count > 0 && onDeptClick?.(chip.deptName)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: 20,
+                padding: '8px 14px',
+                background: s.bg,
+                border: `0.5px solid ${s.border}`,
+                color: s.color,
+                fontSize: 13,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                cursor: chip.count > 0 ? 'pointer' : 'default',
+                transition: 'filter 0.15s',
+              }}
+              onMouseEnter={(e) => { if (chip.count > 0) (e.currentTarget.style.filter = 'brightness(0.95)'); }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = ''; }}
+            >
+              <span>{chip.deptName}</span>
+              <span
+                style={{
+                  background: s.badgeBg,
+                  color: s.badgeColor,
+                  borderRadius: 10,
+                  padding: '1px 8px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  minWidth: 24,
+                  textAlign: 'center',
+                }}
+              >
+                {chip.count > 0 ? chip.count : '\u2014'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

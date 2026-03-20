@@ -173,7 +173,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
-      {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrency(getRevenue(item))}</td>}
+      <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrency(getRevenue(item))}</td>
       <td className="px-1 py-1">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} disabled={readOnly} />
       </td>
@@ -185,6 +185,8 @@ const ROW_HEIGHT = 40;
 
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, children }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: string } | null>(null);
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
 
@@ -257,6 +259,51 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     return items.filter(item => getTier(item) === activeTier);
   }, [items, getTier, activeTier]);
 
+  const sortedItems = useMemo(() => {
+    if (!sortConfig) return filteredItems;
+    const { key, direction } = sortConfig;
+    const getValue = (item: DashboardItem): string | number => {
+      const row = editData[item.id];
+      switch (key) {
+        case 'importance': return row?.importance || getTier(item);
+        case 'cisManager': return item.cisManager;
+        case 'purchaseManager': return row?.purchaseManager ?? '';
+        case 'category': return item.category;
+        case 'customerCode': return item.customerCode;
+        case 'materialCode': return item.materialCode;
+        case 'itemName': return item.itemName;
+        case 'createdDate': return item.createdDate;
+        case 'originalDueDate': return item.originalDueDate;
+        case 'changedDueDate': return item.changedDueDate;
+        case 'orderQuantity': return item.orderQuantity;
+        case 'totalQuantity': return item.totalQuantity;
+        case 'remainingQuantity': return item.remainingQuantity;
+        case 'productionCompleteDate': return row?.productionCompleteDate ?? '';
+        case 'materialSettingDate': return row?.materialSettingDate ?? '';
+        case 'productionRequestYn': return item.productionRequestYn;
+        case 'mfg1': return item.mfg1;
+        case 'manufacturingDate': return row?.manufacturingDate ?? '';
+        case 'packagingDate': return row?.packagingDate ?? '';
+        case 'productionSite': return row?.productionSite ?? '';
+        case 'revenuePossible': return row?.revenuePossible ?? '';
+        case 'revenuePossibleQuantity': return row?.revenuePossibleQuantity ?? item.remainingQuantity;
+        case 'progressRate': return getProgressRate(item, editData);
+        case 'delayReason': return row?.delayReason ?? '';
+        case 'unitPrice': return item.unitPrice;
+        case 'revenue': return getRevenue(item);
+        case 'note': return row?.note ?? '';
+        default: return '';
+      }
+    };
+    return [...filteredItems].sort((a, b) => {
+      const aVal = getValue(a);
+      const bVal = getValue(b);
+      const mult = direction === 'asc' ? 1 : -1;
+      if (typeof aVal === 'number' && typeof bVal === 'number') return (aVal - bVal) * mult;
+      return String(aVal).localeCompare(String(bVal), 'ko') * mult;
+    });
+  }, [filteredItems, sortConfig, editData, getTier]);
+
   const totals = useMemo(() => {
     return filteredItems.reduce((acc, item) => ({
       totalQuantity: acc.totalQuantity + item.totalQuantity,
@@ -295,9 +342,27 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); };
   }, []);
 
+  // 우클릭 컨텍스트 메뉴 닫기
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [contextMenu]);
+
+  const si = (key: string) =>
+    sortConfig?.key === key && <span className="text-indigo-500 text-[10px]">{sortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>;
+
+  const handleHeaderContext = (e: React.MouseEvent) => {
+    const th = (e.target as HTMLElement).closest('th');
+    if (!th?.dataset.sortKey) return;
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, key: th.dataset.sortKey });
+  };
+
   // 가상화 설정
   const rowVirtualizer = useVirtualizer({
-    count: filteredItems.length,
+    count: sortedItems.length,
     getScrollElement: () => tableScrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
@@ -379,46 +444,46 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
       <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]">
         <table className="w-full text-left border-collapse min-w-[2900px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
-            <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap">
-              <th className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sticky left-0 z-40 bg-slate-50">중요도</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[44px] z-40 bg-slate-50">CIS담당</th>
-              <th className="px-1 py-2 border-r border-slate-200 sticky left-[102px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600">구매담당</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[160px] z-40 bg-slate-50">중분류</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[230px] z-40 bg-slate-50">고객약호</th>
-              <th className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50">자재</th>
-              <th className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</th>
+            <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap" onContextMenu={handleHeaderContext}>
+              <th data-sort-key="importance" className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sticky left-0 z-40 bg-slate-50 cursor-context-menu">중요도{si('importance')}</th>
+              <th data-sort-key="cisManager" className="px-2 py-2 border-r border-slate-200 sticky left-[44px] z-40 bg-slate-50 cursor-context-menu">CIS담당{si('cisManager')}</th>
+              <th data-sort-key="purchaseManager" className="px-1 py-2 border-r border-slate-200 sticky left-[102px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600 cursor-context-menu">구매담당{si('purchaseManager')}</th>
+              <th data-sort-key="category" className="px-2 py-2 border-r border-slate-200 sticky left-[160px] z-40 bg-slate-50 cursor-context-menu">중분류{si('category')}</th>
+              <th data-sort-key="customerCode" className="px-2 py-2 border-r border-slate-200 sticky left-[230px] z-40 bg-slate-50 cursor-context-menu">고객약호{si('customerCode')}</th>
+              <th data-sort-key="materialCode" className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50 cursor-context-menu">자재{si('materialCode')}</th>
+              <th data-sort-key="itemName" className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50 cursor-context-menu" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역{si('itemName')}</th>
 
-              <th className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">생성일</th>
-              <th className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">원납기일</th>
-              <th className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">변경납기일</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px]">생산완료<br/>요청일</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">부자재</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">제조<br/>요청여부</th>
-              <th className="px-2 py-2 border-r border-slate-200 text-center w-[72px]">현재<br/>제조계획</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">제조</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px]">충포장</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px]">생산처</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px]">매출<br/>가능수량</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</th>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</th>
-              {isAdmin && <th className="px-2 py-2 border-r border-slate-200 text-right">단가</th>}
-              {isAdmin && <th className="px-2 py-2 border-r border-slate-200 text-right">매출<br/>(단가x잔량)</th>}
-              <th className="px-1 py-2 text-center">비고</th>
+              <th data-sort-key="createdDate" className="px-2 py-2 border-r border-slate-200 w-[62px] text-center cursor-context-menu">생성일{si('createdDate')}</th>
+              <th data-sort-key="originalDueDate" className="px-2 py-2 border-r border-slate-200 w-[62px] text-center cursor-context-menu">원납기일{si('originalDueDate')}</th>
+              <th data-sort-key="changedDueDate" className="px-2 py-2 border-r border-slate-200 w-[62px] text-center cursor-context-menu">변경납기일{si('changedDueDate')}</th>
+              <th data-sort-key="orderQuantity" className="px-2 py-2 border-r border-slate-200 text-right w-[78px] cursor-context-menu">총오더수량{si('orderQuantity')}</th>
+              <th data-sort-key="totalQuantity" className="px-2 py-2 border-r border-slate-200 text-right w-[72px] cursor-context-menu">환산수량{si('totalQuantity')}</th>
+              <th data-sort-key="remainingQuantity" className="px-2 py-2 border-r border-slate-200 text-right w-[72px] cursor-context-menu">미납잔량{si('remainingQuantity')}</th>
+              <th data-sort-key="productionCompleteDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px] cursor-context-menu">생산완료<br/>요청일{si('productionCompleteDate')}</th>
+              <th data-sort-key="materialSettingDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px] cursor-context-menu">부자재{si('materialSettingDate')}</th>
+              <th data-sort-key="productionRequestYn" className="px-2 py-2 border-r border-slate-200 text-center w-[62px] cursor-context-menu">제조<br/>요청여부{si('productionRequestYn')}</th>
+              <th data-sort-key="mfg1" className="px-2 py-2 border-r border-slate-200 text-center w-[72px] cursor-context-menu">현재<br/>제조계획{si('mfg1')}</th>
+              <th data-sort-key="manufacturingDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px] cursor-context-menu">제조{si('manufacturingDate')}</th>
+              <th data-sort-key="packagingDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px] cursor-context-menu">충포장{si('packagingDate')}</th>
+              <th data-sort-key="productionSite" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px] cursor-context-menu">생산처{si('productionSite')}</th>
+              <th data-sort-key="revenuePossible" className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 cursor-context-menu">매출<br/>가능여부{si('revenuePossible')}</th>
+              <th data-sort-key="revenuePossibleQuantity" className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px] cursor-context-menu">매출<br/>가능수량{si('revenuePossibleQuantity')}</th>
+              <th data-sort-key="progressRate" className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600 cursor-context-menu">진도율{si('progressRate')}</th>
+              <th data-sort-key="delayReason" className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600 cursor-context-menu">지연<br/>사유{si('delayReason')}</th>
+              {isAdmin && <th data-sort-key="unitPrice" className="px-2 py-2 border-r border-slate-200 text-right cursor-context-menu">단가{si('unitPrice')}</th>}
+              <th data-sort-key="revenue" className="px-2 py-2 border-r border-slate-200 text-right cursor-context-menu">매출<br/>(단가x잔량){si('revenue')}</th>
+              <th data-sort-key="note" className="px-1 py-2 text-center cursor-context-menu">비고{si('note')}</th>
             </tr>
           </thead>
           <tbody className="text-[15px]">
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 26 : 24} />
+                <td colSpan={isAdmin ? 26 : 25} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const item = filteredItems[virtualRow.index];
+              const item = sortedItems[virtualRow.index];
               const row = editData[item.id];
               const rate = getProgressRate(item, editData);
               const tier = getTier(item);
@@ -447,7 +512,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 26 : 24} />
+                <td colSpan={isAdmin ? 26 : 25} />
               </tr>
             )}
           </tbody>
@@ -475,12 +540,45 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}
-              {isAdmin && <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrency(totals.revenue)}</td>}
+              <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrency(totals.revenue)}</td>
               <td className="px-4 py-3"></td>
             </tr>
           </tfoot>
         </table>
       </div>
+
+      {/* 우클릭 정렬 컨텍스트 메뉴 */}
+      {contextMenu && (
+        <div
+          className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[160px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            onClick={() => { setSortConfig({ key: contextMenu.key, direction: 'asc' }); setContextMenu(null); }}
+          >
+            <span className="text-indigo-500">▲</span> 오름차순 정렬
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            onClick={() => { setSortConfig({ key: contextMenu.key, direction: 'desc' }); setContextMenu(null); }}
+          >
+            <span className="text-indigo-500">▼</span> 내림차순 정렬
+          </button>
+          {sortConfig && sortConfig.key === contextMenu.key && (
+            <>
+              <div className="border-t border-slate-100 my-1" />
+              <button
+                className="w-full px-4 py-2 text-left text-sm text-slate-400 hover:bg-slate-50 flex items-center gap-2"
+                onClick={() => { setSortConfig(null); setContextMenu(null); }}
+              >
+                <span>✕</span> 정렬 해제
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

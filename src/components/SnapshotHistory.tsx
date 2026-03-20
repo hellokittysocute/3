@@ -19,23 +19,34 @@ type DetailTab = 'summary' | 'table';
 function computeDerivedData(items: DashboardItem[], editMap: Record<string, EditableData>) {
   const stats = calculateStats(items, editMap);
 
-  // Top10 고객사
+  // Top5 고객사
   const customerChartData = (() => {
     const codes = [...new Set(items.map(i => i.customerCode))];
-    return codes.map(code => {
+    const getStatus = (i: DashboardItem) => {
+      const edited = editMap[i.id]?.revenuePossible;
+      if (edited === '가능' || edited === '확인중' || edited === '불가능') return edited;
+      return i.status;
+    };
+    const all = codes.map(code => {
       const cItems = items.filter(i => i.customerCode === code);
-      const getStatus = (i: DashboardItem) => {
-        const edited = editMap[i.id]?.revenuePossible;
-        if (edited === '가능' || edited === '확인중' || edited === '불가능') return edited;
-        return i.status;
-      };
       return {
         name: code,
         가능: cItems.filter(i => getStatus(i) === '가능').reduce((s, i) => s + getRevenue(i), 0),
         확인중: cItems.filter(i => getStatus(i) === '확인중').reduce((s, i) => s + getRevenue(i), 0),
         불가능: cItems.filter(i => getStatus(i) === '불가능').reduce((s, i) => s + getRevenue(i), 0),
       };
-    }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능)).slice(0, 10);
+    }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
+    const top5 = all.slice(0, 10);
+    const rest = all.slice(10);
+    if (rest.length > 0) {
+      top5.push({
+        name: '기타',
+        가능: rest.reduce((s, c) => s + c.가능, 0),
+        확인중: rest.reduce((s, c) => s + c.확인중, 0),
+        불가능: rest.reduce((s, c) => s + c.불가능, 0),
+      });
+    }
+    return top5;
   })();
 
   // 귀책부서별 지연현황
@@ -284,13 +295,12 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
               </div>
             </div>
 
-            {/* 2행: Top10 고객사 + 귀책부서별 지연현황/미회신 */}
+            {/* 2행: Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              {/* Top10 고객사 */}
               <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
                 <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
                 <div className="space-y-0.5">
-                  {derived.customerChartData.slice(0, 10).map((c, idx) => {
+                  {derived.customerChartData.map((c, idx) => {
                     const total = c.가능 + c.확인중 + c.불가능;
                     const maxTotal = derived.customerChartData[0] ? derived.customerChartData[0].가능 + derived.customerChartData[0].확인중 + derived.customerChartData[0].불가능 : 1;
                     const barWidth = (total / maxTotal) * 100;
@@ -319,8 +329,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
                 </div>
               </div>
 
-              {/* 귀책부서별 지연현황 + 미회신 건수 */}
-              <div className="grid grid-cols-2 items-stretch h-full" style={{ gap: 12 }}>
+              <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={derived.delayByDeptData} />
                 <NoReplyCard data={derived.noReplyData} />
               </div>

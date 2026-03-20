@@ -14,6 +14,7 @@ import { AdminUserManagement } from './components/AdminUserManagement';
 import { AdminDataUpload } from './components/AdminDataUpload';
 import { DelayByDeptCard } from './components/DelayByDeptCard';
 import { NoReplyCard } from './components/NoReplyCard';
+import { DrilldownModal } from './components/DrilldownModal';
 import { SnapshotHistory } from './components/SnapshotHistory';
 import { useAuth } from './contexts/AuthContext';
 import { cn, formatCurrency } from './lib/utils';
@@ -32,6 +33,10 @@ export default function App() {
   const [cisManagerFilter, setCisManagerFilter] = useState('');
   const [purchaseManagerFilter, setPurchaseManagerFilter] = useState('');
   const [midCategoryFilter, setMidCategoryFilter] = useState('');
+
+  // 드릴다운 모달 상태
+  const [customerModal, setCustomerModal] = useState<string | null>(null); // customerCode
+  const [delayDeptModal, setDelayDeptModal] = useState<string | null>(null); // deptName
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,16 +244,28 @@ export default function App() {
 
   // Chart data preparation
   const customerChartData = useMemo(() => {
-    const customers = [...new Set(items.map(i => i.customerCode))].slice(0, 10);
-    return customers.map(code => {
-      const cItems = items.filter(i => i.customerCode === code);
-      return {
-        name: code,
-        가능: cItems.filter(i => i.status === '가능').reduce((s, i) => s + getRevenue(i), 0),
-        확인중: cItems.filter(i => i.status === '확인중').reduce((s, i) => s + getRevenue(i), 0),
-        불가능: cItems.filter(i => i.status === '불가능').reduce((s, i) => s + getRevenue(i), 0),
-      };
-    }).sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
+    const customerMap: Record<string, { 가능: number; 확인중: number; 불가능: number }> = {};
+    items.forEach(i => {
+      if (!customerMap[i.customerCode]) customerMap[i.customerCode] = { 가능: 0, 확인중: 0, 불가능: 0 };
+      const rev = getRevenue(i);
+      if (i.status === '가능') customerMap[i.customerCode].가능 += rev;
+      else if (i.status === '불가능') customerMap[i.customerCode].불가능 += rev;
+      else customerMap[i.customerCode].확인중 += rev;
+    });
+    const all = Object.entries(customerMap)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => (b.가능 + b.확인중 + b.불가능) - (a.가능 + a.확인중 + a.불가능));
+    const top5 = all.slice(0, 10);
+    const rest = all.slice(10);
+    if (rest.length > 0) {
+      top5.push({
+        name: '기타',
+        가능: rest.reduce((s, c) => s + c.가능, 0),
+        확인중: rest.reduce((s, c) => s + c.확인중, 0),
+        불가능: rest.reduce((s, c) => s + c.불가능, 0),
+      });
+    }
+    return top5;
   }, [items]);
 
   // 고객사별 관리구분 달성률 (매출가능수량 / 미납잔량)
@@ -262,14 +279,16 @@ export default function App() {
       const possibleRevenue = possibleItems.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity) * i.unitPrice, 0);
       return totalRevenue > 0 ? (possibleRevenue / totalRevenue) * 100 : 0;
     };
-    const customerCodes = customerChartData.map(c => c.name);
-    return customerCodes.map(code => {
-      const cItems = items.filter(i => i.customerCode === code);
-      return {
-        name: code,
-        rate: calcRate(cItems),
-      };
-    });
+    const top10Codes = customerChartData.filter(c => c.name !== '기타').map(c => c.name);
+    const result = top10Codes.map(code => ({
+      name: code,
+      rate: calcRate(items.filter(i => i.customerCode === code)),
+    }));
+    if (customerChartData.some(c => c.name === '기타')) {
+      const restItems = items.filter(i => !top10Codes.includes(i.customerCode));
+      result.push({ name: '기타', rate: calcRate(restItems) });
+    }
+    return result;
   }, [items, editData, customerChartData]);
 
   const teamChartData = useMemo(() => {
@@ -316,6 +335,70 @@ export default function App() {
       { dept: '생산', count: productionCount },
     ].filter(d => d.count > 0);
   }, [items, editData]);
+
+  // 고객사 드릴다운 데이터
+  const customerModalData = useMemo(() => {
+    if (!customerModal) return null;
+    const isEtc = customerModal === '기타';
+    const top10Codes = customerChartData.filter(c => c.name !== '기타').map(c => c.name);
+    const cItems = isEtc
+      ? items.filter(i => !top10Codes.includes(i.customerCode))
+      : items.filter(i => i.customerCode === customerModal);
+    const customerName = cItems[0]?.customerName || customerModal;
+    const totalAmount = cItems.reduce((s, i) => s + getRevenue(i), 0);
+
+    const itemList = cItems.map(i => {
+      const ed = editData[i.id];
+      const status = ed?.revenuePossible || i.status || '확인중';
+      return {
+        itemCode: i.materialCode,
+        itemName: i.itemName,
+        amount: getRevenue(i),
+        count: i.remainingQuantity,
+        status: status as '가능' | '확인중' | '불가능',
+      };
+    }).sort((a, b) => b.amount - a.amount);
+
+    return { customerCode: customerModal, customerName, totalAmount, items: itemList };
+  }, [customerModal, items, editData, customerChartData]);
+
+  // 귀책부서 드릴다운 데이터
+  const delayDeptModalData = useMemo(() => {
+    if (!delayDeptModal) return null;
+    // 부서명 역매핑
+    const reverseMap: Record<string, string[]> = {
+      '구매(원)': ['구매'],
+      '연구': ['연구소'],
+    };
+    const matchNames = reverseMap[delayDeptModal] || [delayDeptModal];
+
+    const deptItems = items.filter(i => {
+      const reason = (editData[i.id]?.delayReason || '').trim();
+      return matchNames.includes(reason);
+    });
+
+    const itemList = deptItems.map(i => {
+      const ed = editData[i.id];
+      // 지연일수: 변경납기일 - 오늘
+      let delayDays = 0;
+      if (i.changedDueDate) {
+        const due = new Date(i.changedDueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff > 0) delayDays = diff;
+      }
+      return {
+        itemCode: i.materialCode,
+        itemName: i.itemName,
+        delayDays,
+        manager: ed?.purchaseManager || i.cisManager,
+        reason: ed?.delayReason || '',
+      };
+    }).sort((a, b) => b.delayDays - a.delayDays);
+
+    return { deptName: delayDeptModal, totalCount: deptItems.length, items: itemList };
+  }, [delayDeptModal, items, editData]);
 
   const trendData = [
     { date: '02/27', rate: 0 },
@@ -561,16 +644,20 @@ export default function App() {
 
             {/* 3행 — Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              {/* Top10 고객사 */}
               <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
                 <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
                 <div className="space-y-0.5">
-                  {customerChartData.slice(0, 10).map((c, idx) => {
+                  {customerChartData.map((c, idx) => {
                     const total = c.가능 + c.확인중 + c.불가능;
                     const maxTotal = customerChartData[0] ? customerChartData[0].가능 + customerChartData[0].확인중 + customerChartData[0].불가능 : 1;
                     const barWidth = (total / maxTotal) * 100;
                     return (
-                      <div key={c.name} className="flex items-center gap-2.5" style={{ height: 36 }}>
+                      <div
+                        key={c.name}
+                        className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 rounded-lg transition-colors"
+                        style={{ height: 36, padding: '0 4px', margin: '0 -4px' }}
+                        onClick={() => setCustomerModal(c.name)}
+                      >
                         <div
                           className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                           style={{
@@ -594,15 +681,122 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 귀책부서별 지연현황 + 미회신 건수 */}
-              <div className="grid grid-cols-2 items-stretch h-full" style={{ gap: 12 }}>
-                <DelayByDeptCard data={delayByDeptData} />
+              <div className="flex flex-col" style={{ gap: 20 }}>
+                <DelayByDeptCard data={delayByDeptData} onDeptClick={(dept) => setDelayDeptModal(dept)} />
                 <NoReplyCard data={noReplyData} />
               </div>
             </div>
           </div>
           );
         })()}
+
+        {/* 고객사 드릴다운 모달 */}
+        <DrilldownModal
+          isOpen={!!customerModal}
+          onClose={() => setCustomerModal(null)}
+          title={
+            <>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{customerModalData?.customerName || customerModal}</span>
+              <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, background: '#eef2ff', padding: '2px 8px', borderRadius: 6 }}>
+                {customerModalData ? formatCurrency(customerModalData.totalAmount) : ''}
+              </span>
+            </>
+          }
+        >
+          {customerModalData && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* 품목별 매출 리스트 */}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                  품목별 매출 ({customerModalData.items.length}건)
+                </div>
+                <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e5e7eb', color: '#9ca3af' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>품번</th>
+                      <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>품명</th>
+                      <th style={{ textAlign: 'right', padding: '6px 4px', fontWeight: 500 }}>매출</th>
+                      <th style={{ textAlign: 'right', padding: '6px 4px', fontWeight: 500 }}>잔량</th>
+                      <th style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 500 }}>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerModalData.items.map((item, i) => {
+                      const statusColor = item.status === '가능' ? '#10b981' : item.status === '불가능' ? '#f43f5e' : '#f59e0b';
+                      const statusBg = item.status === '가능' ? '#ecfdf5' : item.status === '불가능' ? '#fef2f2' : '#fffbeb';
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                          <td style={{ padding: '6px 4px', color: '#6b7280', whiteSpace: 'nowrap' }}>{item.itemCode}</td>
+                          <td style={{ padding: '6px 4px', color: '#374151', whiteSpace: 'normal', wordBreak: 'break-word' as const }}>{item.itemName}</td>
+                          <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 600, color: '#1f2937' }}>{formatCurrency(item.amount)}</td>
+                          <td style={{ padding: '6px 4px', textAlign: 'right', color: '#6b7280' }}>{item.count.toLocaleString()}</td>
+                          <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                              color: statusColor, background: statusBg,
+                            }}>
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </DrilldownModal>
+
+        {/* 귀책부서 드릴다운 모달 */}
+        <DrilldownModal
+          isOpen={!!delayDeptModal}
+          onClose={() => setDelayDeptModal(null)}
+          title={
+            <>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{delayDeptModal}</span>
+              {delayDeptModalData && (
+                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, background: '#534AB7', padding: '2px 8px', borderRadius: 6 }}>
+                  지연 {delayDeptModalData.totalCount}건
+                </span>
+              )}
+            </>
+          }
+        >
+          {delayDeptModalData && (
+            <div>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e5e7eb', color: '#9ca3af' }}>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>품번</th>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>품명</th>
+                    <th style={{ textAlign: 'right', padding: '6px 4px', fontWeight: 500 }}>지연일</th>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>담당자</th>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>사유</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {delayDeptModalData.items.map((item, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '6px 4px', color: '#6b7280', whiteSpace: 'nowrap' }}>{item.itemCode}</td>
+                      <td style={{ padding: '6px 4px', color: '#374151', whiteSpace: 'normal', wordBreak: 'break-word' as const }}>{item.itemName}</td>
+                      <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 700, color: item.delayDays >= 7 ? '#ef4444' : '#374151' }}>
+                        {item.delayDays > 0 ? `${item.delayDays}일` : '-'}
+                      </td>
+                      <td style={{ padding: '6px 4px', color: '#6b7280' }}>{item.manager}</td>
+                      <td style={{ padding: '6px 4px', color: '#6b7280' }}>{item.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {delayDeptModalData.items.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>
+                  해당 부서의 지연 항목이 없습니다.
+                </div>
+              )}
+            </div>
+          )}
+        </DrilldownModal>
 
         {activeTab === 'details' && (
           <div className="-mx-10 space-y-8 animate-in fade-in duration-700">
