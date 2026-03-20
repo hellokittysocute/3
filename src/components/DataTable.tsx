@@ -371,8 +371,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   return (
     <div>
       {/* 필터 탭 + 저장 버튼 */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-8 py-3 sm:py-4 border-b border-slate-100 gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto w-full sm:w-auto">
           {tabs.map(tab => {
             const isActive = activeTier === tab.key;
             const count = tab.key === '전체' ? items.length : tierCounts[tab.key as '상' | '중' | '하'];
@@ -383,18 +383,18 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                 key={tab.key}
                 onClick={() => setActiveTier(tab.key)}
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[15px] font-bold transition-all border",
+                  "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-[15px] font-bold transition-all border shrink-0",
                   isActive && tab.key === '전체' && "bg-slate-900 text-white border-slate-900 shadow-lg",
                   isActive && tab.key !== '전체' && "text-white shadow-lg",
                   !isActive && "bg-white text-slate-500 border-slate-200 hover:bg-slate-50",
                 )}
                 style={isActive && color ? { backgroundColor: color.border, borderColor: color.border } : undefined}
               >
-                {tab.emoji && <span className="text-[14px]">{tab.emoji}</span>}
+                {tab.emoji && <span className="text-[12px] sm:text-[14px]">{tab.emoji}</span>}
                 {tab.label}
                 <span
                   className={cn(
-                    "text-[14px] font-bold px-2 py-0.5 rounded-full min-w-[26px] text-center",
+                    "text-[12px] sm:text-[14px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full min-w-[22px] sm:min-w-[26px] text-center",
                     isActive ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500",
                   )}
                   style={isActive && color ? { backgroundColor: 'rgba(255,255,255,0.25)' } : undefined}
@@ -406,18 +406,18 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
           })}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             onClick={handleExcelDownload}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[13px] sm:text-[15px] font-bold transition-all duration-300 shadow-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
           >
-            <Download className="w-4 h-4" /> 다운로드
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 다운로드
           </button>
           {!readOnly && (
             <button
               onClick={onSave}
               className={cn(
-                "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[15px] font-bold transition-all duration-300 shadow-lg",
+                "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[13px] sm:text-[15px] font-bold transition-all duration-300 shadow-lg",
                 saveStatus === 'saved'
                   ? "bg-emerald-500 text-white shadow-emerald-200"
                   : "bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200"

@@ -28,44 +28,30 @@ export const DrilldownModal: React.FC<DrilldownModalProps> = ({ isOpen, onClose,
     <div
       ref={overlayRef}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(0,0,0,0.3)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
-      }}
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-5"
+      style={{ background: 'rgba(0,0,0,0.3)' }}
     >
       <div
-        style={{
-          background: '#fff', borderRadius: 16, width: 800, maxWidth: '100%',
-          maxHeight: 600, display: 'flex', flexDirection: 'column',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-        }}
+        className="bg-white w-full sm:w-auto sm:min-w-[560px] sm:max-w-[800px] rounded-t-2xl sm:rounded-2xl max-h-[85vh] sm:max-h-[600px] flex flex-col"
+        style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px', borderBottom: '1px solid #f1f5f9',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             {title}
           </div>
           <button
             onClick={onClose}
-            style={{
-              width: 28, height: 28, borderRadius: 8, border: 'none',
-              background: '#f1f5f9', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 ml-2"
+            style={{ border: 'none', cursor: 'pointer' }}
           >
             <X size={14} color="#64748b" />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', padding: 20, flex: 1 }}>
+        <div className="overflow-y-auto overflow-x-auto p-4 sm:p-5 flex-1">
           {children}
         </div>
       </div>

@@ -108,7 +108,7 @@ export const DelayByDeptCard: React.FC<DelayByDeptCardProps> = ({ data, onDeptCl
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
           gap: 7,
         }}
       >

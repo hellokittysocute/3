@@ -438,45 +438,45 @@ export default function App() {
     <div className="min-h-screen bg-[#f5f6fa] font-sans text-slate-900">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-8 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200">
-              <LayoutDashboard className="text-white w-6 h-6" />
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-3 sm:py-0 sm:h-24 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-slate-900 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200 shrink-0">
+              <LayoutDashboard className="text-white w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h1 className="text-[30px] font-black tracking-tighter text-slate-900">
+            <div className="min-w-0">
+              <h1 className="text-[18px] sm:text-[30px] font-black tracking-tighter text-slate-900 truncate">
                 📊 {parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {(stats.overall.totalRevenue / 100000000).toFixed(1)}억</span>
-                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                <p className="text-[13px] text-slate-400 font-medium italic">{parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 실시간 현황</p>
+                <span className="text-[11px] sm:text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {(stats.overall.totalRevenue / 100000000).toFixed(1)}억</span>
+                <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
+                <p className="text-[13px] text-slate-400 font-medium italic hidden sm:block">{parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 실시간 현황</p>
                 {isReadOnly && <span className="text-[11px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">읽기전용</span>}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col items-end">
+          <div className="flex items-center gap-2 sm:gap-6 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+            <div className="hidden lg:flex flex-col items-end">
               <span className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-1">시스템 상태</span>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[15px] font-bold text-slate-700">실시간 동기화 중</span>
               </div>
             </div>
-            <div className="h-10 w-px bg-slate-200" />
+            <div className="h-10 w-px bg-slate-200 hidden lg:block" />
             <button
               onClick={() => { setSaveStatus('loading'); refreshEditData(); }}
-              className="group bg-slate-900 text-white pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-xl shadow-slate-200"
+              className="group bg-slate-900 text-white px-3 sm:pl-4 sm:pr-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold hover:bg-emerald-600 transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shadow-xl shadow-slate-200 shrink-0"
             >
-              <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", saveStatus === 'loading' ? "animate-spin" : "group-hover:rotate-180")} />
-              데이터 갱신
+              <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-500", saveStatus === 'loading' ? "animate-spin" : "group-hover:rotate-180")} />
+              <span className="hidden sm:inline">데이터 갱신</span><span className="sm:hidden">갱신</span>
             </button>
             <button
               onClick={handleSnapshot}
               disabled={snapshotStatus === 'saving'}
               className={cn(
-                "flex items-center gap-2 pl-4 pr-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 shadow-xl",
+                "flex items-center gap-1.5 sm:gap-2 px-3 sm:pl-4 sm:pr-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 shadow-xl shrink-0",
                 snapshotStatus === 'saved'
                   ? "bg-indigo-500 text-white shadow-indigo-200"
                   : snapshotStatus === 'saving'
@@ -484,20 +484,20 @@ export default function App() {
                   : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
               )}
             >
-              <Camera className="w-4 h-4" />
-              {snapshotStatus === 'saved' ? '저장 완료' : snapshotStatus === 'saving' ? '저장 중...' : '스냅샷'}
+              <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              {snapshotStatus === 'saved' ? '완료' : snapshotStatus === 'saving' ? '저장중' : '스냅샷'}
             </button>
-            <div className="h-10 w-px bg-slate-200" />
+            <div className="h-10 w-px bg-slate-200 hidden sm:block" />
             {/* 사용자 정보 + 로그아웃 */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-9 h-9 rounded-full border-2 border-slate-200" />
+                <img src={profile.avatar_url} alt="" className="w-7 h-7 sm:w-9 sm:h-9 rounded-full border-2 border-slate-200" />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-slate-400" />
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
                 </div>
               )}
-              <div className="flex flex-col items-start">
+              <div className="hidden sm:flex flex-col items-start">
                 <span className="text-[13px] font-bold text-slate-700">{profile?.name || profile?.email}</span>
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
                   {isAdmin && <Shield className="w-3 h-3 text-indigo-500" />}
@@ -506,17 +506,17 @@ export default function App() {
               </div>
               <button
                 onClick={signOut}
-                className="ml-1 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 title="로그아웃"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="max-w-[1600px] mx-auto px-8 flex gap-10">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 flex gap-4 sm:gap-10 overflow-x-auto">
           {[
             { id: 'summary', label: '종합현황', icon: LayoutDashboard },
             { id: 'details', label: '상세데이터', icon: List },
@@ -530,7 +530,7 @@ export default function App() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex items-center gap-2 py-5 text-[15px] font-black uppercase tracking-widest transition-all relative group",
+                "flex items-center gap-1.5 sm:gap-2 py-3 sm:py-5 text-[12px] sm:text-[15px] font-black uppercase tracking-widest transition-all relative group whitespace-nowrap",
                 activeTab === tab.id
                   ? "text-slate-900"
                   : "text-slate-400 hover:text-slate-600"
@@ -548,7 +548,7 @@ export default function App() {
         {/* 월별 시트 탭 제거 — 스냅샷으로 이력 관리 */}
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-10">
+      <main className="max-w-[1600px] mx-auto p-4 sm:p-10">
         {activeTab === 'summary' && (() => {
           const goalRate = stats.overall.totalRevenue > 0 ? (stats.overall.possibleRevenue / stats.overall.totalRevenue) * 100 : 0;
           // 매출구성: 고정값
@@ -799,10 +799,10 @@ export default function App() {
         </DrilldownModal>
 
         {activeTab === 'details' && (
-          <div className="-mx-10 space-y-8 animate-in fade-in duration-700">
+          <div className="-mx-4 sm:-mx-10 space-y-8 animate-in fade-in duration-700">
             <div className="bg-white overflow-hidden">
               <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} onSnapshot={handleSnapshot} snapshotStatus={snapshotStatus} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly}>
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-9 gap-6 bg-white px-8 py-4 border-b border-slate-200/60">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3 sm:gap-6 bg-white px-4 sm:px-8 py-4 border-b border-slate-200/60">
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
                     <input
