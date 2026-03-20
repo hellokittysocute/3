@@ -8,6 +8,7 @@ import { formatCurrency } from '../lib/utils';
 import { DonutChart } from './DonutChart';
 import { DelayByDeptCard, DelayDeptItem } from './DelayByDeptCard';
 import { NoReplyCard, NoReplyDeptItem } from './NoReplyCard';
+import { Top10CustomerCard } from './Top10CustomerCard';
 
 interface SnapshotHistoryProps {
   isAdmin?: boolean;
@@ -81,7 +82,7 @@ function computeDerivedData(items: DashboardItem[], editMap: Record<string, Edit
 
   // 진도율
   const totalRemaining = items.reduce((s, i) => s + i.remainingQuantity, 0);
-  const totalPossibleQty = items.reduce((s, i) => s + (editMap[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity), 0);
+  const totalPossibleQty = items.reduce((s, i) => s + (editMap[i.id]?.revenuePossibleQuantity || 0), 0);
   const progressRate = totalRemaining > 0 ? (totalPossibleQty / totalRemaining) * 100 : 0;
 
   return { stats, customerChartData, delayByDeptData, noReplyData, progressRate };
@@ -134,7 +135,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
   const handleExcelDownload = useCallback(() => {
     if (!selectedSnapshot || snapshotRows.length === 0) return;
     const rows = snapshotRows.map(({ item, edit }) => {
-      const qty = edit?.revenuePossibleQuantity || item.remainingQuantity;
+      const qty = edit?.revenuePossibleQuantity || 0;
       return {
         '중요도': edit?.importance ?? '',
         'CIS담당': item.cisManager,
@@ -297,37 +298,13 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
 
             {/* 2행: Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
-                <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
-                <div className="space-y-0.5">
-                  {derived.customerChartData.map((c, idx) => {
-                    const total = c.가능 + c.확인중 + c.불가능;
-                    const maxTotal = derived.customerChartData[0] ? derived.customerChartData[0].가능 + derived.customerChartData[0].확인중 + derived.customerChartData[0].불가능 : 1;
-                    const barWidth = (total / maxTotal) * 100;
-                    return (
-                      <div key={c.name} className="flex items-center gap-2.5" style={{ height: 36 }}>
-                        <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                          style={{
-                            backgroundColor: idx < 3 ? '#6366f1' : '#f1f3f5',
-                            color: idx < 3 ? '#fff' : '#9ca3af',
-                          }}
-                        >
-                          {idx + 1}
-                        </div>
-                        <span className="text-[12px] font-medium text-gray-600 w-12 shrink-0 truncate">{c.name}</span>
-                        <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
-                          <div
-                            className="h-full rounded transition-all duration-500"
-                            style={{ width: `${barWidth}%`, backgroundColor: idx < 3 ? '#818cf8' : '#cbd5e1' }}
-                          />
-                        </div>
-                        <span className="text-[13px] font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <Top10CustomerCard
+                data={derived.customerChartData.map((c) => ({
+                  name: c.name,
+                  amount: c.가능 + c.확인중 + c.불가능,
+                  isEtc: c.name === '기타',
+                }))}
+              />
 
               <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={derived.delayByDeptData} />
@@ -359,7 +336,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
                 </thead>
                 <tbody>
                   {snapshotRows.map(({ item, edit }, idx) => {
-                    const qty = edit?.revenuePossibleQuantity || item.remainingQuantity;
+                    const qty = edit?.revenuePossibleQuantity || 0;
                     const revenue = qty * item.unitPrice;
                     const importance = edit?.importance || '';
                     const impColor = importance === '상' ? 'text-red-500' : importance === '중' ? 'text-amber-500' : importance === '하' ? 'text-green-500' : 'text-slate-400';

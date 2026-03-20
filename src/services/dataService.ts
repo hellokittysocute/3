@@ -78,13 +78,13 @@ export function calculateStats(items: DashboardItem[], editData?: Record<string,
 
   // 가능 매출액: 단가 × 매출가능수량
   const getPossibleRevenue = (item: DashboardItem): number => {
-    const qty = editData?.[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity;
+    const qty = editData?.[item.id]?.revenuePossibleQuantity || 0;
     return item.unitPrice * qty;
   };
 
   // 확인중/불가능 매출액: (미납잔량 - 매출가능수량) × 단가
   const getUnpossibleRevenue = (item: DashboardItem): number => {
-    const qty = editData?.[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity;
+    const qty = editData?.[item.id]?.revenuePossibleQuantity || 0;
     return item.unitPrice * (item.remainingQuantity - qty);
   };
 

@@ -10,7 +10,7 @@ interface NoReplyCardProps {
 }
 
 const DEPT_STYLE: Record<string, { bar: string; countColor: string; pctColor: string }> = {
-  '생산': { bar: '#f97316', countColor: '#c2410c', pctColor: '#f97316' },
+  '생산': { bar: '#f59e0b', countColor: '#b45309', pctColor: '#f59e0b' },
   '구매': { bar: '#22c55e', countColor: '#15803d', pctColor: '#22c55e' },
 };
 
@@ -48,7 +48,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
                   <div style={{ height: '100%', borderRadius: 3, background: colors.bar, width: `${pct}%`, transition: 'width 0.4s' }} />
                 </div>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: colors.countColor }}>{d.count.toLocaleString()}</span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: colors.countColor }}>{d.count.toLocaleString()}건</span>
                   <span style={{ fontSize: 11, color: '#d1d5db' }}>&middot;</span>
                   <span style={{ fontSize: 11, color: colors.pctColor }}>{pct.toFixed(1)}%</span>
                 </span>

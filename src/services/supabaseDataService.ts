@@ -62,7 +62,7 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
     manufacturingDate: (row.manufacturing_date as string) || '',
     packagingDate: (row.packaging_date as string) || '',
     revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '확인중',
-    revenuePossibleQuantity: Number(row.revenue_possible_quantity) || 0,
+    revenuePossibleQuantity: row.revenue_possible_quantity != null ? Number(row.revenue_possible_quantity) : 0,
     delayReason: (row.delay_reason as string) || '',
     importance: (row.importance as '상' | '중' | '하' | '') || '',
     productionSite: (row.production_site as string) || '',
@@ -266,7 +266,7 @@ export async function createSnapshot(
 
   const totalRevenue = items.reduce((s, i) => {
     const ed = editData[i.id];
-    const qty = ed?.revenuePossibleQuantity || i.remainingQuantity;
+    const qty = ed?.revenuePossibleQuantity || 0;
     return s + qty * i.unitPrice;
   }, 0);
 

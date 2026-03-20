@@ -14,6 +14,7 @@ import { AdminUserManagement } from './components/AdminUserManagement';
 import { AdminDataUpload } from './components/AdminDataUpload';
 import { DelayByDeptCard } from './components/DelayByDeptCard';
 import { NoReplyCard } from './components/NoReplyCard';
+import { Top10CustomerCard } from './components/Top10CustomerCard';
 import { DrilldownModal } from './components/DrilldownModal';
 import { SnapshotHistory } from './components/SnapshotHistory';
 import { useAuth } from './contexts/AuthContext';
@@ -71,18 +72,16 @@ export default function App() {
         ]);
         setItems(dashboardItems);
         // DB에서 가져온 편집 데이터가 있으면 병합
-        if (Object.keys(editDataFromDb).length > 0) {
-          const merged: Record<string, EditableData> = {};
-          dashboardItems.forEach(item => {
-            merged[item.id] = editDataFromDb[item.id] || {
-              productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-              revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
-              purchaseManager: '', note: '',
-            };
-          });
-          setEditData(merged);
-          setSavedEditData(merged);
-        }
+        const merged: Record<string, EditableData> = {};
+        dashboardItems.forEach(item => {
+          merged[item.id] = editDataFromDb[item.id] || {
+            productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+            revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '', productionSite: '',
+            purchaseManager: '', note: '',
+          };
+        });
+        setEditData(merged);
+        setSavedEditData(merged);
       } catch (err) {
         console.error('데이터 로드 실패:', err);
       } finally {
@@ -99,7 +98,7 @@ export default function App() {
     items.forEach(item => {
       initial[item.id] = {
         productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-        revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '', productionSite: '',
+        revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '', productionSite: '',
         purchaseManager: '', note: '',
       };
     });
@@ -124,7 +123,7 @@ export default function App() {
   const editProgressRates = useMemo(() => {
     const calc = (filtered: DashboardItem[]) => {
       const totalRemaining = filtered.reduce((s, i) => s + i.remainingQuantity, 0);
-      const totalPossibleQty = filtered.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity), 0);
+      const totalPossibleQty = filtered.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity || 0), 0);
       return totalRemaining > 0 ? (totalPossibleQty / totalRemaining) * 100 : 0;
     };
     return {
@@ -146,7 +145,7 @@ export default function App() {
       dashboardItems.forEach(item => {
         merged[item.id] = editDataFromDb[item.id] || {
           productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
-          revenuePossible: '확인중', revenuePossibleQuantity: item.remainingQuantity, delayReason: '', importance: '',
+          revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '',
           productionSite: '', purchaseManager: '', note: '',
         };
       });
@@ -165,7 +164,14 @@ export default function App() {
 
   const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
     setSaveStatus('idle');
-    setEditData(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+    setEditData(prev => {
+      const updated = { ...prev[id], [field]: value };
+      // 매출가능여부를 '가능' 외로 바꾸면 매출가능수량 삭제
+      if (field === 'revenuePossible' && value !== '가능') {
+        updated.revenuePossibleQuantity = 0;
+      }
+      return { ...prev, [id]: updated };
+    });
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -276,7 +282,7 @@ export default function App() {
         const v = (editData[i.id]?.revenuePossible || '').trim().toLowerCase();
         return v === '가능' || v === 'o';
       });
-      const possibleRevenue = possibleItems.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity ?? i.remainingQuantity) * i.unitPrice, 0);
+      const possibleRevenue = possibleItems.reduce((s, i) => s + (editData[i.id]?.revenuePossibleQuantity || 0) * i.unitPrice, 0);
       return totalRevenue > 0 ? (possibleRevenue / totalRevenue) * 100 : 0;
     };
     const top10Codes = customerChartData.filter(c => c.name !== '기타').map(c => c.name);
@@ -401,11 +407,11 @@ export default function App() {
   }, [delayDeptModal, items, editData]);
 
   const trendData = [
-    { date: '02/27', rate: 0 },
-    { date: '02/28', rate: 5.2 },
-    { date: '03/01', rate: 12.8 },
-    { date: '03/02', rate: 18.5 },
-    { date: '03/03', rate: 24.1 },
+    { date: '03/01', rate: 0 },
+    { date: '03/02', rate: 5.2 },
+    { date: '03/03', rate: 12.8 },
+    { date: '03/04', rate: 18.5 },
+    { date: '03/05', rate: 24.1 },
   ];
 
   // 인증 가드
@@ -644,42 +650,14 @@ export default function App() {
 
             {/* 3행 — Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              <div className="bg-white" style={{ ...cardStyle, padding: 20 }}>
-                <h3 className="text-[14px] font-bold text-gray-800 mb-4">Top 10 고객사</h3>
-                <div className="space-y-0.5">
-                  {customerChartData.map((c, idx) => {
-                    const total = c.가능 + c.확인중 + c.불가능;
-                    const maxTotal = customerChartData[0] ? customerChartData[0].가능 + customerChartData[0].확인중 + customerChartData[0].불가능 : 1;
-                    const barWidth = (total / maxTotal) * 100;
-                    return (
-                      <div
-                        key={c.name}
-                        className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 rounded-lg transition-colors"
-                        style={{ height: 36, padding: '0 4px', margin: '0 -4px' }}
-                        onClick={() => setCustomerModal(c.name)}
-                      >
-                        <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                          style={{
-                            backgroundColor: idx < 3 ? '#6366f1' : '#f1f3f5',
-                            color: idx < 3 ? '#fff' : '#9ca3af',
-                          }}
-                        >
-                          {idx + 1}
-                        </div>
-                        <span className="text-[12px] font-medium text-gray-600 w-12 shrink-0 truncate">{c.name}</span>
-                        <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
-                          <div
-                            className="h-full rounded transition-all duration-500"
-                            style={{ width: `${barWidth}%`, backgroundColor: idx < 3 ? '#818cf8' : '#cbd5e1' }}
-                          />
-                        </div>
-                        <span className="text-[13px] font-bold text-gray-700 w-16 text-right shrink-0">{formatCurrency(total)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <Top10CustomerCard
+                data={customerChartData.map((c) => ({
+                  name: c.name,
+                  amount: c.가능 + c.확인중 + c.불가능,
+                  isEtc: c.name === '기타',
+                }))}
+                onCustomerClick={(name) => setCustomerModal(name)}
+              />
 
               <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={delayByDeptData} onDeptClick={(dept) => setDelayDeptModal(dept)} />

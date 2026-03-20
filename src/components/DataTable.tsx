@@ -69,7 +69,7 @@ function buildTierMap(items: DashboardItem[]): Record<string, '상' | '중' | '�
 }
 
 function getProgressRate(item: DashboardItem, editData: Record<string, EditableData>): number {
-  const qty = editData[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity;
+  const qty = editData[item.id]?.revenuePossibleQuantity || 0;
   return item.remainingQuantity > 0 ? (qty / item.remainingQuantity) * 100 : 0;
 }
 
@@ -159,7 +159,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
-        <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={(row?.revenuePossibleQuantity ?? item.remainingQuantity).toLocaleString()} onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly} />
+        <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]", (row?.revenuePossible || '확인중') === '확인중' && "bg-slate-50 text-slate-300")} value={(row?.revenuePossible || '확인중') === '확인중' ? '' : (row?.revenuePossibleQuantity ? row.revenuePossibleQuantity.toLocaleString() : '')} placeholder={(row?.revenuePossible || '확인중') === '확인중' ? '' : '입력'} onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly || (row?.revenuePossible || '확인중') === '확인중'} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <span className="text-[13px] font-bold" style={{ color: color.text }}>
@@ -219,8 +219,8 @@ function getSortValue(item: DashboardItem, editData: Record<string, EditableData
     case 'packagingDate': return row?.packagingDate || '';
     case 'productionSite': return row?.productionSite || '';
     case 'revenuePossible': return row?.revenuePossible || '';
-    case 'revenuePossibleQuantity': return row?.revenuePossibleQuantity ?? item.remainingQuantity;
-    case 'progressRate': return item.remainingQuantity > 0 ? ((row?.revenuePossibleQuantity ?? item.remainingQuantity) / item.remainingQuantity) * 100 : 0;
+    case 'revenuePossibleQuantity': return row?.revenuePossibleQuantity || 0;
+    case 'progressRate': return item.remainingQuantity > 0 ? ((row?.revenuePossibleQuantity || 0) / item.remainingQuantity) * 100 : 0;
     case 'delayReason': return row?.delayReason || '';
     case 'unitPrice': return item.unitPrice;
     case 'revenue': return getRevenue(item);
@@ -291,7 +291,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
       const row = editData[item.id];
       const tier = getTier(item);
       const rate = item.remainingQuantity > 0
-        ? ((row?.revenuePossibleQuantity ?? item.remainingQuantity) / item.remainingQuantity) * 100
+        ? ((row?.revenuePossibleQuantity || 0) / item.remainingQuantity) * 100
         : 0;
 
       return {
@@ -321,7 +321,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '충포장': row?.packagingDate ?? '',
         '생산처': row?.productionSite ?? '',
         '매출 가능여부': row?.revenuePossible ?? '',
-        '매출 가능 수량': row?.revenuePossibleQuantity ?? item.remainingQuantity,
+        '매출 가능 수량': row?.revenuePossibleQuantity || 0,
         '진도율(%)': Number(rate.toFixed(1)),
         '지연사유': row?.delayReason ?? '',
         '단가': item.unitPrice,
@@ -376,7 +376,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   }, [sortedItems]);
 
   const totalRevenuePossibleQty = useMemo(() => {
-    return sortedItems.reduce((sum, item) => sum + (editData[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity), 0);
+    return sortedItems.reduce((sum, item) => sum + (editData[item.id]?.revenuePossibleQuantity || 0), 0);
   }, [sortedItems, editData]);
 
   const tabs: { key: Tier; label: string; emoji?: string }[] = [
