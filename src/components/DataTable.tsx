@@ -97,7 +97,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
   return (
     <>
       {/* 중요도 컬럼 - 드롭다운 (고정) */}
-      <td className="px-1 py-1 border-r border-slate-100/60 text-center sticky left-0 z-20 bg-white" style={{ backgroundColor: color.bg }}>
+      <td className="px-1 py-1 border-r border-slate-100/60 text-center sm:sticky sm:left-0 sm:z-20 bg-white" style={{ backgroundColor: color.bg }}>
         <select
           className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer font-bold text-[13px]")}
           style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
@@ -111,12 +111,12 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="하">하</option>
         </select>
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[44px] z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[102px] z-20 whitespace-nowrap bg-white">{row?.purchaseManager ?? ''}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[160px] z-20 whitespace-nowrap bg-white">{item.category}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[230px] z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sticky left-[292px] z-20 bg-white">{item.materialCode}</td>
-      <td className="px-2 py-1 border-r-2 border-slate-300 sticky left-[402px] z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[44px] sm:z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[102px] sm:z-20 whitespace-nowrap bg-white">{row?.purchaseManager ?? ''}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[160px] sm:z-20 whitespace-nowrap bg-white">{item.category}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[230px] sm:z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[292px] sm:z-20 bg-white">{item.materialCode}</td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.createdDate)}</td>
@@ -500,15 +500,15 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
       <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]">
         <table className="w-full text-left border-collapse min-w-[2900px]">
-          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
+          <thead className="bg-slate-50 border-b border-slate-200 sm:sticky sm:top-0 sm:z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap" onContextMenu={handleHeaderContext}>
-              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sticky left-0 z-40 bg-slate-50">중요도</SortableTh>
-              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[44px] z-40 bg-slate-50">CIS담당</SortableTh>
-              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sticky left-[102px] z-40 bg-indigo-50/50 text-indigo-600">구매담당</SortableTh>
-              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[160px] z-40 bg-slate-50">중분류</SortableTh>
-              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[230px] z-40 bg-slate-50">고객약호</SortableTh>
-              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50">자재</SortableTh>
-              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
+              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sm:sticky sm:left-0 sm:z-40 bg-slate-50">중요도</SortableTh>
+              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[44px] sm:z-40 bg-slate-50">CIS담당</SortableTh>
+              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-40 bg-indigo-50/50 text-indigo-600">구매담당</SortableTh>
+              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-40 bg-slate-50">중분류</SortableTh>
+              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-40 bg-slate-50">고객약호</SortableTh>
+              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-40 bg-slate-50">자재</SortableTh>
+              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
 
               <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">생성일</SortableTh>
               <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">원납기일</SortableTh>
@@ -573,15 +573,15 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               </tr>
             )}
           </tbody>
-          <tfoot className="sticky bottom-0 z-25 border-t-2 border-slate-300">
+          <tfoot className="sm:sticky sm:bottom-0 sm:z-25 border-t-2 border-slate-300">
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
-              <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sticky left-0 z-20 bg-slate-100">합계</td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[44px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[102px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[160px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[230px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sticky left-[292px] z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sticky left-[402px] z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
+              <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sm:sticky sm:left-0 sm:z-20 bg-slate-100">합계</td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[44px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
               <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
