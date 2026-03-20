@@ -392,12 +392,17 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
         if (error) throw new Error(`edit_data 업로드 실패 (행 ${i}): ${error.message}`);
       }
 
-      // 기존 항목: CSV에서 오는 구매담당/중요도를 개별 update (수동 입력값 보존)
+      // 기존 항목: CSV에서 오는 필드를 개별 update (수동 입력값 중 해당 필드만 갱신)
       const existingRows = rowsWithMonth.filter(row => existingIds.has(row.id));
       for (const row of existingRows) {
         const updates: Record<string, string> = {};
         if (row._purchase_manager) updates.purchase_manager = row._purchase_manager as string;
         if (row._importance) updates.importance = row._importance as string;
+        if (row.production_request_date) updates.production_complete_date = row.production_request_date as string;
+        if (row._material_setting_date) updates.material_setting_date = row._material_setting_date as string;
+        if (row._manufacturing_date) updates.manufacturing_date = row._manufacturing_date as string;
+        if (row._packaging_date) updates.packaging_date = row._packaging_date as string;
+        if (row._note) updates.note = row._note as string;
         if (Object.keys(updates).length > 0) {
           await supabase.from('edit_data').update(updates).eq('item_id', row.id);
         }
