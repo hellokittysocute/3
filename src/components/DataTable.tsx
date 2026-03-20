@@ -1,10 +1,22 @@
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
-import { Save, Check, Download, Camera } from 'lucide-react';
+import { Save, Check, Download, Camera, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
 import { formatCurrency, cn } from '../lib/utils';
+
+type SortKey =
+  | 'importance' | 'cisManager' | 'purchaseManager' | 'category' | 'customerCode'
+  | 'materialCode' | 'itemName' | 'createdDate' | 'originalDueDate' | 'changedDueDate'
+  | 'orderQuantity' | 'totalQuantity' | 'remainingQuantity'
+  | 'productionCompleteDate' | 'materialSettingDate' | 'productionRequestYn' | 'mfg1'
+  | 'manufacturingDate' | 'packagingDate' | 'productionSite'
+  | 'revenuePossible' | 'revenuePossibleQuantity' | 'progressRate' | 'delayReason'
+  | 'unitPrice' | 'revenue' | 'note';
+
+type SortDirection = 'asc' | 'desc';
+type SortConfig = { key: SortKey; direction: SortDirection } | null;
 
 function formatDateShort(dateStr: string): string {
   if (!dateStr) return '';
@@ -183,10 +195,87 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
 
 const ROW_HEIGHT = 40;
 
+function getSortValue(item: DashboardItem, editData: Record<string, EditableData>, key: SortKey): string | number {
+  const row = editData[item.id];
+  switch (key) {
+    case 'importance': return row?.importance || '';
+    case 'cisManager': return item.cisManager || '';
+    case 'purchaseManager': return row?.purchaseManager || '';
+    case 'category': return item.category || '';
+    case 'customerCode': return item.customerCode || '';
+    case 'materialCode': return item.materialCode || '';
+    case 'itemName': return item.itemName || '';
+    case 'createdDate': return item.createdDate || '';
+    case 'originalDueDate': return item.originalDueDate || '';
+    case 'changedDueDate': return item.changedDueDate || '';
+    case 'orderQuantity': return item.orderQuantity;
+    case 'totalQuantity': return item.totalQuantity;
+    case 'remainingQuantity': return item.remainingQuantity;
+    case 'productionCompleteDate': return row?.productionCompleteDate || '';
+    case 'materialSettingDate': return row?.materialSettingDate || '';
+    case 'productionRequestYn': return item.productionRequestYn || '';
+    case 'mfg1': return item.mfg1 || '';
+    case 'manufacturingDate': return row?.manufacturingDate || '';
+    case 'packagingDate': return row?.packagingDate || '';
+    case 'productionSite': return row?.productionSite || '';
+    case 'revenuePossible': return row?.revenuePossible || '';
+    case 'revenuePossibleQuantity': return row?.revenuePossibleQuantity ?? item.remainingQuantity;
+    case 'progressRate': return item.remainingQuantity > 0 ? ((row?.revenuePossibleQuantity ?? item.remainingQuantity) / item.remainingQuantity) * 100 : 0;
+    case 'delayReason': return row?.delayReason || '';
+    case 'unitPrice': return item.unitPrice;
+    case 'revenue': return getRevenue(item);
+    case 'note': return row?.note || '';
+    default: return '';
+  }
+}
+
+interface SortableThProps {
+  sortKey: SortKey;
+  sortConfig: SortConfig;
+  onSort: (key: SortKey) => void;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}
+
+const SortableTh: React.FC<SortableThProps> = ({ sortKey, sortConfig, onSort, className, style, children }) => {
+  const isActive = sortConfig?.key === sortKey;
+  return (
+    <th
+      data-sort-key={sortKey}
+      className={cn(className, "cursor-pointer select-none hover:bg-slate-100/80 transition-colors")}
+      style={style}
+      onClick={() => onSort(sortKey)}
+    >
+      <div className="flex items-center justify-center gap-0.5">
+        <span>{children}</span>
+        <span className="inline-flex flex-col ml-0.5">
+          {isActive ? (
+            sortConfig.direction === 'asc'
+              ? <ChevronUp className="w-3 h-3 text-indigo-600" />
+              : <ChevronDown className="w-3 h-3 text-indigo-600" />
+          ) : (
+            <ChevronsUpDown className="w-3 h-3 text-slate-300" />
+          )}
+        </span>
+      </div>
+    </th>
+  );
+};
+
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, children }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: string } | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: SortKey } | null>(null);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return prev.direction === 'asc' ? { key, direction: 'desc' } : { key, direction: 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
 
@@ -262,50 +351,21 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   const sortedItems = useMemo(() => {
     if (!sortConfig) return filteredItems;
     const { key, direction } = sortConfig;
-    const getValue = (item: DashboardItem): string | number => {
-      const row = editData[item.id];
-      switch (key) {
-        case 'importance': return row?.importance || getTier(item);
-        case 'cisManager': return item.cisManager;
-        case 'purchaseManager': return row?.purchaseManager ?? '';
-        case 'category': return item.category;
-        case 'customerCode': return item.customerCode;
-        case 'materialCode': return item.materialCode;
-        case 'itemName': return item.itemName;
-        case 'createdDate': return item.createdDate;
-        case 'originalDueDate': return item.originalDueDate;
-        case 'changedDueDate': return item.changedDueDate;
-        case 'orderQuantity': return item.orderQuantity;
-        case 'totalQuantity': return item.totalQuantity;
-        case 'remainingQuantity': return item.remainingQuantity;
-        case 'productionCompleteDate': return row?.productionCompleteDate ?? '';
-        case 'materialSettingDate': return row?.materialSettingDate ?? '';
-        case 'productionRequestYn': return item.productionRequestYn;
-        case 'mfg1': return item.mfg1;
-        case 'manufacturingDate': return row?.manufacturingDate ?? '';
-        case 'packagingDate': return row?.packagingDate ?? '';
-        case 'productionSite': return row?.productionSite ?? '';
-        case 'revenuePossible': return row?.revenuePossible ?? '';
-        case 'revenuePossibleQuantity': return row?.revenuePossibleQuantity ?? item.remainingQuantity;
-        case 'progressRate': return getProgressRate(item, editData);
-        case 'delayReason': return row?.delayReason ?? '';
-        case 'unitPrice': return item.unitPrice;
-        case 'revenue': return getRevenue(item);
-        case 'note': return row?.note ?? '';
-        default: return '';
-      }
-    };
     return [...filteredItems].sort((a, b) => {
-      const aVal = getValue(a);
-      const bVal = getValue(b);
-      const mult = direction === 'asc' ? 1 : -1;
-      if (typeof aVal === 'number' && typeof bVal === 'number') return (aVal - bVal) * mult;
-      return String(aVal).localeCompare(String(bVal), 'ko') * mult;
+      const aVal = getSortValue(a, editData, key);
+      const bVal = getSortValue(b, editData, key);
+      let cmp: number;
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        cmp = aVal - bVal;
+      } else {
+        cmp = String(aVal).localeCompare(String(bVal), 'ko');
+      }
+      return direction === 'asc' ? cmp : -cmp;
     });
-  }, [filteredItems, sortConfig, editData, getTier]);
+  }, [filteredItems, editData, sortConfig]);
 
   const totals = useMemo(() => {
-    return filteredItems.reduce((acc, item) => ({
+    return sortedItems.reduce((acc, item) => ({
       totalQuantity: acc.totalQuantity + item.totalQuantity,
       orderQuantity: acc.orderQuantity + item.orderQuantity,
       deliveredQuantity: acc.deliveredQuantity + item.deliveredQuantity,
@@ -313,11 +373,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
       revenue: acc.revenue + getRevenue(item),
       originalOrderQuantity: acc.originalOrderQuantity + (item.orderQuantity || 0),
     }), { totalQuantity: 0, orderQuantity: 0, deliveredQuantity: 0, remainingQuantity: 0, revenue: 0, originalOrderQuantity: 0 });
-  }, [filteredItems]);
+  }, [sortedItems]);
 
   const totalRevenuePossibleQty = useMemo(() => {
-    return filteredItems.reduce((sum, item) => sum + (editData[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity), 0);
-  }, [filteredItems, editData]);
+    return sortedItems.reduce((sum, item) => sum + (editData[item.id]?.revenuePossibleQuantity ?? item.remainingQuantity), 0);
+  }, [sortedItems, editData]);
 
   const tabs: { key: Tier; label: string; emoji?: string }[] = [
     { key: '전체', label: '전체' },
@@ -350,14 +410,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     return () => window.removeEventListener('click', close);
   }, [contextMenu]);
 
-  const si = (key: string) =>
-    sortConfig?.key === key && <span className="text-indigo-500 text-[10px]">{sortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>;
-
   const handleHeaderContext = (e: React.MouseEvent) => {
     const th = (e.target as HTMLElement).closest('th');
     if (!th?.dataset.sortKey) return;
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, key: th.dataset.sortKey });
+    setContextMenu({ x: e.clientX, y: e.clientY, key: th.dataset.sortKey as SortKey });
   };
 
   // 가상화 설정
@@ -445,34 +502,34 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <table className="w-full text-left border-collapse min-w-[2900px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap" onContextMenu={handleHeaderContext}>
-              <th data-sort-key="importance" className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sticky left-0 z-40 bg-slate-50 cursor-context-menu">중요도{si('importance')}</th>
-              <th data-sort-key="cisManager" className="px-2 py-2 border-r border-slate-200 sticky left-[44px] z-40 bg-slate-50 cursor-context-menu">CIS담당{si('cisManager')}</th>
-              <th data-sort-key="purchaseManager" className="px-1 py-2 border-r border-slate-200 sticky left-[102px] z-40 bg-slate-50 text-center bg-indigo-50/50 text-indigo-600 cursor-context-menu">구매담당{si('purchaseManager')}</th>
-              <th data-sort-key="category" className="px-2 py-2 border-r border-slate-200 sticky left-[160px] z-40 bg-slate-50 cursor-context-menu">중분류{si('category')}</th>
-              <th data-sort-key="customerCode" className="px-2 py-2 border-r border-slate-200 sticky left-[230px] z-40 bg-slate-50 cursor-context-menu">고객약호{si('customerCode')}</th>
-              <th data-sort-key="materialCode" className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50 cursor-context-menu">자재{si('materialCode')}</th>
-              <th data-sort-key="itemName" className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50 cursor-context-menu" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역{si('itemName')}</th>
+              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sticky left-0 z-40 bg-slate-50">중요도</SortableTh>
+              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[44px] z-40 bg-slate-50">CIS담당</SortableTh>
+              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sticky left-[102px] z-40 bg-indigo-50/50 text-indigo-600">구매담당</SortableTh>
+              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[160px] z-40 bg-slate-50">중분류</SortableTh>
+              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[230px] z-40 bg-slate-50">고객약호</SortableTh>
+              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sticky left-[292px] z-40 bg-slate-50">자재</SortableTh>
+              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sticky left-[402px] z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
 
-              <th data-sort-key="createdDate" className="px-2 py-2 border-r border-slate-200 w-[62px] text-center cursor-context-menu">생성일{si('createdDate')}</th>
-              <th data-sort-key="originalDueDate" className="px-2 py-2 border-r border-slate-200 w-[62px] text-center cursor-context-menu">원납기일{si('originalDueDate')}</th>
-              <th data-sort-key="changedDueDate" className="px-2 py-2 border-r border-slate-200 w-[62px] text-center cursor-context-menu">변경납기일{si('changedDueDate')}</th>
-              <th data-sort-key="orderQuantity" className="px-2 py-2 border-r border-slate-200 text-right w-[78px] cursor-context-menu">총오더수량{si('orderQuantity')}</th>
-              <th data-sort-key="totalQuantity" className="px-2 py-2 border-r border-slate-200 text-right w-[72px] cursor-context-menu">환산수량{si('totalQuantity')}</th>
-              <th data-sort-key="remainingQuantity" className="px-2 py-2 border-r border-slate-200 text-right w-[72px] cursor-context-menu">미납잔량{si('remainingQuantity')}</th>
-              <th data-sort-key="productionCompleteDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px] cursor-context-menu">생산완료<br/>요청일{si('productionCompleteDate')}</th>
-              <th data-sort-key="materialSettingDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px] cursor-context-menu">부자재{si('materialSettingDate')}</th>
-              <th data-sort-key="productionRequestYn" className="px-2 py-2 border-r border-slate-200 text-center w-[62px] cursor-context-menu">제조<br/>요청여부{si('productionRequestYn')}</th>
-              <th data-sort-key="mfg1" className="px-2 py-2 border-r border-slate-200 text-center w-[72px] cursor-context-menu">현재<br/>제조계획{si('mfg1')}</th>
-              <th data-sort-key="manufacturingDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px] cursor-context-menu">제조{si('manufacturingDate')}</th>
-              <th data-sort-key="packagingDate" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px] cursor-context-menu">충포장{si('packagingDate')}</th>
-              <th data-sort-key="productionSite" className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px] cursor-context-menu">생산처{si('productionSite')}</th>
-              <th data-sort-key="revenuePossible" className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 cursor-context-menu">매출<br/>가능여부{si('revenuePossible')}</th>
-              <th data-sort-key="revenuePossibleQuantity" className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px] cursor-context-menu">매출<br/>가능수량{si('revenuePossibleQuantity')}</th>
-              <th data-sort-key="progressRate" className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600 cursor-context-menu">진도율{si('progressRate')}</th>
-              <th data-sort-key="delayReason" className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600 cursor-context-menu">지연<br/>사유{si('delayReason')}</th>
-              {isAdmin && <th data-sort-key="unitPrice" className="px-2 py-2 border-r border-slate-200 text-right cursor-context-menu">단가{si('unitPrice')}</th>}
-              <th data-sort-key="revenue" className="px-2 py-2 border-r border-slate-200 text-right cursor-context-menu">매출<br/>(단가x잔량){si('revenue')}</th>
-              <th data-sort-key="note" className="px-1 py-2 text-center cursor-context-menu">비고{si('note')}</th>
+              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">생성일</SortableTh>
+              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">원납기일</SortableTh>
+              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">변경납기일</SortableTh>
+              <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</SortableTh>
+              <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</SortableTh>
+              <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</SortableTh>
+              <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px]">생산완료<br/>요청일</SortableTh>
+              <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">부자재</SortableTh>
+              <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">제조<br/>요청여부</SortableTh>
+              <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[72px]">현재<br/>제조계획</SortableTh>
+              <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">제조</SortableTh>
+              <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px]">충포장</SortableTh>
+              <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px]">생산처</SortableTh>
+              <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</SortableTh>
+              <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
+              <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</SortableTh>
+              <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</SortableTh>
+              {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right">단가</SortableTh>}
+              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right">매출<br/>(단가x잔량)</SortableTh>
+              <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center">비고</SortableTh>
             </tr>
           </thead>
           <tbody className="text-[15px]">
@@ -556,13 +613,13 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         >
           <button
             className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-            onClick={() => { setSortConfig({ key: contextMenu.key, direction: 'asc' }); setContextMenu(null); }}
+            onClick={() => { setSortConfig({ key: contextMenu.key as SortKey, direction: 'asc' }); setContextMenu(null); }}
           >
             <span className="text-indigo-500">▲</span> 오름차순 정렬
           </button>
           <button
             className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-            onClick={() => { setSortConfig({ key: contextMenu.key, direction: 'desc' }); setContextMenu(null); }}
+            onClick={() => { setSortConfig({ key: contextMenu.key as SortKey, direction: 'desc' }); setContextMenu(null); }}
           >
             <span className="text-indigo-500">▼</span> 내림차순 정렬
           </button>
