@@ -426,42 +426,122 @@ export default function App() {
     let mfgCount = 0;
     let pkgCount = 0;
 
+    // 평균 회신일 계산용
+    const parseDate = (s: string): Date | null => {
+      if (!s) return null;
+      const v = s.trim().replace(/^~/, '');
+      const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2]));
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const bizDays = (from: Date, to: Date): number => {
+      let c = 0; const d = new Date(from);
+      while (d < to) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) c++; }
+      return c;
+    };
+    // 담당자별 D-day 기준 평균 (소요일 - 기한 = 차이, 음수=빠름, 양수=초과)
+    const LIMIT_PURCHASE = 3, LIMIT_MFG = 2, LIMIT_PKG = 2;
+    const purchaseAvg: Record<string, { total: number; cnt: number }> = {};
+    const mfgAvg: Record<string, { total: number; cnt: number }> = {};
+    const pkgAvg: Record<string, { total: number; cnt: number }> = {};
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    // 완료건: 소요일 - 기한
+    items.forEach(item => {
+      if (item.materialSource?.trim() === '사급') return;
+      const ed = editData[item.id];
+      if (!ed) return;
+      if ((ed.purchaseManager ?? '').trim() === '사급') return;
+
+      const writeD = parseDate(ed.writeDate ?? '');
+      const matFilled = parseDate(ed.materialSettingFilledAt ?? '');
+      if (writeD && matFilled) {
+        const mgr = (ed.purchaseManager ?? '').trim() || '미지정';
+        if (!purchaseAvg[mgr]) purchaseAvg[mgr] = { total: 0, cnt: 0 };
+        purchaseAvg[mgr].total += bizDays(writeD, matFilled) - LIMIT_PURCHASE;
+        purchaseAvg[mgr].cnt += 1;
+      }
+      const matFilled2 = parseDate(ed.materialSettingFilledAt ?? '');
+      const mfgFilled = parseDate(ed.manufacturingFilledAt ?? '');
+      if (matFilled2 && mfgFilled) {
+        const mgr = (item.cisManager ?? '').trim() || '미지정';
+        if (!mfgAvg[mgr]) mfgAvg[mgr] = { total: 0, cnt: 0 };
+        mfgAvg[mgr].total += bizDays(matFilled2, mfgFilled) - LIMIT_MFG;
+        mfgAvg[mgr].cnt += 1;
+      }
+      const mfgFilled2 = parseDate(ed.manufacturingFilledAt ?? '');
+      const pkgFilled = parseDate(ed.packagingFilledAt ?? '');
+      if (mfgFilled2 && pkgFilled) {
+        const mgr = (item.cisManager ?? '').trim() || '미지정';
+        if (!pkgAvg[mgr]) pkgAvg[mgr] = { total: 0, cnt: 0 };
+        pkgAvg[mgr].total += bizDays(mfgFilled2, pkgFilled) - LIMIT_PKG;
+        pkgAvg[mgr].cnt += 1;
+      }
+    });
+
+    // 미회신 건수 집계 + 미회신 건의 현재 경과일도 평균에 포함
     items.forEach(item => {
       if (item.materialSource?.trim() === '사급') return;
       const ed = editData[item.id];
       if ((ed?.purchaseManager ?? '').trim() === '사급') return;
       const cat = item.category?.trim() || '';
 
-      // 부자재칸 공란 → 구매
       if (!(ed?.materialSettingDate ?? '').trim()) {
         purchaseCount++;
         const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
         purchaseByMgr[mgr] = (purchaseByMgr[mgr] || 0) + 1;
+        const writeD = parseDate(ed?.writeDate ?? '');
+        if (writeD) {
+          if (!purchaseAvg[mgr]) purchaseAvg[mgr] = { total: 0, cnt: 0 };
+          purchaseAvg[mgr].total += bizDays(writeD, today) - LIMIT_PURCHASE;
+          purchaseAvg[mgr].cnt += 1;
+        }
       }
-      // 제조칸 공란 → 제조
       if (!(ed?.manufacturingDate ?? '').trim()) {
         mfgCount++;
         const managers = getMfgManagers(cat, item.itemName || '');
         const share = 1 / managers.length;
         managers.forEach(m => { mfgByMgr[m] = (mfgByMgr[m] || 0) + share; });
+        const matFilled = parseDate(ed?.materialSettingFilledAt ?? '');
+        if (matFilled) {
+          managers.forEach(m => {
+            if (!mfgAvg[m]) mfgAvg[m] = { total: 0, cnt: 0 };
+            mfgAvg[m].total += (bizDays(matFilled, today) - LIMIT_MFG) * share;
+            mfgAvg[m].cnt += share;
+          });
+        }
       }
-      // 충포장칸 공란 → 충포장
       if (!(ed?.packagingDate ?? '').trim()) {
         pkgCount++;
         const managers = getPkgManagers(cat);
         const share = 1 / managers.length;
         managers.forEach(m => { pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
+        const mfgFilled = parseDate(ed?.manufacturingFilledAt ?? '');
+        if (mfgFilled) {
+          managers.forEach(m => {
+            if (!pkgAvg[m]) pkgAvg[m] = { total: 0, cnt: 0 };
+            pkgAvg[m].total += (bizDays(mfgFilled, today) - LIMIT_PKG) * share;
+            pkgAvg[m].cnt += share;
+          });
+        }
       }
     });
 
-    const toManagerList = (map: Record<string, number>) =>
-      Object.entries(map).map(([name, count]) => ({ name, count: Math.round(count) })).filter(m => m.count > 0).sort((a, b) => b.count - a.count);
+    const toManagerList = (map: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) =>
+      Object.entries(map).map(([name, count]) => {
+        const a = avgMap[name];
+        return { name, count: Math.round(count), avgDays: a && a.cnt > 0 ? a.total / a.cnt : undefined };
+      }).filter(m => m.count > 0).sort((a, b) => b.count - a.count);
     return [
-      { dept: '제조', count: mfgCount, managers: toManagerList(mfgByMgr) },
-      { dept: '충포장', count: pkgCount, managers: toManagerList(pkgByMgr) },
-      { dept: '구매', count: purchaseCount, managers: toManagerList(purchaseByMgr) },
+      { dept: '제조', count: mfgCount, managers: toManagerList(mfgByMgr, mfgAvg) },
+      { dept: '충포장', count: pkgCount, managers: toManagerList(pkgByMgr, pkgAvg) },
+      { dept: '구매', count: purchaseCount, managers: toManagerList(purchaseByMgr, purchaseAvg) },
     ].filter(d => d.count > 0);
   }, [items, editData]);
+
+  // 담당자별 평균 회신일 계산
+
 
   // 고객사 드릴다운 데이터
   const customerModalData = useMemo(() => {

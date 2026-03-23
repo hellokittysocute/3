@@ -63,10 +63,24 @@ function countBusinessDays(from: Date, to: Date): number {
 
 /** D-day 계산 (평일 기준): 기준일 + 영업일 기한 - 오늘 */
 function calcDday(baseDate: string, filledDate: string, limitDays: number): { label: string; status: 'done' | 'ok' | 'today' | 'over' | 'none' } {
-  // 이미 입력 완료
-  if (filledDate && filledDate.trim()) return { label: '✓', status: 'done' };
-  // 기준일 미입력
   const base = parseShortDate(baseDate);
+  // 입력 완료 → 기한 대비 며칠 빨리/늦게 완료했는지 표시
+  if (filledDate && filledDate.trim()) {
+    if (!base) return { label: '0일', status: 'done' };
+    const filled = parseShortDate(filledDate);
+    if (!filled) return { label: '0일', status: 'done' };
+    const deadline = addBusinessDays(base, limitDays);
+    deadline.setHours(0, 0, 0, 0);
+    filled.setHours(0, 0, 0, 0);
+    if (deadline.getTime() === filled.getTime()) return { label: '0일', status: 'done' };
+    if (filled < deadline) {
+      const early = countBusinessDays(filled, deadline);
+      return { label: `-${early}일`, status: 'done' };
+    }
+    const late = countBusinessDays(deadline, filled);
+    return { label: `+${late}일`, status: 'doneOver' as any };
+  }
+  // 기준일 미입력
   if (!base) return { label: '-', status: 'none' };
   // 마감일 = 기준일 + 영업일 N일
   const deadline = addBusinessDays(base, limitDays);
@@ -85,6 +99,7 @@ function calcDday(baseDate: string, filledDate: string, limitDays: number): { la
 
 const DDAY_STYLE: Record<string, string> = {
   done: 'text-emerald-600 font-bold',
+  doneOver: 'text-amber-600 font-bold',
   ok: 'text-slate-400',
   today: 'text-amber-600 font-bold animate-pulse',
   over: 'text-rose-600 font-bold',
@@ -153,6 +168,21 @@ const TIER_COLORS = {
 };
 
 const INPUT_CLASS = "w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all";
+
+/** 행에 D-day 초과 건이 있는지 판단 */
+function hasOverdueDday(row: EditableData | undefined): boolean {
+  if (!row) return false;
+  const checks: [string, string, number][] = [
+    [row.writeDate, row.materialSettingFilledAt, 3],           // 부자재
+    [row.materialSettingFilledAt, row.manufacturingFilledAt, 2], // 제조
+    [row.manufacturingFilledAt, row.packagingFilledAt, 2],      // 충포장
+  ];
+  for (const [base, filled, limit] of checks) {
+    const d = calcDday(base, filled, limit);
+    if (d.status === 'over') return true;
+  }
+  return false;
+}
 
 // 메모이즈된 행 컴포넌트
 interface TableRowProps {
@@ -638,11 +668,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               const tier = getTier(item);
               const color = TIER_COLORS[tier];
 
+              const overdue = hasOverdueDday(row);
               return (
                 <tr
                   key={item.id}
                   data-index={virtualRow.index}
-                  className="hover:bg-slate-50 transition-colors border-b border-slate-100"
+                  className={cn("transition-colors border-b border-slate-100", overdue ? "bg-rose-50/60 hover:bg-rose-100/60" : "hover:bg-slate-50")}
                   style={{ height: ROW_HEIGHT }}
                 >
                   <TableRow
