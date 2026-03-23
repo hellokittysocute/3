@@ -10,6 +10,11 @@ export function formatCurrency(value: number) {
   return `${Math.round(eok)}억`;
 }
 
+export function formatCurrencyDetail(value: number) {
+  const eok = value / 100000000;
+  return `${eok.toFixed(1)}억`;
+}
+
 export function formatNumber(value: number) {
   return value.toLocaleString();
 }

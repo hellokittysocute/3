@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatCurrencyDetail, cn } from '../lib/utils';
 
 type SortKey =
   | 'writeDate' | 'importance' | 'cisManager' | 'purchaseManager' | 'category' | 'customerCode'
@@ -301,7 +301,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
-      <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrency(getRevenue(item))}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrencyDetail(getRevenue(item))}</td>
       <td className="px-1 py-1">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} disabled={readOnly} />
       </td>
@@ -720,7 +720,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}
-              <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrency(totals.revenue)}</td>
+              <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrencyDetail(totals.revenue)}</td>
               <td className="px-4 py-3"></td>
             </tr>
           </tfoot>
