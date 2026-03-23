@@ -28,7 +28,7 @@ const BADGE_BG = {
 function formatShort(v: number): string {
   if (v === 0) return '0';
   const eok = v / 100000000;
-  if (eok >= 1) return eok % 1 === 0 ? eok + '억' : eok.toFixed(1) + '억';
+  if (eok >= 1) return Math.round(eok) + '억';
   const man = v / 10000;
   return man.toLocaleString() + '만';
 }

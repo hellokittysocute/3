@@ -454,7 +454,7 @@ export default function App() {
                 📊 {parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 <span className="text-emerald-600">대시보드</span>
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[11px] sm:text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {(stats.overall.totalRevenue / 100000000).toFixed(1)}억</span>
+                <span className="text-[11px] sm:text-[13px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Project {formatCurrency(stats.overall.totalRevenue)}</span>
                 <div className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block" />
                 <p className="text-[13px] text-slate-400 font-medium italic hidden sm:block">{parseInt(selectedMonth.split('-')[1])}월 중점관리 품목 실시간 현황</p>
                 {isReadOnly && <span className="text-[11px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">읽기전용</span>}
@@ -638,7 +638,7 @@ export default function App() {
                   </div>
                   <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
-                    <div className="text-[18px] font-extrabold text-gray-800">{(stats.overall.totalRevenue / 100000000).toFixed(0)}억</div>
+                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.totalRevenue)}</div>
                   </div>
                   <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>

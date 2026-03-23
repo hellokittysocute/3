@@ -31,9 +31,9 @@ const BAR_COLORS: Record<number, string> = {
 };
 
 function formatAmount(amount: number): string {
-  if (amount >= 100000000) return `${(amount / 100000000).toFixed(0)}억`;
-  if (amount >= 10000000) return `${(amount / 100000000).toFixed(1)}억`;
-  if (amount >= 1000000) return `${(amount / 1000000).toFixed(0)}백만`;
+  if (amount >= 100000000) return `${Math.round(amount / 100000000)}억`;
+  if (amount >= 10000000) return `${Math.round(amount / 100000000)}억`;
+  if (amount >= 1000000) return `${Math.round(amount / 1000000)}백만`;
   return amount.toLocaleString();
 }
 

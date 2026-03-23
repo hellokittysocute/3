@@ -286,7 +286,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
                   </div>
                   <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
-                    <div className="text-[18px] font-extrabold text-gray-800">{(derived.stats.overall.totalRevenue / 100000000).toFixed(0)}억</div>
+                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(derived.stats.overall.totalRevenue)}</div>
                   </div>
                   <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                     <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
