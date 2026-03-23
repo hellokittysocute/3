@@ -81,7 +81,7 @@ const GroupHeader: React.FC<{ name: string; count: number; style: GroupStyle; av
         <span style={{ fontSize: 11, fontWeight: 600, color: s.badgeColor, background: s.badgeBg, borderRadius: 6, padding: '2px 8px' }}>{avgLabel}</span>
       )}
       {manager && (
-        <span style={{ fontSize: 11, color: '#6b7280' }}>- {manager}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: s.badgeColor }}>- {manager}</span>
       )}
     </div>
     <span style={{ fontSize: 11, fontWeight: 700, color: s.badgeColor, background: s.badgeBg, borderRadius: 8, padding: '2px 8px', flexShrink: 0 }}>
