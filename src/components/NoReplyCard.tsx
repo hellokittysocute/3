@@ -25,10 +25,11 @@ const PURCHASE_STYLE: GroupStyle = { dot: '#10b981', label: '#047857', badgeBg: 
 
 const MGR_CATEGORY: Record<string, string> = {
   '이정훈': '기초', '홍경의': '기초_색조', '정진숙': '파우더', '김영찬': 'PB담당',
-  '장건수': '립', '송하림': '포장', '원대한': '파우더', '오승연': '립',
+  '장건수': '립', '송하림': '기초', '원대한': '파우더', '오승연': '립',
   '장철환': '선밤', '황아름': '쿠션', '박수진': '튜브',
   '정진영': '겔마스크, 아이패치', '장재호': '기초 외주', '송수빈': '기초 외주',
-  '오정훈': '마스크시트, 캔', '송진우': '튜브 외주', '장승상': '기초_포장', '조선혜': '견본',
+  '오정훈': '마스크시트, 캔', '송진우': '튜브 외주', '장승상': '기초', '조선혜': '견본',
+  '양정빈': '파우더', '유민지': '튜브, 에어쿠션',
 };
 
 const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ managers, limit, showCategory }) => {
@@ -49,7 +50,7 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#374151' }}>{m.name}{showCategory && MGR_CATEGORY[m.name] && <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
+              <span style={{ fontSize: 12, color: '#374151' }}>{m.name}{showCategory && MGR_CATEGORY[m.name] && <span style={{ color: '#374151', marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
               {label && (
                 <span style={{
                   fontSize: 10, fontWeight: 600, borderRadius: 4, padding: '1px 5px',
