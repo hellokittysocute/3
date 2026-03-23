@@ -12,7 +12,7 @@ export function formatCurrency(value: number) {
 
 export function formatCurrencyDetail(value: number) {
   const eok = value / 100000000;
-  return `${eok.toFixed(1)}억`;
+  return `${eok.toFixed(2)}억`;
 }
 
 export function formatNumber(value: number) {
