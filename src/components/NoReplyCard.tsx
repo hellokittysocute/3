@@ -50,7 +50,7 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#374151' }}>{m.name}{showCategory && MGR_CATEGORY[m.name] && <span style={{ color: '#374151', marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
+              <span style={{ fontSize: 12, color: '#374151' }}><b>{m.name}</b>{showCategory && MGR_CATEGORY[m.name] && <span style={{ color: '#374151', fontWeight: 400, marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
               {label && (
                 <span style={{
                   fontSize: 10, fontWeight: 600, borderRadius: 4, padding: '1px 5px',
