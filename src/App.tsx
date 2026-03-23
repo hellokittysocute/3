@@ -463,23 +463,25 @@ export default function App() {
         purchaseAvg[mgr].total += bizDays(writeD, matFilled) - LIMIT_PURCHASE;
         purchaseAvg[mgr].cnt += 1;
       }
-      // 제조: 구매가 실제 입력한 건만 (materialSettingFilledAt !== writeDate)
+      // 제조: 양쪽 모두 실제 입력한 건만 (업로드 pre-fill 제외)
       const matFilled2 = parseDate(ed.materialSettingFilledAt ?? '');
       const mfgFilled = parseDate(ed.manufacturingFilledAt ?? '');
       if (matFilled2 && mfgFilled
         && ed.materialSettingFilledAt !== ed.manufacturingFilledAt
-        && ed.materialSettingFilledAt !== ed.writeDate) {
+        && ed.materialSettingFilledAt !== ed.writeDate
+        && ed.manufacturingFilledAt !== ed.writeDate) {
         const mgr = (item.cisManager ?? '').trim() || '미지정';
         if (!mfgAvg[mgr]) mfgAvg[mgr] = { total: 0, cnt: 0 };
         mfgAvg[mgr].total += bizDays(matFilled2, mfgFilled) - LIMIT_MFG;
         mfgAvg[mgr].cnt += 1;
       }
-      // 충포장: 제조가 실제 입력한 건만 (manufacturingFilledAt !== writeDate)
+      // 충포장: 양쪽 모두 실제 입력한 건만 (업로드 pre-fill 제외)
       const mfgFilled2 = parseDate(ed.manufacturingFilledAt ?? '');
       const pkgFilled = parseDate(ed.packagingFilledAt ?? '');
       if (mfgFilled2 && pkgFilled
         && ed.manufacturingFilledAt !== ed.packagingFilledAt
-        && ed.manufacturingFilledAt !== ed.writeDate) {
+        && ed.manufacturingFilledAt !== ed.writeDate
+        && ed.packagingFilledAt !== ed.writeDate) {
         const mgr = (item.cisManager ?? '').trim() || '미지정';
         if (!pkgAvg[mgr]) pkgAvg[mgr] = { total: 0, cnt: 0 };
         pkgAvg[mgr].total += bizDays(mfgFilled2, pkgFilled) - LIMIT_PKG;
