@@ -504,9 +504,9 @@ export default function App() {
         const managers = getMfgManagers(cat, item.itemName || '');
         const share = 1 / managers.length;
         managers.forEach(m => { mfgByMgr[m] = (mfgByMgr[m] || 0) + share; });
-        // 부자재 입력 완료된 건만 평균에 포함
+        // 부자재 입력 완료 & 업로드일 동일 제외
         const matFilled = parseDate(ed?.materialSettingFilledAt ?? '');
-        if (matFilled) {
+        if (matFilled && ed?.materialSettingFilledAt !== ed?.writeDate) {
           managers.forEach(m => {
             if (!mfgAvg[m]) mfgAvg[m] = { total: 0, cnt: 0 };
             mfgAvg[m].total += (bizDays(matFilled, today) - LIMIT_MFG) * share;
@@ -519,9 +519,9 @@ export default function App() {
         const managers = getPkgManagers(cat);
         const share = 1 / managers.length;
         managers.forEach(m => { pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
-        // 제조 입력 완료된 건만 평균에 포함
+        // 제조 입력 완료 & 업로드일 동일 제외
         const mfgFilled = parseDate(ed?.manufacturingFilledAt ?? '');
-        if (mfgFilled) {
+        if (mfgFilled && ed?.manufacturingFilledAt !== ed?.writeDate) {
           managers.forEach(m => {
             if (!pkgAvg[m]) pkgAvg[m] = { total: 0, cnt: 0 };
             pkgAvg[m].total += (bizDays(mfgFilled, today) - LIMIT_PKG) * share;
