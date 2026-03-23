@@ -3,58 +3,119 @@ import React, { useMemo } from 'react';
 export interface NoReplyDeptItem {
   dept: string;
   count: number;
+  managers: { name: string; count: number }[];
 }
 
 interface NoReplyCardProps {
   data: NoReplyDeptItem[];
 }
 
-const DEPT_STYLE: Record<string, { bar: string; countColor: string; pctColor: string }> = {
-  '생산': { bar: '#f59e0b', countColor: '#b45309', pctColor: '#f59e0b' },
-  '구매': { bar: '#22c55e', countColor: '#15803d', pctColor: '#22c55e' },
+interface GroupStyle {
+  dot: string;
+  label: string;
+  badgeBg: string;
+  badgeColor: string;
+  border: string;
+}
+
+const PROD_STYLE: GroupStyle = { dot: '#f59e0b', label: '#b45309', badgeBg: '#FFF8EB', badgeColor: '#b45309', border: '#f59e0b' };
+const PURCHASE_STYLE: GroupStyle = { dot: '#10b981', label: '#047857', badgeBg: '#ECFDF5', badgeColor: '#047857', border: '#10b981' };
+
+const ManagerList: React.FC<{ managers: { name: string; count: number }[] }> = ({ managers }) => {
+  if (managers.length === 0) return <span style={{ fontSize: 11, color: '#9ca3af' }}>담당자 없음</span>;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {managers.map(m => (
+        <div
+          key={m.name}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '4px 8px', background: '#fff', borderRadius: 6,
+          }}
+        >
+          <span style={{ fontSize: 12, color: '#374151' }}>{m.name}</span>
+          <span style={{ fontSize: 12, color: '#374151' }}>{m.count.toLocaleString()}건</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; managers: { name: string; count: number }[] }> = ({ title, count, style: s, managers }) => (
+  <div style={{ background: '#f8f9fb', borderRadius: 8, padding: '10px 12px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+      <span style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em' }}>{title}</span>
+      <span style={{ fontSize: 10, fontWeight: 600, color: s.badgeColor, background: s.badgeBg, borderRadius: 6, padding: '1px 6px', opacity: 0.85 }}>
+        {count.toLocaleString()}건
+      </span>
+    </div>
+    <ManagerList managers={managers} />
+  </div>
+);
+
+const GroupHeader: React.FC<{ name: string; count: number; style: GroupStyle }> = ({ name, count, style: s }) => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+      <span style={{ fontSize: 13, fontWeight: 500, color: s.label }}>{name}</span>
+    </div>
+    <span style={{ fontSize: 11, fontWeight: 700, color: s.badgeColor, background: s.badgeBg, borderRadius: 8, padding: '2px 8px' }}>
+      {count.toLocaleString()}건
+    </span>
+  </div>
+);
+
+const cardBase: React.CSSProperties = {
+  background: '#fff',
+  border: '0.5px solid #e5e7eb',
+  padding: '14px 16px',
+  display: 'flex',
+  flexDirection: 'column',
 };
 
 export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
-  const sorted = useMemo(() => [...data].sort((a, b) => b.count - a.count), [data]);
+  const dataMap = useMemo(() => Object.fromEntries(data.map(d => [d.dept, d])), [data]);
+
+  const mfg = dataMap['제조'];
+  const pkg = dataMap['충포장'];
+  const purchase = dataMap['구매'];
+  const prodCount = (mfg?.count || 0) + (pkg?.count || 0);
 
   return (
-    <div
-      style={{
-        background: '#fff',
-        borderRadius: 14,
-        border: '0.5px solid #e5e7eb',
-        padding: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-      }}
-    >
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', margin: 0, marginBottom: 14 }}>미회신 건수</h3>
+    <div style={{ background: '#fff', borderRadius: 14, border: '0.5px solid #e5e7eb', padding: 20, display: 'flex', flexDirection: 'column' }}>
+      {/* 위젯 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', margin: 0 }}>미회신 건수</h3>
+        {totalCount > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#A32D2D', background: '#FCEBEB', borderRadius: 8, padding: '2px 10px' }}>
+            총 {totalCount.toLocaleString()}건
+          </span>
+        )}
+      </div>
 
       {totalCount === 0 ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <span style={{ fontSize: 13, color: '#9ca3af' }}>미회신 없음</span>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, justifyContent: 'center' }}>
-          {sorted.map(d => {
-            const pct = (d.count / totalCount) * 100;
-            const colors = DEPT_STYLE[d.dept] || { bar: '#94a3b8', countColor: '#64748b', pctColor: '#94a3b8' };
-            return (
-              <div key={d.dept} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#6b7280', width: 28, flexShrink: 0 }}>{d.dept}</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#f1f5f9' }}>
-                  <div style={{ height: '100%', borderRadius: 3, background: colors.bar, width: `${pct}%`, transition: 'width 0.4s' }} />
-                </div>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: colors.countColor }}>{d.count.toLocaleString()}건</span>
-                  <span style={{ fontSize: 11, color: '#d1d5db' }}>&middot;</span>
-                  <span style={{ fontSize: 11, color: colors.pctColor }}>{pct.toFixed(1)}%</span>
-                </span>
-              </div>
-            );
-          })}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
+          {/* 생산 카드 */}
+          <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
+            <GroupHeader name="생산" count={prodCount} style={PROD_STYLE} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} />}
+              {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} />}
+            </div>
+          </div>
+
+          {/* 구매 카드 */}
+          <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
+            <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {purchase && purchase.count > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} />}
+            </div>
+          </div>
         </div>
       )}
     </div>

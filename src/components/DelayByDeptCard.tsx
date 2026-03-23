@@ -16,13 +16,12 @@ interface DelayByDeptCardProps {
   onDeptClick?: (deptName: string) => void;
 }
 
-const ALL_DEPTS = ['영업', '고객', '구매(원)', '구매(부)', '생산', '품질', '물류', '연구'];
+const ALL_DEPTS = ['영업', '고객', '구매(원)', '구매(부)', '생산', '품질'];
 
 // 부서명 매핑: 데이터의 name → 칩에 표시할 부서명
 function mapDeptName(name: string): string {
   const map: Record<string, string> = {
     '구매': '구매(원)',
-    '연구소': '연구',
   };
   return map[name] || name;
 }
@@ -108,7 +107,7 @@ export const DelayByDeptCard: React.FC<DelayByDeptCardProps> = ({ data, onDeptCl
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+          gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 7,
         }}
       >

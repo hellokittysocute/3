@@ -50,12 +50,13 @@ function computeDerivedData(items: DashboardItem[], editMap: Record<string, Edit
     return top5;
   })();
 
-  // 귀책부서별 지연현황
+  // 귀책부서별 지연현황 (물류, 연구소 제외)
+  const EXCLUDE_DEPTS = ['물류', '연구소'];
   const delayByDeptData: DelayDeptItem[] = (() => {
     const deptMap: Record<string, { count: number; revenue: number }> = {};
     items.forEach(item => {
       const dept = (editMap[item.id]?.delayReason || '').trim();
-      if (!dept) return;
+      if (!dept || EXCLUDE_DEPTS.includes(dept)) return;
       if (!deptMap[dept]) deptMap[dept] = { count: 0, revenue: 0 };
       deptMap[dept].count += 1;
       deptMap[dept].revenue += getRevenue(item);
@@ -65,12 +66,14 @@ function computeDerivedData(items: DashboardItem[], editMap: Record<string, Edit
       .sort((a, b) => b.count - a.count);
   })();
 
-  // 미회신 건수
+  // 미회신 건수 (사급 제외)
   const noReplyData: NoReplyDeptItem[] = (() => {
     let purchaseCount = 0;
     let productionCount = 0;
     items.forEach(item => {
+      if (item.materialSource?.trim() === '사급') return;
       const ed = editMap[item.id];
+      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
       if (!(ed?.materialSettingDate ?? '').trim()) purchaseCount++;
       if (!(ed?.manufacturingDate ?? '').trim() || !(ed?.packagingDate ?? '').trim()) productionCount++;
     });

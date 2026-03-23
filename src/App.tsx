@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users, Camera } from 'lucide-react';
+import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users, Camera, Clock } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
 import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths, createSnapshot, hasSnapshotForMonth } from './services/supabaseDataService';
@@ -18,10 +18,10 @@ import { Top10CustomerCard } from './components/Top10CustomerCard';
 import { DrilldownModal } from './components/DrilldownModal';
 import { SnapshotHistory } from './components/SnapshotHistory';
 import { useAuth } from './contexts/AuthContext';
-import { cn, formatCurrency } from './lib/utils';
+import { cn, formatCurrency, addWorkingDays } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-type TabId = 'summary' | 'details' | 'snapshots' | 'admin-users' | 'admin-upload';
+type TabId = 'summary' | 'details' | 'delay' | 'snapshots' | 'admin-users' | 'admin-upload';
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isActive, signOut } = useAuth();
@@ -34,6 +34,7 @@ export default function App() {
   const [cisManagerFilter, setCisManagerFilter] = useState('');
   const [purchaseManagerFilter, setPurchaseManagerFilter] = useState('');
   const [midCategoryFilter, setMidCategoryFilter] = useState('');
+  const [dueDateFilter, setDueDateFilter] = useState('');
 
   // 드릴다운 모달 상태
   const [customerModal, setCustomerModal] = useState<string | null>(null); // customerCode
@@ -232,25 +233,47 @@ export default function App() {
         item.salesDocument?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.customerCode.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !categoryFilter || item.managementType === categoryFilter;
-      const matchesMidCategory = !midCategoryFilter || item.category === midCategoryFilter;
+      const matchesMidCategory = !midCategoryFilter || item.category.toLowerCase().includes(midCategoryFilter.toLowerCase());
       const row = editData[item.id];
       const actualRevenuePossible = row?.revenuePossible || '확인중';
-      const matchesRevenuePossible = !revenuePossibleFilter || (actualRevenuePossible === revenuePossibleFilter);
-      const matchesDelay = !delayReasonFilter || (row?.delayReason === delayReasonFilter);
+      const matchesRevenuePossible = !revenuePossibleFilter || actualRevenuePossible.toLowerCase().includes(revenuePossibleFilter.toLowerCase());
+      const matchesDelay = !delayReasonFilter || (row?.delayReason ?? '').toLowerCase().includes(delayReasonFilter.toLowerCase());
       const matchesCisManager = !cisManagerFilter || item.cisManager.toLowerCase().includes(cisManagerFilter.toLowerCase());
       const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager ?? '').toLowerCase().includes(purchaseManagerFilter.toLowerCase());
-      return matchesSearch && matchesCategory && matchesMidCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager;
+      const matchesDueDate = !dueDateFilter || item.changedDueDate.toLowerCase().includes(dueDateFilter.toLowerCase());
+      return matchesSearch && matchesCategory && matchesMidCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager && matchesDueDate;
     }).sort((a, b) => {
       const order: Record<string, number> = { '불가능': 0, '확인중': 1, '가능': 2 };
       const aStatus = savedEditData[a.id]?.revenuePossible || '확인중';
       const bStatus = savedEditData[b.id]?.revenuePossible || '확인중';
       return (order[aStatus] ?? 1) - (order[bStatus] ?? 1);
     });
-  }, [items, searchTerm, categoryFilter, midCategoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData, savedEditData]);
+  }, [items, searchTerm, categoryFilter, midCategoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, dueDateFilter, editData, savedEditData]);
 
   const stats = useMemo(() => calculateStats(filteredItems, editData), [filteredItems, editData]);
 
-  const hasActiveFilter = !!(searchTerm || categoryFilter || midCategoryFilter || revenuePossibleFilter || delayReasonFilter || cisManagerFilter || purchaseManagerFilter);
+  const hasActiveFilter = !!(searchTerm || categoryFilter || midCategoryFilter || revenuePossibleFilter || delayReasonFilter || cisManagerFilter || purchaseManagerFilter || dueDateFilter);
+
+  // 미회신 판단: 작성일자 + 워킹데이 3일 후 마감일 기준
+  const CREATION_DATE = new Date(2026, 2, 20); // 2026-03-20 (고정값, 추후 동적 변경 가능)
+  const DELAY_DEADLINE = addWorkingDays(CREATION_DATE, 3); // 2026-03-25
+
+  const delayedIds = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (today < DELAY_DEADLINE) return new Set<string>();
+    const ids = new Set<string>();
+    items.forEach(item => {
+      if (item.materialSource?.trim() === '사급') return;
+      const ed = editData[item.id];
+      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      const mat = (ed?.materialSettingDate ?? '').trim();
+      const mfg = (ed?.manufacturingDate ?? '').trim();
+      const pkg = (ed?.packagingDate ?? '').trim();
+      if (!mat || !mfg || !pkg) ids.add(item.id);
+    });
+    return ids;
+  }, [items, editData]);
 
   // Chart data preparation
   const customerChartData = useMemo(() => {
@@ -316,11 +339,12 @@ export default function App() {
 
   const materialCustomerData = useMemo(() => getMaterialByCustomer(items), [items]);
 
+  const EXCLUDE_DEPTS = ['물류', '연구소'];
   const delayByDeptData = useMemo(() => {
     const deptMap: Record<string, { count: number; revenue: number }> = {};
     items.forEach(item => {
       const dept = (editData[item.id]?.delayReason || '').trim();
-      if (!dept) return;
+      if (!dept || EXCLUDE_DEPTS.includes(dept)) return;
       if (!deptMap[dept]) deptMap[dept] = { count: 0, revenue: 0 };
       deptMap[dept].count += 1;
       deptMap[dept].revenue += getRevenue(item);
@@ -331,18 +355,95 @@ export default function App() {
   }, [items, editData]);
 
   const noReplyData = useMemo(() => {
+    // 제조 담당자 매핑 (정확히 일치)
+    const MFG_EXACT: Record<string, string[]> = {
+      '겔마스크': ['정진영'], '기초': ['이정훈', '홍경의'],
+      '립글로즈': ['장건수'], '마스카라': ['장건수'],
+      '마스크시트': ['이정훈'], '붓펜': ['장건수'], '아이패치': ['정진영'],
+      '에어쿠션': ['홍경의'], '캔': ['이정훈'], '튜브': ['이정훈', '홍경의'],
+      '틴트/컨실러': ['장건수'],
+    };
+    // 제조 담당자 매핑 (부분 일치 — 순서대로 검사)
+    const MFG_INCLUDES: [string, string[]][] = [
+      ['스틱밤', ['이정훈', '홍경의']], // 스틱밤+립 예외는 getMfgManagers에서 처리
+      ['견본', ['이정훈', '홍경의']],
+      ['립스틱', ['장건수']],
+      ['파우더', ['정진숙']],
+    ];
+    // 충포장 담당자 매핑 (정확히 일치)
+    const PKG_EXACT: Record<string, string[]> = {
+      '겔마스크': ['정진영'], '견본': ['조선혜', '오정훈'],
+      '기초': ['송하림', '장재호', '송수빈'],
+      '립글로즈': ['오승연'], '립스틱': ['장철환'], '마스카라': ['장철환'],
+      '마스크시트': ['오정훈'], '붓펜': ['장철환'], '아이패치': ['정진영'],
+      '에어쿠션': ['장승상'], '캔': ['오정훈'], '튜브': ['박수진', '송진우'],
+      '틴트/컨실러': ['오승연'], '스틱밤': ['장철환'],
+    };
+    // 충포장 담당자 매핑 (부분 일치)
+    const PKG_INCLUDES: [string, string[]][] = [
+      ['견본', ['조선혜', '오정훈']],
+      ['립스틱', ['장철환']],
+      ['파우더', ['원대한']],
+      ['스틱밤', ['장철환']],
+    ];
+
+    const getMfgManagers = (cat: string, itemName: string): string[] => {
+      if (cat.includes('스틱밤') && itemName.includes('립')) return ['장건수'];
+      if (MFG_EXACT[cat]) return MFG_EXACT[cat];
+      for (const [keyword, managers] of MFG_INCLUDES) {
+        if (cat.includes(keyword)) return managers;
+      }
+      return ['미지정'];
+    };
+    const getPkgManagers = (cat: string): string[] => {
+      if (PKG_EXACT[cat]) return PKG_EXACT[cat];
+      for (const [keyword, managers] of PKG_INCLUDES) {
+        if (cat.includes(keyword)) return managers;
+      }
+      return ['미지정'];
+    };
+
+    const purchaseByMgr: Record<string, number> = {};
+    const mfgByMgr: Record<string, number> = {};
+    const pkgByMgr: Record<string, number> = {};
     let purchaseCount = 0;
-    let productionCount = 0;
+    let mfgCount = 0;
+    let pkgCount = 0;
+
     items.forEach(item => {
+      if (item.materialSource?.trim() === '사급') return;
       const ed = editData[item.id];
-      // 부자재칸 공란 → 구매팀 귀책
-      if (!(ed?.materialSettingDate ?? '').trim()) purchaseCount++;
-      // 제조 또는 충포장칸 공란 → 운영팀 귀책
-      if (!(ed?.manufacturingDate ?? '').trim() || !(ed?.packagingDate ?? '').trim()) productionCount++;
+      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      const cat = item.category?.trim() || '';
+
+      // 부자재칸 공란 → 구매
+      if (!(ed?.materialSettingDate ?? '').trim()) {
+        purchaseCount++;
+        const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
+        purchaseByMgr[mgr] = (purchaseByMgr[mgr] || 0) + 1;
+      }
+      // 제조칸 공란 → 제조
+      if (!(ed?.manufacturingDate ?? '').trim()) {
+        mfgCount++;
+        const managers = getMfgManagers(cat, item.itemName || '');
+        const share = 1 / managers.length;
+        managers.forEach(m => { mfgByMgr[m] = (mfgByMgr[m] || 0) + share; });
+      }
+      // 충포장칸 공란 → 충포장
+      if (!(ed?.packagingDate ?? '').trim()) {
+        pkgCount++;
+        const managers = getPkgManagers(cat);
+        const share = 1 / managers.length;
+        managers.forEach(m => { pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
+      }
     });
+
+    const toManagerList = (map: Record<string, number>) =>
+      Object.entries(map).map(([name, count]) => ({ name, count: Math.round(count) })).filter(m => m.count > 0).sort((a, b) => b.count - a.count);
     return [
-      { dept: '구매', count: purchaseCount },
-      { dept: '생산', count: productionCount },
+      { dept: '제조', count: mfgCount, managers: toManagerList(mfgByMgr) },
+      { dept: '충포장', count: pkgCount, managers: toManagerList(pkgByMgr) },
+      { dept: '구매', count: purchaseCount, managers: toManagerList(purchaseByMgr) },
     ].filter(d => d.count > 0);
   }, [items, editData]);
 
@@ -544,10 +645,10 @@ export default function App() {
                   : "text-slate-400 hover:text-slate-600"
               )}
             >
-              <tab.icon className={cn("w-4 h-4", activeTab === tab.id ? "text-emerald-500" : "text-slate-300 group-hover:text-slate-400")} />
+              <tab.icon className={cn("w-4 h-4", activeTab === tab.id ? (tab.id === 'delay' ? "text-red-500" : "text-emerald-500") : "text-slate-300 group-hover:text-slate-400")} />
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-emerald-500 rounded-t-full" />
+                <div className={cn("absolute bottom-0 left-0 w-full h-1 rounded-t-full", tab.id === 'delay' ? "bg-red-500" : "bg-emerald-500")} />
               )}
             </button>
           ))}
@@ -650,20 +751,20 @@ export default function App() {
               </div>
             </div>
 
-            {/* 3행 — Top10 고객사 + 귀책부서별 지연현황 (1:1) */}
+            {/* 3행 — 미회신 건수 + 귀책부서별 지연현황 & Top10 고객사 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              <Top10CustomerCard
-                data={customerChartData.map((c) => ({
-                  name: c.name,
-                  amount: c.가능 + c.확인중 + c.불가능,
-                  isEtc: c.name === '기타',
-                }))}
-                onCustomerClick={(name) => setCustomerModal(name)}
-              />
+              <NoReplyCard data={noReplyData} />
 
               <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={delayByDeptData} onDeptClick={(dept) => setDelayDeptModal(dept)} />
-                <NoReplyCard data={noReplyData} />
+                <Top10CustomerCard
+                  data={customerChartData.map((c) => ({
+                    name: c.name,
+                    amount: c.가능 + c.확인중 + c.불가능,
+                    isEtc: c.name === '기타',
+                  }))}
+                  onCustomerClick={(name) => setCustomerModal(name)}
+                />
               </div>
             </div>
           </div>
@@ -781,7 +882,7 @@ export default function App() {
         {activeTab === 'details' && (
           <div className="-mx-4 sm:-mx-10 space-y-8 animate-in fade-in duration-700">
             <div className="bg-white overflow-hidden">
-              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} onSnapshot={handleSnapshot} snapshotStatus={snapshotStatus} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly} hasFilter={hasActiveFilter}>
+              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} onSnapshot={handleSnapshot} snapshotStatus={snapshotStatus} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly} hasFilter={hasActiveFilter} delayedIds={delayedIds}>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3 sm:gap-6 bg-white px-4 sm:px-8 py-4 border-b border-slate-200/60">
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>
@@ -818,53 +919,43 @@ export default function App() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">중분류</label>
-                    <select
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                    <input
+                      type="text"
+                      placeholder="중분류 검색..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                       value={midCategoryFilter}
                       onChange={(e) => setMidCategoryFilter(e.target.value)}
-                    >
-                      <option value="">전체</option>
-                      {MID_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출 가능여부</label>
-                    <select
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                    <input
+                      type="text"
+                      placeholder="가능/불가능/확인중"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                       value={revenuePossibleFilter}
                       onChange={(e) => setRevenuePossibleFilter(e.target.value)}
-                    >
-                      <option value="">전체</option>
-                      <option value="가능">가능</option>
-                      <option value="불가능">불가능</option>
-                      <option value="확인중">확인중</option>
-                    </select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">지연사유</label>
-                    <select
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+                    <input
+                      type="text"
+                      placeholder="부서명 검색..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                       value={delayReasonFilter}
                       onChange={(e) => setDelayReasonFilter(e.target.value)}
-                    >
-                      <option value="">전체</option>
-                      <option value="구매">구매</option>
-                      <option value="생산">생산</option>
-                      <option value="품질">품질</option>
-                      <option value="연구소">연구소</option>
-                      <option value="물류">물류</option>
-                      <option value="영업">영업</option>
-                    </select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">납기일</label>
-                    <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
-                      <option>전체</option>
-                      <option>2026-03</option>
-                      <option>2026-04</option>
-                    </select>
+                    <input
+                      type="text"
+                      placeholder="날짜 검색..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      value={dueDateFilter}
+                      onChange={(e) => setDueDateFilter(e.target.value)}
+                    />
                   </div>
                 </div>
               </DataTable>
