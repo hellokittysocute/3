@@ -76,7 +76,7 @@ export default function App() {
         const merged: Record<string, EditableData> = {};
         dashboardItems.forEach(item => {
           merged[item.id] = editDataFromDb[item.id] || {
-            productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+            writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
             revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '', productionSite: '',
             purchaseManager: '', note: '',
           };
@@ -98,7 +98,7 @@ export default function App() {
     const initial: Record<string, EditableData> = {};
     items.forEach(item => {
       initial[item.id] = {
-        productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+        writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
         revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '', productionSite: '',
         purchaseManager: '', note: '',
       };
@@ -145,7 +145,7 @@ export default function App() {
       const merged: Record<string, EditableData> = {};
       dashboardItems.forEach(item => {
         merged[item.id] = editDataFromDb[item.id] || {
-          productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+          writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
           revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '',
           productionSite: '', purchaseManager: '', note: '',
         };
@@ -165,12 +165,28 @@ export default function App() {
 
   const handleUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
     setSaveStatus('idle');
+    const today = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
     setEditData(prev => {
-      const updated = { ...prev[id], [field]: value };
+      const old = prev[id] || {} as EditableData;
+      const updated = { ...old, [field]: value };
       // 매출가능여부를 '가능' 외로 바꾸면 매출가능수량 삭제
       if (field === 'revenuePossible' && value !== '가능') {
         updated.revenuePossibleQuantity = 0;
       }
+      // 빈 값 → 입력 시 filledAt 타임스탬프 자동 기록
+      if (field === 'materialSettingDate' && !old.materialSettingDate && value) {
+        updated.materialSettingFilledAt = today;
+      }
+      if (field === 'manufacturingDate' && !old.manufacturingDate && value) {
+        updated.manufacturingFilledAt = today;
+      }
+      if (field === 'packagingDate' && !old.packagingDate && value) {
+        updated.packagingFilledAt = today;
+      }
+      // 값 삭제 시 filledAt도 초기화
+      if (field === 'materialSettingDate' && !value) updated.materialSettingFilledAt = '';
+      if (field === 'manufacturingDate' && !value) updated.manufacturingFilledAt = '';
+      if (field === 'packagingDate' && !value) updated.packagingFilledAt = '';
       return { ...prev, [id]: updated };
     });
   }, []);

@@ -69,10 +69,14 @@ function toShortDate(s: string): string {
 // ── DB row → EditableData 변환 ──
 function rowToEditData(row: Record<string, unknown>): EditableData {
   return {
+    writeDate: (row.write_date as string) || '',
     productionCompleteDate: toShortDate((row.production_complete_date as string) || ''),
     materialSettingDate: toShortDate((row.material_setting_date as string) || ''),
     manufacturingDate: toShortDate((row.manufacturing_date as string) || ''),
     packagingDate: toShortDate((row.packaging_date as string) || ''),
+    materialSettingFilledAt: (row.material_setting_filled_at as string) || '',
+    manufacturingFilledAt: (row.manufacturing_filled_at as string) || '',
+    packagingFilledAt: (row.packaging_filled_at as string) || '',
     revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '확인중',
     revenuePossibleQuantity: row.revenue_possible_quantity != null ? Number(row.revenue_possible_quantity) : 0,
     delayReason: (row.delay_reason as string) || '',
@@ -164,10 +168,14 @@ export async function updateEditData(itemId: string, editableData: EditableData,
     .from('edit_data')
     .upsert({
       item_id: itemId,
+      write_date: editableData.writeDate,
       production_complete_date: editableData.productionCompleteDate,
       material_setting_date: editableData.materialSettingDate,
       manufacturing_date: editableData.manufacturingDate,
       packaging_date: editableData.packagingDate,
+      material_setting_filled_at: editableData.materialSettingFilledAt,
+      manufacturing_filled_at: editableData.manufacturingFilledAt,
+      packaging_filled_at: editableData.packagingFilledAt,
       revenue_possible: editableData.revenuePossible,
       revenue_possible_quantity: editableData.revenuePossibleQuantity,
       delay_reason: editableData.delayReason,
@@ -234,10 +242,14 @@ export async function updateSalesSetting(key: string, value: number): Promise<vo
 export async function saveAllEditData(allData: Record<string, EditableData>, month?: string): Promise<void> {
   const rows = Object.entries(allData).map(([itemId, d]) => ({
     item_id: itemId,
+    write_date: d.writeDate,
     production_complete_date: d.productionCompleteDate,
     material_setting_date: d.materialSettingDate,
     manufacturing_date: d.manufacturingDate,
     packaging_date: d.packagingDate,
+    material_setting_filled_at: d.materialSettingFilledAt,
+    manufacturing_filled_at: d.manufacturingFilledAt,
+    packaging_filled_at: d.packagingFilledAt,
     revenue_possible: d.revenuePossible,
     revenue_possible_quantity: d.revenuePossibleQuantity,
     delay_reason: d.delayReason,
@@ -270,8 +282,9 @@ export async function createSnapshot(
   const data: SnapshotRow[] = items.map(item => ({
     item,
     edit: editData[item.id] || {
-      productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '',
-      packagingDate: '', revenuePossible: '확인중' as const, revenuePossibleQuantity: 0,
+      writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '',
+      packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
+      revenuePossible: '확인중' as const, revenuePossibleQuantity: 0,
       delayReason: '', importance: '' as const, productionSite: '', purchaseManager: '', note: '',
     },
   }));

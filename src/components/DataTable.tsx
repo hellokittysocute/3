@@ -7,7 +7,7 @@ import { getRevenue } from '../services/dataService';
 import { formatCurrency, cn } from '../lib/utils';
 
 type SortKey =
-  | 'importance' | 'cisManager' | 'purchaseManager' | 'category' | 'customerCode'
+  | 'writeDate' | 'importance' | 'cisManager' | 'purchaseManager' | 'category' | 'customerCode'
   | 'materialCode' | 'itemName' | 'createdDate' | 'originalDueDate' | 'changedDueDate'
   | 'orderQuantity' | 'totalQuantity' | 'remainingQuantity'
   | 'productionCompleteDate' | 'materialSettingDate' | 'productionRequestYn' | 'mfg1'
@@ -17,6 +17,79 @@ type SortKey =
 
 type SortDirection = 'asc' | 'desc';
 type SortConfig = { key: SortKey; direction: SortDirection } | null;
+
+/** "3/20" 등의 날짜 문자열을 Date 객체로 파싱 (올해 기준) */
+function parseShortDate(s: string): Date | null {
+  if (!s) return null;
+  const v = s.trim().replace(/^~/, '');
+  const m = v.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (m) return new Date(new Date().getFullYear(), Number(m[1]) - 1, Number(m[2]));
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** 기준일로부터 영업일(평일) N일 후 날짜 계산 */
+function addBusinessDays(start: Date, days: number): Date {
+  const d = new Date(start);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++; // 토(6), 일(0) 제외
+  }
+  return d;
+}
+
+/** 두 날짜 사이의 영업일 수 계산 (from 다음날부터 to까지) */
+function countBusinessDays(from: Date, to: Date): number {
+  let count = 0;
+  const d = new Date(from);
+  const target = to.getTime();
+  const direction = target >= d.getTime() ? 1 : -1;
+  if (direction === 1) {
+    while (d.getTime() < target) {
+      d.setDate(d.getDate() + 1);
+      if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+    }
+    return count;
+  } else {
+    while (d.getTime() > target) {
+      d.setDate(d.getDate() - 1);
+      if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+    }
+    return -count;
+  }
+}
+
+/** D-day 계산 (평일 기준): 기준일 + 영업일 기한 - 오늘 */
+function calcDday(baseDate: string, filledDate: string, limitDays: number): { label: string; status: 'done' | 'ok' | 'today' | 'over' | 'none' } {
+  // 이미 입력 완료
+  if (filledDate && filledDate.trim()) return { label: '✓', status: 'done' };
+  // 기준일 미입력
+  const base = parseShortDate(baseDate);
+  if (!base) return { label: '-', status: 'none' };
+  // 마감일 = 기준일 + 영업일 N일
+  const deadline = addBusinessDays(base, limitDays);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadline.setHours(0, 0, 0, 0);
+  // 오늘과 마감일 사이의 영업일 차이
+  if (deadline.getTime() === today.getTime()) return { label: '당일', status: 'today' };
+  if (deadline.getTime() > today.getTime()) {
+    const remaining = countBusinessDays(today, deadline);
+    return { label: `-${remaining}일`, status: 'ok' };
+  }
+  const overdue = countBusinessDays(deadline, today);
+  return { label: `+${overdue}일`, status: 'over' };
+}
+
+const DDAY_STYLE: Record<string, string> = {
+  done: 'text-emerald-600 font-bold',
+  ok: 'text-slate-400',
+  today: 'text-amber-600 font-bold animate-pulse',
+  over: 'text-rose-600 font-bold',
+  none: 'text-slate-300',
+};
 
 function formatDateShort(dateStr: string): string {
   if (!dateStr) return '';
@@ -49,8 +122,6 @@ interface DataTableProps {
   saveStatus: 'idle' | 'saved' | 'loading';
   isAdmin?: boolean;
   readOnly?: boolean;
-  hasFilter?: boolean;
-  delayedIds?: Set<string>;
   children?: React.ReactNode;
 }
 
@@ -76,9 +147,9 @@ function getProgressRate(item: DashboardItem, editData: Record<string, EditableD
 }
 
 const TIER_COLORS = {
-  '상': { dot: '#e8354a', bg: '#fef1f2', text: '#e8354a', border: '#e8354a' },
-  '중': { dot: '#d4880a', bg: '#fdf6ed', text: '#d4880a', border: '#d4880a' },
-  '하': { dot: '#16a34a', bg: '#edf8f1', text: '#16a34a', border: '#16a34a' },
+  '상': { dot: '#e8354a', bg: 'rgba(232,53,74,0.08)', text: '#e8354a', border: '#e8354a' },
+  '중': { dot: '#d4880a', bg: 'rgba(212,136,10,0.08)', text: '#d4880a', border: '#d4880a' },
+  '하': { dot: '#16a34a', bg: 'rgba(22,163,74,0.08)', text: '#16a34a', border: '#16a34a' },
 };
 
 const INPUT_CLASS = "w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all";
@@ -92,18 +163,18 @@ interface TableRowProps {
   rate: number;
   isAdmin?: boolean;
   readOnly?: boolean;
-  isDelayed?: boolean;
   onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
 }
 
-const DELAY_INPUT_CLASS = "!border-red-400 !bg-red-50/50";
-
-const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, readOnly, isDelayed, onUpdateField }) => {
-  const stickyBg = isDelayed ? 'bg-red-50' : 'bg-white';
+const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, readOnly, onUpdateField }) => {
   return (
     <>
+      {/* 작성일 컬럼 (고정) */}
+      <td className="px-1 py-1 border-r border-slate-100/60 text-center sm:sticky sm:left-0 sm:z-20 bg-white">
+        <span className="text-[13px] text-slate-500">{row?.writeDate ?? ''}</span>
+      </td>
       {/* 중요도 컬럼 - 드롭다운 (고정) */}
-      <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center sm:sticky sm:left-0 sm:z-20 overflow-hidden min-w-[44px] w-[44px]", stickyBg)} style={{ backgroundColor: isDelayed ? undefined : color.bg }}>
+      <td className="px-1 py-1 border-r border-slate-100/60 text-center sm:sticky sm:left-[58px] sm:z-20 bg-white" style={{ backgroundColor: color.bg }}>
         <select
           className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer font-bold text-[13px]")}
           style={{ color: color.text, backgroundColor: `${color.dot}10`, borderColor: `${color.dot}40` }}
@@ -117,12 +188,12 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="하">하</option>
         </select>
       </td>
-      <td className={cn("px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[44px] sm:z-20 whitespace-nowrap overflow-hidden min-w-[58px] w-[58px]", stickyBg)}>{item.cisManager}</td>
-      <td className={cn("px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[102px] sm:z-20 whitespace-nowrap overflow-hidden min-w-[58px] w-[58px]", stickyBg)}>{row?.purchaseManager ?? ''}</td>
-      <td className={cn("px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[160px] sm:z-20 whitespace-nowrap overflow-hidden min-w-[70px] w-[70px]", stickyBg)}>{item.category}</td>
-      <td className={cn("px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[230px] sm:z-20 whitespace-nowrap overflow-hidden min-w-[62px] w-[62px]", stickyBg)}>{item.customerCode}</td>
-      <td className={cn("px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[292px] sm:z-20 overflow-hidden min-w-[110px] w-[110px]", stickyBg)}>{item.materialCode}</td>
-      <td className={cn("px-2 py-1 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 overflow-hidden", stickyBg)} style={{ boxShadow: '6px 0 12px -2px rgba(0,0,0,0.12)' }}>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[102px] sm:z-20 whitespace-nowrap bg-white">{item.cisManager}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[160px] sm:z-20 whitespace-nowrap bg-white">{row?.purchaseManager ?? ''}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[218px] sm:z-20 whitespace-nowrap bg-white">{item.category}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[288px] sm:z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[350px] sm:z-20 bg-white">{item.materialCode}</td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.createdDate)}</td>
@@ -135,16 +206,25 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} disabled={readOnly} />
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]", isDelayed && !(row?.materialSettingDate ?? '').trim() && DELAY_INPUT_CLASS)} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
       </td>
+      {(() => { const d = calcDday(row?.writeDate ?? '', row?.materialSettingFilledAt ?? '', 3); return (
+        <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
+      ); })()}
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center whitespace-nowrap">{item.productionRequestYn}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.mfg1)}</td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]", isDelayed && !(row?.manufacturingDate ?? '').trim() && DELAY_INPUT_CLASS)} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
       </td>
+      {(() => { const d = calcDday(row?.materialSettingFilledAt ?? '', row?.manufacturingFilledAt ?? '', 2); return (
+        <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
+      ); })()}
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
-        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]", isDelayed && !(row?.packagingDate ?? '').trim() && DELAY_INPUT_CLASS)} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} disabled={readOnly} />
+        <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} disabled={readOnly} />
       </td>
+      {(() => { const d = calcDday(row?.manufacturingFilledAt ?? '', row?.packagingFilledAt ?? '', 2); return (
+        <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
+      ); })()}
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} disabled={readOnly} />
       </td>
@@ -204,6 +284,7 @@ const ROW_HEIGHT = 40;
 function getSortValue(item: DashboardItem, editData: Record<string, EditableData>, key: SortKey): string | number {
   const row = editData[item.id];
   switch (key) {
+    case 'writeDate': return row?.writeDate || '';
     case 'importance': return row?.importance || '';
     case 'cisManager': return item.cisManager || '';
     case 'purchaseManager': return row?.purchaseManager || '';
@@ -241,18 +322,15 @@ interface SortableThProps {
   onSort: (key: SortKey) => void;
   className?: string;
   style?: React.CSSProperties;
-  resizable?: boolean;
-  resizeTarget?: SortKey;
-  onResizeStart?: (e: React.MouseEvent, key: SortKey) => void;
   children: React.ReactNode;
 }
 
-const SortableTh: React.FC<SortableThProps> = ({ sortKey, sortConfig, onSort, className, style, resizable, resizeTarget, onResizeStart, children }) => {
+const SortableTh: React.FC<SortableThProps> = ({ sortKey, sortConfig, onSort, className, style, children }) => {
   const isActive = sortConfig?.key === sortKey;
   return (
     <th
       data-sort-key={sortKey}
-      className={cn(className, "cursor-pointer select-none hover:bg-slate-100/80 transition-colors relative")}
+      className={cn(className, "cursor-pointer select-none hover:bg-slate-100/80 transition-colors")}
       style={style}
       onClick={() => onSort(sortKey)}
     >
@@ -268,57 +346,14 @@ const SortableTh: React.FC<SortableThProps> = ({ sortKey, sortConfig, onSort, cl
           )}
         </span>
       </div>
-      {resizable && (
-        <div
-          className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-indigo-400/40 z-10"
-          onMouseDown={(e) => { e.stopPropagation(); onResizeStart?.(e, resizeTarget ?? sortKey); }}
-        />
-      )}
     </th>
   );
 };
 
-// 스크롤 영역 열 기본 너비
-const DEFAULT_COL_WIDTHS: Record<string, number> = {
-  createdDate: 62, originalDueDate: 62, changedDueDate: 62,
-  orderQuantity: 78, totalQuantity: 72, remainingQuantity: 72,
-  productionCompleteDate: 76, materialSettingDate: 68,
-  productionRequestYn: 62, mfg1: 72,
-  manufacturingDate: 68, packagingDate: 200, productionSite: 82,
-  revenuePossible: 68, revenuePossibleQuantity: 100,
-  progressRate: 58, delayReason: 62,
-  unitPrice: 68, revenue: 80, note: 200,
-};
-
-export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, hasFilter, delayedIds, children }) => {
-  const [showDelayOnly, setShowDelayOnly] = useState(false);
+export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, children }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: SortKey } | null>(null);
-  const [colWidths, setColWidths] = useState<Record<string, number>>({ ...DEFAULT_COL_WIDTHS });
-
-  const handleResizeStart = useCallback((e: React.MouseEvent, key: SortKey) => {
-    const startX = e.clientX;
-    const startW = colWidths[key] || DEFAULT_COL_WIDTHS[key] || 60;
-    const onMove = (me: MouseEvent) => {
-      const newW = Math.max(36, startW + me.clientX - startX);
-      setColWidths(prev => ({ ...prev, [key]: newW }));
-    };
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [colWidths]);
-
-  // editData ref: 정렬/필터 내부에서 참조하되, 변경 시 재정렬을 트리거하지 않음
-  const editDataRef = useRef(editData);
-  editDataRef.current = editData;
 
   const handleSort = useCallback((key: SortKey) => {
     setSortConfig(prev => {
@@ -331,22 +366,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
 
-  // importance 값만 추적하여, 다른 필드 편집 시 불필요한 필터/정렬 재실행 방지
-  const importanceKey = useMemo(() => {
-    const parts: string[] = [];
-    for (const [id, d] of Object.entries(editData)) {
-      if (d?.importance) parts.push(`${id}:${d.importance}`);
-    }
-    return parts.join(',');
-  }, [editData]);
-
   // 수동 importance 우선, 없으면 자동 계산값
   const getTier = useCallback((item: DashboardItem): '상' | '중' | '하' => {
-    const manual = editDataRef.current[item.id]?.importance;
+    const manual = editData[item.id]?.importance;
     if (manual === '상' || manual === '중' || manual === '하') return manual;
     return autoTierMap[item.id];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [importanceKey, autoTierMap]);
+  }, [editData, autoTierMap]);
 
   const handleExcelDownload = useCallback(() => {
     const rows = items.map((item) => {
@@ -357,6 +382,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         : 0;
 
       return {
+        '작성일': row?.writeDate ?? '',
         '중요도': tier,
         '자재코드': item.materialCode,
         '내역': item.itemName,
@@ -405,26 +431,17 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     return counts;
   }, [items, getTier]);
 
-  const delayCount = useMemo(() => {
-    if (!delayedIds) return 0;
-    return items.filter(item => delayedIds.has(item.id)).length;
-  }, [items, delayedIds]);
-
   const filteredItems = useMemo(() => {
-    let result = activeTier === '전체' ? items : items.filter(item => getTier(item) === activeTier);
-    if (showDelayOnly && delayedIds) {
-      result = result.filter(item => delayedIds.has(item.id));
-    }
-    return result;
-  }, [items, getTier, activeTier, showDelayOnly, delayedIds]);
+    if (activeTier === '전체') return items;
+    return items.filter(item => getTier(item) === activeTier);
+  }, [items, getTier, activeTier]);
 
   const sortedItems = useMemo(() => {
     if (!sortConfig) return filteredItems;
     const { key, direction } = sortConfig;
-    const snapEditData = editDataRef.current;
     return [...filteredItems].sort((a, b) => {
-      const aVal = getSortValue(a, snapEditData, key);
-      const bVal = getSortValue(b, snapEditData, key);
+      const aVal = getSortValue(a, editData, key);
+      const bVal = getSortValue(b, editData, key);
       let cmp: number;
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         cmp = aVal - bVal;
@@ -433,8 +450,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
       }
       return direction === 'asc' ? cmp : -cmp;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredItems, sortConfig]);
+  }, [filteredItems, editData, sortConfig]);
 
   const totals = useMemo(() => {
     return sortedItems.reduce((acc, item) => ({
@@ -466,23 +482,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     const topEl = topScrollRef.current;
     const tableEl = tableScrollRef.current;
     if (!topEl || !tableEl) return;
-    let rafId = 0;
-    let source: 'top' | 'table' | null = null;
-    const onTopScroll = () => {
-      if (source === 'table') return;
-      source = 'top';
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => { tableEl.scrollLeft = topEl.scrollLeft; source = null; });
-    };
-    const onTableScroll = () => {
-      if (source === 'top') return;
-      source = 'table';
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => { topEl.scrollLeft = tableEl.scrollLeft; source = null; });
-    };
-    topEl.addEventListener('scroll', onTopScroll, { passive: true });
-    tableEl.addEventListener('scroll', onTableScroll, { passive: true });
-    return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); cancelAnimationFrame(rafId); };
+    let syncing = false;
+    const onTopScroll = () => { if (!syncing) { syncing = true; tableEl.scrollLeft = topEl.scrollLeft; syncing = false; } };
+    const onTableScroll = () => { if (!syncing) { syncing = true; topEl.scrollLeft = tableEl.scrollLeft; syncing = false; } };
+    topEl.addEventListener('scroll', onTopScroll);
+    tableEl.addEventListener('scroll', onTableScroll);
+    return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); };
   }, []);
 
   // 우클릭 컨텍스트 메뉴 닫기
@@ -544,25 +549,6 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               </button>
             );
           })}
-          {delayedIds && delayCount > 0 && (
-            <button
-              onClick={() => setShowDelayOnly(prev => !prev)}
-              className={cn(
-                "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-[15px] font-bold transition-all border shrink-0",
-                showDelayOnly
-                  ? "bg-red-600 text-white border-red-600 shadow-lg"
-                  : "bg-white text-red-500 border-red-300 hover:bg-red-50",
-              )}
-            >
-              ⚠️ 미회신
-              <span className={cn(
-                "text-[12px] sm:text-[14px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full min-w-[22px] sm:min-w-[26px] text-center",
-                showDelayOnly ? "bg-white/25 text-white" : "bg-red-100 text-red-500",
-              )}>
-                {delayCount}
-              </span>
-            </button>
-          )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -600,75 +586,49 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <div style={{ width: '2900px', height: '1px' }} />
       </div>
 
-      <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]" style={{ overflowAnchor: 'none' }}>
-        <table className="text-left border-collapse min-w-[2900px]" style={{ tableLayout: 'fixed', contain: 'layout style' }}>
+      <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]">
+        <table className="w-full text-left border-collapse min-w-[2900px]">
           <thead className="bg-slate-50 border-b border-slate-200 sm:sticky sm:top-0 sm:z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap" onContextMenu={handleHeaderContext}>
-              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sm:sticky sm:left-0 sm:z-40 bg-slate-50 overflow-hidden">중요도</SortableTh>
-              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[44px] sm:z-40 bg-slate-50 overflow-hidden">CIS담당</SortableTh>
-              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-40 bg-indigo-50 text-indigo-600 overflow-hidden">구매담당</SortableTh>
-              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-40 bg-slate-50 overflow-hidden">중분류</SortableTh>
-              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-40 bg-slate-50 overflow-hidden">고객약호</SortableTh>
-              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-40 bg-slate-50 overflow-hidden">자재</SortableTh>
-              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-40 bg-slate-50 overflow-hidden" style={{ boxShadow: '6px 0 12px -2px rgba(0,0,0,0.12)' }}>내역</SortableTh>
+              <SortableTh sortKey="writeDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[58px] sm:sticky sm:left-0 sm:z-40 bg-indigo-50/50 text-indigo-600">작성일</SortableTh>
+              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sm:sticky sm:left-[58px] sm:z-40 bg-slate-50">중요도</SortableTh>
+              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-40 bg-slate-50">CIS담당</SortableTh>
+              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-40 bg-indigo-50/50 text-indigo-600">구매담당</SortableTh>
+              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[218px] sm:z-40 bg-slate-50">중분류</SortableTh>
+              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-40 bg-slate-50">고객약호</SortableTh>
+              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-40 bg-slate-50">자재</SortableTh>
+              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
 
-              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="originalDueDate" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-center" style={{ width: colWidths.createdDate }}>생성일</SortableTh>
-              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="changedDueDate" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-center" style={{ width: colWidths.originalDueDate }}>원납기일</SortableTh>
-              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="orderQuantity" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-center" style={{ width: colWidths.changedDueDate }}>변경납기일</SortableTh>
-              <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="totalQuantity" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-right" style={{ width: colWidths.orderQuantity }}>총오더수량</SortableTh>
-              <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="remainingQuantity" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-right" style={{ width: colWidths.totalQuantity }}>환산수량</SortableTh>
-              <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="productionCompleteDate" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-right" style={{ width: colWidths.remainingQuantity }}>미납잔량</SortableTh>
-              <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="materialSettingDate" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600" style={{ width: colWidths.productionCompleteDate }}>생산완료<br/>요청일</SortableTh>
-              <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="productionRequestYn" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600" style={{ width: colWidths.materialSettingDate }}>부자재</SortableTh>
-              <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="mfg1" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-center" style={{ width: colWidths.productionRequestYn }}>제조<br/>요청여부</SortableTh>
-              <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="manufacturingDate" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-center" style={{ width: colWidths.mfg1 }}>현재<br/>제조계획</SortableTh>
-              <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="packagingDate" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600" style={{ width: colWidths.manufacturingDate }}>제조</SortableTh>
-              <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="productionSite" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600" style={{ width: colWidths.packagingDate }}>충포장</SortableTh>
-              <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="revenuePossible" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600" style={{ width: colWidths.productionSite }}>생산처</SortableTh>
-              <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="revenuePossibleQuantity" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600" style={{ width: colWidths.revenuePossible }}>매출<br/>가능여부</SortableTh>
-              <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="progressRate" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600" style={{ width: colWidths.revenuePossibleQuantity }}>매출<br/>가능수량</SortableTh>
-              <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="delayReason" onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600" style={{ width: colWidths.progressRate }}>진도율</SortableTh>
-              <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget={isAdmin ? "unitPrice" : "revenue"} onResizeStart={handleResizeStart} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600" style={{ width: colWidths.delayReason }}>지연<br/>사유</SortableTh>
-              {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="revenue" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-right" style={{ width: colWidths.unitPrice }}>단가</SortableTh>}
-              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} resizable resizeTarget="note" onResizeStart={handleResizeStart} className="px-2 py-2 border-r border-slate-200 text-right" style={{ width: colWidths.revenue }}>매출<br/>(단가x잔량)</SortableTh>
-              <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center" style={{ width: colWidths.note }}>비고</SortableTh>
+              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">생성일</SortableTh>
+              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">원납기일</SortableTh>
+              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">변경납기일</SortableTh>
+              <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</SortableTh>
+              <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</SortableTh>
+              <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</SortableTh>
+              <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px]">생산완료<br/>요청일</SortableTh>
+              <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">부자재</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-50/50 text-rose-500 w-[48px] text-[11px]">부자재<br/>D-day</th>
+              <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">제조<br/>요청여부</SortableTh>
+              <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[72px]">현재<br/>제조계획</SortableTh>
+              <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">제조</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-50/50 text-rose-500 w-[48px] text-[11px]">제조<br/>D-day</th>
+              <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px]">충포장</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-50/50 text-rose-500 w-[48px] text-[11px]">충포장<br/>D-day</th>
+              <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px]">생산처</SortableTh>
+              <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</SortableTh>
+              <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
+              <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</SortableTh>
+              <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</SortableTh>
+              {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right">단가</SortableTh>}
+              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right">매출<br/>(단가x잔량)</SortableTh>
+              <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center">비고</SortableTh>
             </tr>
           </thead>
-          {hasFilter && (
-            <tbody>
-              <tr className="bg-indigo-50/80 font-extrabold text-slate-800 text-[15px] border-b-2 border-indigo-200">
-                <td className="px-3 py-3 border-r border-indigo-100 text-center text-[14px] text-indigo-500 sm:sticky sm:left-0 sm:z-20 bg-indigo-50/80">합계</td>
-                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[44px] sm:z-20 bg-indigo-50/80"></td>
-                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[102px] sm:z-20 bg-indigo-50/80"></td>
-                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[160px] sm:z-20 bg-indigo-50/80"></td>
-                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[230px] sm:z-20 bg-indigo-50/80"></td>
-                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[292px] sm:z-20 bg-indigo-50/80"></td>
-                <td className="px-4 py-3 border-r-2 border-indigo-200 sm:sticky sm:left-[402px] sm:z-20 bg-indigo-50/80 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>검색 합계 ({sortedItems.length}건)</td>
-                <td colSpan={3} className="px-4 py-3 text-right border-r border-indigo-100"></td>
-                <td className="px-4 py-3 text-right border-r border-indigo-100">{totals.orderQuantity.toLocaleString()}</td>
-                <td className="px-4 py-3 text-right border-r border-indigo-100">{totals.totalQuantity.toLocaleString()}</td>
-                <td className="px-4 py-3 text-right border-r border-indigo-100">{totals.remainingQuantity.toLocaleString()}</td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 text-right border-r border-indigo-100">{totalRevenuePossibleQty.toLocaleString()}</td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                <td className="px-4 py-3 border-r border-indigo-100"></td>
-                {isAdmin && <td className="px-4 py-3 border-r border-indigo-100"></td>}
-                <td className="px-4 py-3 border-r border-indigo-100 text-right">{formatCurrency(totals.revenue)}</td>
-                <td className="px-4 py-3"></td>
-              </tr>
-            </tbody>
-          )}
           <tbody className="text-[15px]">
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 26 : 25} />
+                <td colSpan={isAdmin ? 30 : 29} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -677,13 +637,12 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               const rate = getProgressRate(item, editData);
               const tier = getTier(item);
               const color = TIER_COLORS[tier];
-              const delayed = delayedIds?.has(item.id) ?? false;
 
               return (
                 <tr
                   key={item.id}
                   data-index={virtualRow.index}
-                  className={cn("hover:bg-slate-50 transition-colors border-b border-slate-100", delayed && "!bg-red-50/60 hover:!bg-red-100/60")}
+                  className="hover:bg-slate-50 transition-colors border-b border-slate-100"
                   style={{ height: ROW_HEIGHT }}
                 >
                   <TableRow
@@ -694,7 +653,6 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                     rate={rate}
                     isAdmin={isAdmin}
                     readOnly={readOnly}
-                    isDelayed={delayed}
                     onUpdateField={onUpdateField}
                   />
                 </tr>
@@ -703,11 +661,11 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 26 : 25} />
+                <td colSpan={isAdmin ? 30 : 29} />
               </tr>
             )}
           </tbody>
-          <tfoot className={cn("sm:sticky sm:bottom-0 sm:z-25 border-t-2 border-slate-300", hasFilter && "hidden")}>
+          <tfoot className="sm:sticky sm:bottom-0 sm:z-25 border-t-2 border-slate-300">
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sm:sticky sm:left-0 sm:z-20 bg-slate-100">합계</td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[44px] sm:z-20 bg-slate-100"></td>
@@ -715,7 +673,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계 ({sortedItems.length}건)</td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
               <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>

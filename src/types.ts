@@ -45,12 +45,16 @@ export interface DashboardItem {
 }
 
 export interface EditableData {
+  writeDate: string;
   productionCompleteDate: string;
   materialSettingDate: string;
   manufacturingDate: string;
   packagingDate: string;
   revenuePossible: '가능' | '확인중' | '불가능' | '';
   revenuePossibleQuantity: number;
+  materialSettingFilledAt: string;
+  manufacturingFilledAt: string;
+  packagingFilledAt: string;
   delayReason: string;
   importance: '상' | '중' | '하' | '';
   productionSite: string;

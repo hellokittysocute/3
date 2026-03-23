@@ -78,8 +78,8 @@ function computeDerivedData(items: DashboardItem[], editMap: Record<string, Edit
       if (!(ed?.manufacturingDate ?? '').trim() || !(ed?.packagingDate ?? '').trim()) productionCount++;
     });
     return [
-      { dept: '구매', count: purchaseCount },
-      { dept: '생산', count: productionCount },
+      { dept: '구매', count: purchaseCount, managers: [] },
+      { dept: '생산', count: productionCount, managers: [] },
     ].filter(d => d.count > 0);
   })();
 
