@@ -504,30 +504,13 @@ export default function App() {
         const managers = getMfgManagers(cat, item.itemName || '');
         const share = 1 / managers.length;
         managers.forEach(m => { mfgByMgr[m] = (mfgByMgr[m] || 0) + share; });
-        // 부자재 입력 완료 & 업로드일 동일 제외
-        const matFilled = parseDate(ed?.materialSettingFilledAt ?? '');
-        if (matFilled && ed?.materialSettingFilledAt !== ed?.writeDate) {
-          managers.forEach(m => {
-            if (!mfgAvg[m]) mfgAvg[m] = { total: 0, cnt: 0 };
-            mfgAvg[m].total += (bizDays(matFilled, today) - LIMIT_MFG) * share;
-            mfgAvg[m].cnt += share;
-          });
-        }
+        // 제조/충포장 미회신 건은 평균에서 제외 (완료 건만 집계)
       }
       if (!(ed?.packagingDate ?? '').trim()) {
         pkgCount++;
         const managers = getPkgManagers(cat);
         const share = 1 / managers.length;
         managers.forEach(m => { pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
-        // 제조 입력 완료 & 업로드일 동일 제외
-        const mfgFilled = parseDate(ed?.manufacturingFilledAt ?? '');
-        if (mfgFilled && ed?.manufacturingFilledAt !== ed?.writeDate) {
-          managers.forEach(m => {
-            if (!pkgAvg[m]) pkgAvg[m] = { total: 0, cnt: 0 };
-            pkgAvg[m].total += (bizDays(mfgFilled, today) - LIMIT_PKG) * share;
-            pkgAvg[m].cnt += share;
-          });
-        }
       }
     });
 
