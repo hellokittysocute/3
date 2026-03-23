@@ -162,9 +162,9 @@ function getProgressRate(item: DashboardItem, editData: Record<string, EditableD
 }
 
 const TIER_COLORS = {
-  '상': { dot: '#e8354a', bg: 'rgba(232,53,74,0.08)', text: '#e8354a', border: '#e8354a' },
-  '중': { dot: '#d4880a', bg: 'rgba(212,136,10,0.08)', text: '#d4880a', border: '#d4880a' },
-  '하': { dot: '#16a34a', bg: 'rgba(22,163,74,0.08)', text: '#16a34a', border: '#16a34a' },
+  '상': { dot: '#e8354a', bg: '#fde8eb', text: '#e8354a', border: '#e8354a' },
+  '중': { dot: '#d4880a', bg: '#fdf3e0', text: '#d4880a', border: '#d4880a' },
+  '하': { dot: '#16a34a', bg: '#e6f5eb', text: '#16a34a', border: '#16a34a' },
 };
 
 const INPUT_CLASS = "w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all";

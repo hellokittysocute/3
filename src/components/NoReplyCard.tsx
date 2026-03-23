@@ -72,15 +72,20 @@ const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; manag
   </div>
 );
 
-const GroupHeader: React.FC<{ name: string; count: number; style: GroupStyle }> = ({ name, count, style: s }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
-      <span style={{ fontSize: 13, fontWeight: 500, color: s.label }}>{name}</span>
+const GroupHeader: React.FC<{ name: string; count: number; style: GroupStyle; desc?: string }> = ({ name, count, style: s, desc }) => (
+  <div style={{ marginBottom: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 500, color: s.label }}>{name}</span>
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 700, color: s.badgeColor, background: s.badgeBg, borderRadius: 8, padding: '2px 8px' }}>
+        {count.toLocaleString()}건
+      </span>
     </div>
-    <span style={{ fontSize: 11, fontWeight: 700, color: s.badgeColor, background: s.badgeBg, borderRadius: 8, padding: '2px 8px' }}>
-      {count.toLocaleString()}건
-    </span>
+    {desc && (
+      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4, paddingLeft: 13 }}>{desc}</div>
+    )}
   </div>
 );
 
@@ -92,7 +97,25 @@ const cardBase: React.CSSProperties = {
   flexDirection: 'column',
 };
 
-export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
+const DEFAULT_LIMITS: Record<string, number> = { '구매': 3, '제조': 2, '충포장': 2 };
+
+const computeGroupAvgDays = (depts: (NoReplyDeptItem | undefined)[], limits: Record<string, number>): number | undefined => {
+  let totalWeighted = 0, totalCount = 0;
+  depts.forEach(dept => {
+    if (!dept) return;
+    const limit = limits[dept.dept] || 0;
+    dept.managers.forEach(m => {
+      if (m.avgDays != null) {
+        totalWeighted += (m.avgDays + limit) * m.count;
+        totalCount += m.count;
+      }
+    });
+  });
+  return totalCount > 0 ? Math.round(totalWeighted / totalCount) : undefined;
+};
+
+export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, limits }) => {
+  const effectiveLimits = useMemo(() => ({ ...DEFAULT_LIMITS, ...limits }), [limits]);
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
   const dataMap = useMemo(() => Object.fromEntries(data.map(d => [d.dept, d])), [data]);
 
@@ -100,6 +123,9 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
   const pkg = dataMap['충포장'];
   const purchase = dataMap['구매'];
   const prodCount = (mfg?.count || 0) + (pkg?.count || 0);
+
+  const prodAvgDays = useMemo(() => computeGroupAvgDays([mfg, pkg], effectiveLimits), [mfg, pkg, effectiveLimits]);
+  const purchaseAvgDays = useMemo(() => computeGroupAvgDays([purchase], effectiveLimits), [purchase, effectiveLimits]);
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: '0.5px solid #e5e7eb', padding: 20, display: 'flex', flexDirection: 'column' }}>
@@ -121,7 +147,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
           {/* 생산 카드 */}
           <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-            <GroupHeader name="생산" count={prodCount} style={PROD_STYLE} />
+            <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} desc={prodAvgDays != null ? `평균 ${prodAvgDays}일 - 최우정` : undefined} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} />}
               {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} />}
@@ -130,7 +156,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
 
           {/* 구매 카드 */}
           <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-            <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} />
+            <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} desc={purchaseAvgDays != null ? `평균 ${purchaseAvgDays}일 - 김태문` : undefined} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {purchase && purchase.count > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
             </div>
