@@ -407,11 +407,7 @@ export default function App() {
   }, [delayDeptModal, items, editData]);
 
   const trendData = [
-    { date: '03/01', rate: 0 },
-    { date: '03/02', rate: 5.2 },
-    { date: '03/03', rate: 12.8 },
-    { date: '03/04', rate: 18.5 },
-    { date: '03/05', rate: 24.1 },
+    { date: '3/20', rate: 0 },
   ];
 
   // 인증 가드

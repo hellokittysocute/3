@@ -268,6 +268,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: SortKey } | null>(null);
 
+  // editData ref: 정렬/필터 내부에서 참조하되, 변경 시 재정렬을 트리거하지 않음
+  const editDataRef = useRef(editData);
+  editDataRef.current = editData;
+
   const handleSort = useCallback((key: SortKey) => {
     setSortConfig(prev => {
       if (prev?.key === key) {
@@ -279,12 +283,22 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
 
   const autoTierMap = useMemo(() => buildTierMap(items), [items]);
 
+  // importance 값만 추적하여, 다른 필드 편집 시 불필요한 필터/정렬 재실행 방지
+  const importanceKey = useMemo(() => {
+    const parts: string[] = [];
+    for (const [id, d] of Object.entries(editData)) {
+      if (d?.importance) parts.push(`${id}:${d.importance}`);
+    }
+    return parts.join(',');
+  }, [editData]);
+
   // 수동 importance 우선, 없으면 자동 계산값
   const getTier = useCallback((item: DashboardItem): '상' | '중' | '하' => {
-    const manual = editData[item.id]?.importance;
+    const manual = editDataRef.current[item.id]?.importance;
     if (manual === '상' || manual === '중' || manual === '하') return manual;
     return autoTierMap[item.id];
-  }, [editData, autoTierMap]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importanceKey, autoTierMap]);
 
   const handleExcelDownload = useCallback(() => {
     const rows = items.map((item) => {
@@ -351,9 +365,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   const sortedItems = useMemo(() => {
     if (!sortConfig) return filteredItems;
     const { key, direction } = sortConfig;
+    const snapEditData = editDataRef.current;
     return [...filteredItems].sort((a, b) => {
-      const aVal = getSortValue(a, editData, key);
-      const bVal = getSortValue(b, editData, key);
+      const aVal = getSortValue(a, snapEditData, key);
+      const bVal = getSortValue(b, snapEditData, key);
       let cmp: number;
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         cmp = aVal - bVal;
@@ -362,7 +377,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
       }
       return direction === 'asc' ? cmp : -cmp;
     });
-  }, [filteredItems, editData, sortConfig]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredItems, sortConfig]);
 
   const totals = useMemo(() => {
     return sortedItems.reduce((acc, item) => ({
