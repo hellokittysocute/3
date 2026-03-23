@@ -54,13 +54,25 @@ function rowToItem(row: Record<string, unknown>): DashboardItem {
   };
 }
 
+// ── "2026-04-10 00:00:00" → "4/10" 변환 ──
+function toShortDate(s: string): string {
+  if (!s) return '';
+  const v = s.trim();
+  // 이미 m/d 형식이면 그대로
+  if (/^\~?\d{1,2}\/\d{1,2}$/.test(v)) return v;
+  // ISO/timestamp 형식 파싱
+  const d = new Date(v);
+  if (!isNaN(d.getTime())) return `${d.getMonth() + 1}/${d.getDate()}`;
+  return v;
+}
+
 // ── DB row → EditableData 변환 ──
 function rowToEditData(row: Record<string, unknown>): EditableData {
   return {
-    productionCompleteDate: (row.production_complete_date as string) || '',
-    materialSettingDate: (row.material_setting_date as string) || '',
-    manufacturingDate: (row.manufacturing_date as string) || '',
-    packagingDate: (row.packaging_date as string) || '',
+    productionCompleteDate: toShortDate((row.production_complete_date as string) || ''),
+    materialSettingDate: toShortDate((row.material_setting_date as string) || ''),
+    manufacturingDate: toShortDate((row.manufacturing_date as string) || ''),
+    packagingDate: toShortDate((row.packaging_date as string) || ''),
     revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '확인중',
     revenuePossibleQuantity: row.revenue_possible_quantity != null ? Number(row.revenue_possible_quantity) : 0,
     delayReason: (row.delay_reason as string) || '',
