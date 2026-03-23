@@ -109,7 +109,7 @@ export default function App() {
   const [savedEditData, setSavedEditData] = useState<Record<string, EditableData>>(buildInitialEditData);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
   const [snapshotStatus, setSnapshotStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const stats = useMemo(() => calculateStats(items, editData), [items, editData]);
+  // stats는 filteredItems 정의 후 계산 (검색 결과 반영)
 
   const MID_CATEGORIES = useMemo(() => [...new Set(items.map(i => i.category).filter(Boolean))].sort(), [items]);
   const CIS_MANAGERS = useMemo(() => [...new Set(items.map(i => i.cisManager).filter(Boolean))].sort(), [items]);
@@ -247,6 +247,10 @@ export default function App() {
       return (order[aStatus] ?? 1) - (order[bStatus] ?? 1);
     });
   }, [items, searchTerm, categoryFilter, midCategoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, editData, savedEditData]);
+
+  const stats = useMemo(() => calculateStats(filteredItems, editData), [filteredItems, editData]);
+
+  const hasActiveFilter = !!(searchTerm || categoryFilter || midCategoryFilter || revenuePossibleFilter || delayReasonFilter || cisManagerFilter || purchaseManagerFilter);
 
   // Chart data preparation
   const customerChartData = useMemo(() => {
@@ -464,6 +468,8 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[15px] font-bold text-slate-700">실시간 동기화 중</span>
+                <span className="text-slate-300 mx-1">|</span>
+                <span className="text-[15px] font-bold text-slate-700">작성일자: 2026-03-20</span>
               </div>
             </div>
             <div className="h-10 w-px bg-slate-200 hidden lg:block" />
@@ -775,7 +781,7 @@ export default function App() {
         {activeTab === 'details' && (
           <div className="-mx-4 sm:-mx-10 space-y-8 animate-in fade-in duration-700">
             <div className="bg-white overflow-hidden">
-              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} onSnapshot={handleSnapshot} snapshotStatus={snapshotStatus} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly}>
+              <DataTable items={filteredItems} editData={editData} onUpdateField={handleUpdateField} onSave={handleSave} onSnapshot={handleSnapshot} snapshotStatus={snapshotStatus} saveStatus={saveStatus} isAdmin={isAdmin} readOnly={isReadOnly} hasFilter={hasActiveFilter}>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3 sm:gap-6 bg-white px-4 sm:px-8 py-4 border-b border-slate-200/60">
                   <div className="space-y-2">
                     <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">CIS담당</label>

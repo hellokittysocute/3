@@ -49,6 +49,7 @@ interface DataTableProps {
   saveStatus: 'idle' | 'saved' | 'loading';
   isAdmin?: boolean;
   readOnly?: boolean;
+  hasFilter?: boolean;
   children?: React.ReactNode;
 }
 
@@ -263,7 +264,7 @@ const SortableTh: React.FC<SortableThProps> = ({ sortKey, sortConfig, onSort, cl
   );
 };
 
-export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, children }) => {
+export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, hasFilter, children }) => {
   const [activeTier, setActiveTier] = useState<Tier>('전체');
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: SortKey } | null>(null);
@@ -548,6 +549,36 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center">비고</SortableTh>
             </tr>
           </thead>
+          {hasFilter && (
+            <tbody>
+              <tr className="bg-indigo-50/80 font-extrabold text-slate-800 text-[15px] border-b-2 border-indigo-200">
+                <td className="px-3 py-3 border-r border-indigo-100 text-center text-[14px] text-indigo-500 sm:sticky sm:left-0 sm:z-20 bg-indigo-50/80">합계</td>
+                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[44px] sm:z-20 bg-indigo-50/80"></td>
+                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[102px] sm:z-20 bg-indigo-50/80"></td>
+                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[160px] sm:z-20 bg-indigo-50/80"></td>
+                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[230px] sm:z-20 bg-indigo-50/80"></td>
+                <td className="px-4 py-3 border-r border-indigo-100 sm:sticky sm:left-[292px] sm:z-20 bg-indigo-50/80"></td>
+                <td className="px-4 py-3 border-r-2 border-indigo-200 sm:sticky sm:left-[402px] sm:z-20 bg-indigo-50/80 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>검색 합계 ({sortedItems.length}건)</td>
+                <td colSpan={3} className="px-4 py-3 text-right border-r border-indigo-100"></td>
+                <td className="px-4 py-3 text-right border-r border-indigo-100">{totals.orderQuantity.toLocaleString()}</td>
+                <td className="px-4 py-3 text-right border-r border-indigo-100">{totals.totalQuantity.toLocaleString()}</td>
+                <td className="px-4 py-3 text-right border-r border-indigo-100">{totals.remainingQuantity.toLocaleString()}</td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 text-right border-r border-indigo-100">{totalRevenuePossibleQty.toLocaleString()}</td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                <td className="px-4 py-3 border-r border-indigo-100"></td>
+                {isAdmin && <td className="px-4 py-3 border-r border-indigo-100"></td>}
+                <td className="px-4 py-3 border-r border-indigo-100 text-right">{formatCurrency(totals.revenue)}</td>
+                <td className="px-4 py-3"></td>
+              </tr>
+            </tbody>
+          )}
           <tbody className="text-[15px]">
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
@@ -589,7 +620,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               </tr>
             )}
           </tbody>
-          <tfoot className="sm:sticky sm:bottom-0 sm:z-25 border-t-2 border-slate-300">
+          <tfoot className={cn("sm:sticky sm:bottom-0 sm:z-25 border-t-2 border-slate-300", hasFilter && "hidden")}>
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sm:sticky sm:left-0 sm:z-20 bg-slate-100">합계</td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[44px] sm:z-20 bg-slate-100"></td>
@@ -597,7 +628,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계 ({sortedItems.length}건)</td>
               <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
