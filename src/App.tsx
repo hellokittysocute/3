@@ -463,17 +463,23 @@ export default function App() {
         purchaseAvg[mgr].total += bizDays(writeD, matFilled) - LIMIT_PURCHASE;
         purchaseAvg[mgr].cnt += 1;
       }
+      // 제조: 구매가 실제 입력한 건만 (materialSettingFilledAt !== writeDate)
       const matFilled2 = parseDate(ed.materialSettingFilledAt ?? '');
       const mfgFilled = parseDate(ed.manufacturingFilledAt ?? '');
-      if (matFilled2 && mfgFilled && ed.materialSettingFilledAt !== ed.manufacturingFilledAt) {
+      if (matFilled2 && mfgFilled
+        && ed.materialSettingFilledAt !== ed.manufacturingFilledAt
+        && ed.materialSettingFilledAt !== ed.writeDate) {
         const mgr = (item.cisManager ?? '').trim() || '미지정';
         if (!mfgAvg[mgr]) mfgAvg[mgr] = { total: 0, cnt: 0 };
         mfgAvg[mgr].total += bizDays(matFilled2, mfgFilled) - LIMIT_MFG;
         mfgAvg[mgr].cnt += 1;
       }
+      // 충포장: 제조가 실제 입력한 건만 (manufacturingFilledAt !== writeDate)
       const mfgFilled2 = parseDate(ed.manufacturingFilledAt ?? '');
       const pkgFilled = parseDate(ed.packagingFilledAt ?? '');
-      if (mfgFilled2 && pkgFilled && ed.manufacturingFilledAt !== ed.packagingFilledAt) {
+      if (mfgFilled2 && pkgFilled
+        && ed.manufacturingFilledAt !== ed.packagingFilledAt
+        && ed.manufacturingFilledAt !== ed.writeDate) {
         const mgr = (item.cisManager ?? '').trim() || '미지정';
         if (!pkgAvg[mgr]) pkgAvg[mgr] = { total: 0, cnt: 0 };
         pkgAvg[mgr].total += bizDays(mfgFilled2, pkgFilled) - LIMIT_PKG;
@@ -504,9 +510,9 @@ export default function App() {
         const managers = getMfgManagers(cat, item.itemName || '');
         const share = 1 / managers.length;
         managers.forEach(m => { mfgByMgr[m] = (mfgByMgr[m] || 0) + share; });
-        // 미회신 건의 현재 경과일도 평균에 포함
+        // 미회신 건의 현재 경과일도 평균에 포함 (구매가 실제 입력한 건만)
         const matFilledD = parseDate(ed?.materialSettingFilledAt ?? '');
-        if (matFilledD) {
+        if (matFilledD && ed?.materialSettingFilledAt !== ed?.writeDate) {
           managers.forEach(m => {
             if (!mfgAvg[m]) mfgAvg[m] = { total: 0, cnt: 0 };
             mfgAvg[m].total += bizDays(matFilledD, today) - LIMIT_MFG;
@@ -519,9 +525,9 @@ export default function App() {
         const managers = getPkgManagers(cat);
         const share = 1 / managers.length;
         managers.forEach(m => { pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
-        // 미회신 건의 현재 경과일도 평균에 포함
+        // 미회신 건의 현재 경과일도 평균에 포함 (제조가 실제 입력한 건만)
         const mfgFilledD = parseDate(ed?.manufacturingFilledAt ?? '');
-        if (mfgFilledD) {
+        if (mfgFilledD && ed?.manufacturingFilledAt !== ed?.writeDate) {
           managers.forEach(m => {
             if (!pkgAvg[m]) pkgAvg[m] = { total: 0, cnt: 0 };
             pkgAvg[m].total += bizDays(mfgFilledD, today) - LIMIT_PKG;
