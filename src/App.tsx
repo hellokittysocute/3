@@ -504,11 +504,13 @@ export default function App() {
         const managers = getMfgManagers(cat, item.itemName || '');
         const share = 1 / managers.length;
         managers.forEach(m => { mfgByMgr[m] = (mfgByMgr[m] || 0) + share; });
-        const matFilled = parseDate(ed?.materialSettingFilledAt ?? '');
-        if (matFilled) {
+        // 부자재 입력시점 기준, 없으면 작성일 기준으로 전체 경과 계산
+        const mfgBase = parseDate(ed?.materialSettingFilledAt ?? '') || parseDate(ed?.writeDate ?? '');
+        if (mfgBase) {
+          const totalLimit = (ed?.materialSettingFilledAt ?? '').trim() ? LIMIT_MFG : LIMIT_PURCHASE + LIMIT_MFG;
           managers.forEach(m => {
             if (!mfgAvg[m]) mfgAvg[m] = { total: 0, cnt: 0 };
-            mfgAvg[m].total += (bizDays(matFilled, today) - LIMIT_MFG) * share;
+            mfgAvg[m].total += (bizDays(mfgBase, today) - totalLimit) * share;
             mfgAvg[m].cnt += share;
           });
         }
@@ -518,11 +520,15 @@ export default function App() {
         const managers = getPkgManagers(cat);
         const share = 1 / managers.length;
         managers.forEach(m => { pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
-        const mfgFilled = parseDate(ed?.manufacturingFilledAt ?? '');
-        if (mfgFilled) {
+        // 제조 입력시점 기준, 없으면 부자재 입력시점, 없으면 작성일 기준
+        const pkgBase = parseDate(ed?.manufacturingFilledAt ?? '') || parseDate(ed?.materialSettingFilledAt ?? '') || parseDate(ed?.writeDate ?? '');
+        if (pkgBase) {
+          let totalLimit = LIMIT_PKG;
+          if (!(ed?.manufacturingFilledAt ?? '').trim()) totalLimit += LIMIT_MFG;
+          if (!(ed?.materialSettingFilledAt ?? '').trim()) totalLimit += LIMIT_PURCHASE;
           managers.forEach(m => {
             if (!pkgAvg[m]) pkgAvg[m] = { total: 0, cnt: 0 };
-            pkgAvg[m].total += (bizDays(mfgFilled, today) - LIMIT_PKG) * share;
+            pkgAvg[m].total += (bizDays(pkgBase, today) - totalLimit) * share;
             pkgAvg[m].cnt += share;
           });
         }
