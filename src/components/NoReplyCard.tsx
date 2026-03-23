@@ -23,7 +23,13 @@ interface GroupStyle {
 const PROD_STYLE: GroupStyle = { dot: '#f59e0b', label: '#b45309', badgeBg: '#FFF8EB', badgeColor: '#b45309', border: '#f59e0b' };
 const PURCHASE_STYLE: GroupStyle = { dot: '#10b981', label: '#047857', badgeBg: '#ECFDF5', badgeColor: '#047857', border: '#10b981' };
 
-const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?: number }[]; limit: number }> = ({ managers, limit }) => {
+const MGR_CATEGORY: Record<string, string> = {
+  '이정훈': '기초', '홍경의': '기초_색조', '정진숙': '파우더', '김영찬': 'PB담당',
+  '장건수': '립', '송하림': '기초_포장', '원대한': '파우더', '오승연': '립',
+  '장철환': '선밤', '황아름': '쿠션', '박수진': '튜브',
+};
+
+const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ managers, limit, showCategory }) => {
   if (managers.length === 0) return <span style={{ fontSize: 11, color: '#9ca3af' }}>담당자 없음</span>;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -41,7 +47,7 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#374151' }}>{m.name}</span>
+              <span style={{ fontSize: 12, color: '#374151' }}>{m.name}{showCategory && MGR_CATEGORY[m.name] && <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
               {label && (
                 <span style={{
                   fontSize: 10, fontWeight: 600, borderRadius: 4, padding: '1px 5px',
@@ -60,7 +66,7 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
   );
 };
 
-const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; managers: { name: string; count: number; avgDays?: number }[]; limit: number }> = ({ title, count, style: s, managers, limit }) => (
+const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ title, count, style: s, managers, limit, showCategory }) => (
   <div style={{ background: '#f8f9fb', borderRadius: 8, padding: '10px 12px' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
       <span style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em' }}>{title}</span>
@@ -68,7 +74,7 @@ const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; manag
         {count.toLocaleString()}건
       </span>
     </div>
-    <ManagerList managers={managers} limit={limit} />
+    <ManagerList managers={managers} limit={limit} showCategory={showCategory} />
   </div>
 );
 
@@ -151,8 +157,8 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
           <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
             <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(prodAvgDays)}`} manager="최우정" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} />}
-              {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} />}
+              {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
+              {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
             </div>
           </div>
 
