@@ -287,7 +287,7 @@ const DEFAULT_COL_WIDTHS: Record<string, number> = {
   manufacturingDate: 68, packagingDate: 200, productionSite: 82,
   revenuePossible: 68, revenuePossibleQuantity: 100,
   progressRate: 58, delayReason: 62,
-  unitPrice: 68, revenue: 80, note: 80,
+  unitPrice: 68, revenue: 80, note: 200,
 };
 
 export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateField, onSave, onSnapshot, snapshotStatus = 'idle', saveStatus, isAdmin, readOnly, hasFilter, delayedIds, children }) => {
