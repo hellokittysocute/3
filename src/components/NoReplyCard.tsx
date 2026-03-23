@@ -95,25 +95,26 @@ const cardBase: React.CSSProperties = {
   flexDirection: 'column',
 };
 
-const DEFAULT_LIMITS: Record<string, number> = { '구매': 3, '제조': 2, '충포장': 2 };
-
-const computeGroupAvgDays = (depts: (NoReplyDeptItem | undefined)[], limits: Record<string, number>): number | undefined => {
+const computeGroupAvgDays = (depts: (NoReplyDeptItem | undefined)[]): number | undefined => {
   let totalWeighted = 0, totalCount = 0;
   depts.forEach(dept => {
     if (!dept) return;
-    const limit = limits[dept.dept] || 0;
     dept.managers.forEach(m => {
       if (m.avgDays != null) {
-        totalWeighted += (m.avgDays + limit) * m.count;
+        totalWeighted += m.avgDays * m.count;
         totalCount += m.count;
       }
     });
   });
-  return totalCount > 0 ? Math.round(totalWeighted / totalCount) : undefined;
+  return totalCount > 0 ? +(totalWeighted / totalCount).toFixed(1) : undefined;
 };
 
-export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, limits }) => {
-  const effectiveLimits = useMemo(() => ({ ...DEFAULT_LIMITS, ...limits }), [limits]);
+const formatAvgDays = (v: number | undefined): string => {
+  if (v == null) return '0일';
+  return v <= 0 ? `${v}일` : `+${v}일`;
+};
+
+export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
   const dataMap = useMemo(() => Object.fromEntries(data.map(d => [d.dept, d])), [data]);
 
@@ -122,8 +123,8 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, limits }) => {
   const purchase = dataMap['구매'];
   const prodCount = (mfg?.count || 0) + (pkg?.count || 0);
 
-  const prodAvgDays = useMemo(() => computeGroupAvgDays([mfg, pkg], effectiveLimits), [mfg, pkg, effectiveLimits]);
-  const purchaseAvgDays = useMemo(() => computeGroupAvgDays([purchase], effectiveLimits), [purchase, effectiveLimits]);
+  const prodAvgDays = useMemo(() => computeGroupAvgDays([mfg, pkg]), [mfg, pkg]);
+  const purchaseAvgDays = useMemo(() => computeGroupAvgDays([purchase]), [purchase]);
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: '0.5px solid #e5e7eb', padding: 20, display: 'flex', flexDirection: 'column' }}>
@@ -145,7 +146,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, limits }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
           {/* 생산 카드 */}
           <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-            <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgInfo={`평균 ${prodAvgDays ?? 0}일 - 최우정`} />
+            <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgInfo={`평균 ${formatAvgDays(prodAvgDays)} - 최우정`} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} />}
               {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} />}
@@ -154,7 +155,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, limits }) => {
 
           {/* 구매 카드 */}
           <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-            <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgInfo={`평균 ${purchaseAvgDays ?? 0}일 - 김태문`} />
+            <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgInfo={`평균 ${formatAvgDays(purchaseAvgDays)} - 김태문`} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {purchase && purchase.count > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
             </div>
