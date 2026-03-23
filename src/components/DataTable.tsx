@@ -466,12 +466,23 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
     const topEl = topScrollRef.current;
     const tableEl = tableScrollRef.current;
     if (!topEl || !tableEl) return;
-    let syncing = false;
-    const onTopScroll = () => { if (!syncing) { syncing = true; tableEl.scrollLeft = topEl.scrollLeft; syncing = false; } };
-    const onTableScroll = () => { if (!syncing) { syncing = true; topEl.scrollLeft = tableEl.scrollLeft; syncing = false; } };
-    topEl.addEventListener('scroll', onTopScroll);
-    tableEl.addEventListener('scroll', onTableScroll);
-    return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); };
+    let rafId = 0;
+    let source: 'top' | 'table' | null = null;
+    const onTopScroll = () => {
+      if (source === 'table') return;
+      source = 'top';
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => { tableEl.scrollLeft = topEl.scrollLeft; source = null; });
+    };
+    const onTableScroll = () => {
+      if (source === 'top') return;
+      source = 'table';
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => { topEl.scrollLeft = tableEl.scrollLeft; source = null; });
+    };
+    topEl.addEventListener('scroll', onTopScroll, { passive: true });
+    tableEl.addEventListener('scroll', onTableScroll, { passive: true });
+    return () => { topEl.removeEventListener('scroll', onTopScroll); tableEl.removeEventListener('scroll', onTableScroll); cancelAnimationFrame(rafId); };
   }, []);
 
   // 우클릭 컨텍스트 메뉴 닫기
@@ -589,8 +600,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <div style={{ width: '2900px', height: '1px' }} />
       </div>
 
-      <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]">
-        <table className="text-left border-collapse min-w-[2900px]" style={{ tableLayout: 'fixed' }}>
+      <div ref={tableScrollRef} className="overflow-auto max-h-[85vh]" style={{ overflowAnchor: 'none' }}>
+        <table className="text-left border-collapse min-w-[2900px]" style={{ tableLayout: 'fixed', contain: 'layout style' }}>
           <thead className="bg-slate-50 border-b border-slate-200 sm:sticky sm:top-0 sm:z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap" onContextMenu={handleHeaderContext}>
               <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sm:sticky sm:left-0 sm:z-40 bg-slate-50 overflow-hidden">중요도</SortableTh>
