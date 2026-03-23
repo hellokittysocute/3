@@ -82,8 +82,12 @@ export function AdminUserManagement() {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
-              <tr key={user.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+            {[...users].sort((a, b) => {
+              // 비활성(미승인) 사용자를 상단에 표시
+              if (a.status !== b.status) return a.status === 'inactive' ? -1 : 1;
+              return 0;
+            }).map(user => (
+              <tr key={user.id} className={cn("border-b border-slate-50 transition-colors", user.status === 'inactive' ? "bg-amber-50/60 hover:bg-amber-100/60" : "hover:bg-slate-50/50")}>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {user.avatar_url ? (
