@@ -294,9 +294,9 @@ export default function App() {
     if (today < DELAY_DEADLINE) return new Set<string>();
     const ids = new Set<string>();
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
+      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      if ((ed?.purchaseManager ?? '').includes('사급')) return;
       const mat = (ed?.materialSettingDate ?? '').trim();
       const mfg = (ed?.manufacturingDate ?? '').trim();
       const pkg = (ed?.packagingDate ?? '').trim();
@@ -464,10 +464,10 @@ export default function App() {
 
     // 완료건: 소요일 - 기한
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
+      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
       if (!ed) return;
-      if ((ed.purchaseManager ?? '').trim() === '사급') return;
+      if ((ed.purchaseManager ?? '').includes('사급')) return;
 
       // 업로드일과 동일한 건(기존 데이터) 제외: writeDate == filledAt이면 스킵
       const writeD = parseDate(ed.writeDate ?? '');
@@ -506,9 +506,9 @@ export default function App() {
 
     // 미회신 건수 집계 + 미회신 건의 현재 경과일도 평균에 포함
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
+      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      if ((ed?.purchaseManager ?? '').includes('사급')) return;
       const cat = item.category?.trim() || '';
 
       if (!(ed?.materialSettingDate ?? '').trim()) {
@@ -573,9 +573,9 @@ export default function App() {
     const cisTotal: Record<string, number> = {};
     const cisAvg: Record<string, { total: number; cnt: number }> = {};
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
+      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      if ((ed?.purchaseManager ?? '').includes('사급')) return;
       const mgr = (item.cisManager ?? '').trim() || '미지정';
       cisTotal[mgr] = (cisTotal[mgr] || 0) + 1;
 
@@ -616,7 +616,7 @@ export default function App() {
     const sagupNoReply: Record<string, number> = {}; // 미회신 건수
     items.forEach(item => {
       const ed = editData[item.id];
-      const isSagup = item.materialSource?.trim() === '사급' || (ed?.purchaseManager ?? '').trim() === '사급';
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
       if (!isSagup) return;
       const mgr = (item.cisManager ?? '').trim() || '미지정';
       sagupTotal[mgr] = (sagupTotal[mgr] || 0) + 1;
