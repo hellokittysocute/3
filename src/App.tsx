@@ -194,7 +194,17 @@ export default function App() {
   const handleSave = useCallback(async () => {
     setSaveStatus('loading');
     try {
-      await saveAllEditData(editData, selectedMonth);
+      // 변경된 항목만 추출하여 저장 (다른 담당자의 데이터를 덮어쓰지 않도록)
+      const changedData: Record<string, EditableData> = {};
+      for (const [id, current] of Object.entries(editData)) {
+        const saved = savedEditData[id];
+        if (!saved || JSON.stringify(current) !== JSON.stringify(saved)) {
+          changedData[id] = current;
+        }
+      }
+      if (Object.keys(changedData).length > 0) {
+        await saveAllEditData(changedData, selectedMonth);
+      }
       setSavedEditData(editData);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -202,7 +212,7 @@ export default function App() {
       alert(`저장 실패: ${err.message}`);
       setSaveStatus('idle');
     }
-  }, [editData]);
+  }, [editData, savedEditData]);
 
   const handleSnapshot = useCallback(async () => {
     const [y, m] = selectedMonth.split('-');

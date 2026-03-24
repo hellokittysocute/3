@@ -620,38 +620,38 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         <table className="w-full text-left border-collapse min-w-[2900px]">
           <thead className="bg-slate-50 border-b border-slate-200 sm:sticky sm:top-0 sm:z-30">
             <tr className="text-[13px] font-bold text-slate-500 uppercase tracking-tight whitespace-nowrap" onContextMenu={handleHeaderContext}>
-              <SortableTh sortKey="writeDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[58px] sm:sticky sm:left-0 sm:z-40 bg-indigo-50/50 text-indigo-600">작성일</SortableTh>
-              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sm:sticky sm:left-[58px] sm:z-40 bg-slate-50">중요도</SortableTh>
-              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-40 bg-slate-50">CIS담당</SortableTh>
-              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-40 bg-indigo-50/50 text-indigo-600">구매담당</SortableTh>
-              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[218px] sm:z-40 bg-slate-50">중분류</SortableTh>
-              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-40 bg-slate-50">고객약호</SortableTh>
-              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-40 bg-slate-50">자재</SortableTh>
-              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
+              <SortableTh sortKey="writeDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[58px] sm:sticky sm:left-0 sm:z-40 bg-indigo-100 text-indigo-600">작성일</SortableTh>
+              <SortableTh sortKey="importance" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center w-[44px] sm:sticky sm:left-[58px] sm:z-40 bg-slate-100">중요도</SortableTh>
+              <SortableTh sortKey="cisManager" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-40 bg-slate-100">CIS담당</SortableTh>
+              <SortableTh sortKey="purchaseManager" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-40 bg-indigo-100 text-indigo-600">구매담당</SortableTh>
+              <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[218px] sm:z-40 bg-slate-100">중분류</SortableTh>
+              <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-40 bg-slate-100">고객약호</SortableTh>
+              <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-40 bg-slate-100">자재</SortableTh>
+              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-40 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
 
-              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center">생성일</SortableTh>
-              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center">원납기일</SortableTh>
-              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center">변경납기일</SortableTh>
-              <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</SortableTh>
-              <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</SortableTh>
-              <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</SortableTh>
-              <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[76px]">생산완료<br/>요청일</SortableTh>
-              <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">부자재</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-50/50 text-rose-500 w-[48px] text-[11px]">부자재<br/>D-day</th>
-              <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[62px]">제조<br/>요청여부</SortableTh>
-              <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[72px]">현재<br/>제조계획</SortableTh>
-              <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[68px]">제조</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-50/50 text-rose-500 w-[48px] text-[11px]">제조<br/>D-day</th>
-              <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[200px]">충포장</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-50/50 text-rose-500 w-[48px] text-[11px]">충포장<br/>D-day</th>
-              <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-600 w-[82px]">생산처</SortableTh>
-              <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600">매출<br/>가능여부</SortableTh>
-              <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
-              <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">진도율</SortableTh>
-              <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-50/50 text-amber-600">지연<br/>사유</SortableTh>
-              {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right">단가</SortableTh>}
-              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right">매출<br/>(단가x잔량)</SortableTh>
-              <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center">비고</SortableTh>
+              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">생성일</SortableTh>
+              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">원납기일</SortableTh>
+              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">변경납기일</SortableTh>
+              <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px] bg-slate-100">총오더수량</SortableTh>
+              <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px] bg-slate-100">환산수량</SortableTh>
+              <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px] bg-slate-100">미납잔량</SortableTh>
+              <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[76px]">생산완료<br/>요청일</SortableTh>
+              <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[68px]">부자재</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">부자재<br/>D-day</th>
+              <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[62px] bg-slate-100">제조<br/>요청여부</SortableTh>
+              <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[72px] bg-slate-100">현재<br/>제조계획</SortableTh>
+              <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[68px]">제조</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">제조<br/>D-day</th>
+              <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[200px]">충포장</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">충포장<br/>D-day</th>
+              <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[82px]">생산처</SortableTh>
+              <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600">매출<br/>가능여부</SortableTh>
+              <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
+              <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>
+              <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>
+              {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
+              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">매출<br/>(단가x잔량)</SortableTh>
+              <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center bg-slate-100">비고</SortableTh>
             </tr>
           </thead>
           <tbody className="text-[15px]">
