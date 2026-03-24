@@ -192,6 +192,10 @@ const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> =
 
 export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagupManagers }) => {
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
+  const hasPurchaseManagers = useMemo(() => {
+    const p = data.find(d => d.dept === '구매');
+    return p ? p.managers.length > 0 : false;
+  }, [data]);
   const dataMap = useMemo(() => Object.fromEntries(data.map(d => [d.dept, d])), [data]);
 
   const mfg = dataMap['제조'];
@@ -214,7 +218,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
         )}
       </div>
 
-      {totalCount === 0 ? (
+      {totalCount === 0 && !hasPurchaseManagers ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <span style={{ fontSize: 13, color: '#9ca3af' }}>미회신 없음</span>
         </div>
@@ -225,7 +229,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
             <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
               <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgLabel={`평균 ${formatAvgDays(purchaseAvgDays)}`} manager="김태문" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {purchase && purchase.count > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
+                {purchase && purchase.managers.length > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
               </div>
             </div>
             {sagupManagers && sagupManagers.length > 0 && (
