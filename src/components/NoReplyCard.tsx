@@ -192,7 +192,8 @@ const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> =
 };
 
 export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagupManagers }) => {
-  const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
+  const cisNoReplyCount = useMemo(() => (cisNoReply || []).reduce((s, c) => s + c.count, 0), [cisNoReply]);
+  const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0) + cisNoReplyCount, [data, cisNoReplyCount]);
   const hasPurchaseManagers = useMemo(() => {
     const p = data.find(d => d.dept === '구매');
     return p ? p.managers.length > 0 : false;
