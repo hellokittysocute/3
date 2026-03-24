@@ -7,7 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(value: number) {
   const eok = value / 100000000;
-  return `${Math.round(eok)}억`;
+  if (eok >= 1) return `${Math.round(eok)}억`;
+  if (eok >= 0.1) return `${eok.toFixed(1)}억`;
+  const cheon = value / 10000000;
+  if (cheon >= 0.1) return `${cheon.toFixed(1)}천`;
+  return value.toLocaleString();
 }
 
 export function formatCurrencyDetail(value: number) {
