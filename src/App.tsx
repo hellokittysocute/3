@@ -577,14 +577,11 @@ export default function App() {
       const ed = editData[item.id];
       if ((ed?.purchaseManager ?? '').trim() === '사급') return;
       const mgr = (item.cisManager ?? '').trim() || '미지정';
-
-      // 충포장 입력 완료 건만 대상 (충포장 이후 가능여부 입력 추적)
-      if (!(ed?.packagingDate ?? '').trim()) return;
       cisTotal[mgr] = (cisTotal[mgr] || 0) + 1;
 
       const pkgFilledD = parseDate(ed?.packagingFilledAt ?? '');
 
-      // 완료건: 가능여부 입력됨 (가능/불가능)
+      // 완료건: 가능여부 입력됨 (가능/불가능) + 충포장 입력 완료
       if (ed?.revenuePossible && ed.revenuePossible !== '확인중') {
         const revFilledD = parseDate(ed?.revenuePossibleFilledAt ?? '');
         if (pkgFilledD && revFilledD) {
@@ -593,8 +590,9 @@ export default function App() {
           cisAvg[mgr].cnt += 1;
         }
       } else {
-        // 미회신: 충포장 입력 후 가능여부 미입력
+        // 미회신: 가능여부 미입력 (확인중 또는 빈 값)
         cisByMgr[mgr] = (cisByMgr[mgr] || 0) + 1;
+        // 충포장 입력 완료된 건만 경과일 평균에 포함
         if (pkgFilledD) {
           if (!cisAvg[mgr]) cisAvg[mgr] = { total: 0, cnt: 0 };
           cisAvg[mgr].total += bizDays(pkgFilledD, today) - LIMIT_REV;
