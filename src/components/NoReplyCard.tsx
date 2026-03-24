@@ -243,7 +243,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
       {(cisNoReply && cisNoReply.length > 0) || (sagupManagers && sagupManagers.length > 0) ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
           {cisNoReply && cisNoReply.length > 0 && (
-            <CisRevenueChart data={cisNoReply} style={CIS_STYLE} />
+            <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
           )}
           {sagupManagers && sagupManagers.length > 0 && (
             <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
