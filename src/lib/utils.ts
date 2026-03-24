@@ -16,6 +16,8 @@ export function formatCurrency(value: number) {
 
 export function formatCurrencyDetail(value: number) {
   const eok = value / 100000000;
+  if (eok >= 10) return `${Math.round(eok)}억`;
+  if (eok >= 1) return `${eok.toFixed(1)}억`;
   return `${eok.toFixed(2)}억`;
 }
 

@@ -183,10 +183,14 @@ export default function App() {
       if (field === 'packagingDate' && !old.packagingDate && value) {
         updated.packagingFilledAt = today;
       }
+      if (field === 'revenuePossible' && (!old.revenuePossible || old.revenuePossible === '확인중') && value && value !== '확인중') {
+        updated.revenuePossibleFilledAt = today;
+      }
       // 값 삭제 시 filledAt도 초기화
       if (field === 'materialSettingDate' && !value) updated.materialSettingFilledAt = '';
       if (field === 'manufacturingDate' && !value) updated.manufacturingFilledAt = '';
       if (field === 'packagingDate' && !value) updated.packagingFilledAt = '';
+      if (field === 'revenuePossible' && (!value || value === '확인중')) updated.revenuePossibleFilledAt = '';
       return { ...prev, [id]: updated };
     });
   }, []);
@@ -290,9 +294,9 @@ export default function App() {
     if (today < DELAY_DEADLINE) return new Set<string>();
     const ids = new Set<string>();
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
+      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      if ((ed?.purchaseManager ?? '').includes('사급')) return;
       const mat = (ed?.materialSettingDate ?? '').trim();
       const mfg = (ed?.manufacturingDate ?? '').trim();
       const pkg = (ed?.packagingDate ?? '').trim();
@@ -452,7 +456,7 @@ export default function App() {
       return c;
     };
     // 담당자별 D-day 기준 평균 (소요일 - 기한 = 차이, 음수=빠름, 양수=초과)
-    const LIMIT_PURCHASE = 3, LIMIT_MFG = 2, LIMIT_PKG = 2;
+    const LIMIT_PURCHASE = 3, LIMIT_MFG = 3, LIMIT_PKG = 2;
     const purchaseAvg: Record<string, { total: number; cnt: number }> = {};
     const mfgAvg: Record<string, { total: number; cnt: number }> = {};
     const pkgAvg: Record<string, { total: number; cnt: number }> = {};
@@ -460,10 +464,10 @@ export default function App() {
 
     // 완료건: 소요일 - 기한
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
+      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
       if (!ed) return;
-      if ((ed.purchaseManager ?? '').trim() === '사급') return;
+      if ((ed.purchaseManager ?? '').includes('사급')) return;
 
       // 업로드일과 동일한 건(기존 데이터) 제외: writeDate == filledAt이면 스킵
       const writeD = parseDate(ed.writeDate ?? '');
@@ -502,12 +506,12 @@ export default function App() {
 
     // 미회신 건수 집계 + 미회신 건의 현재 경과일도 평균에 포함
     items.forEach(item => {
-      if (item.materialSource?.trim() === '사급') return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
       const cat = item.category?.trim() || '';
 
-      if (!(ed?.materialSettingDate ?? '').trim()) {
+      // 구매 미회신: 사급 제외
+      if (!isSagup && !(ed?.materialSettingDate ?? '').trim()) {
         purchaseCount++;
         const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
         purchaseByMgr[mgr] = (purchaseByMgr[mgr] || 0) + 1;
@@ -546,8 +550,106 @@ export default function App() {
     ].filter(d => d.count > 0);
   }, [items, editData]);
 
-  // 담당자별 평균 회신일 계산
+  // CIS 담당자별 미회신 건수 (사급 제외) + 사급 건 CIS 평균 입력일
+  const cisNoReplyData = useMemo(() => {
+    const parseDate = (s: string): Date | null => {
+      if (!s) return null;
+      const v = s.trim().replace(/^~/, '');
+      const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2]));
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const bizDays = (from: Date, to: Date): number => {
+      let c = 0; const d = new Date(from);
+      while (d < to) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) c++; }
+      return c;
+    };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
 
+    // 1) CIS 담당자별 매출 가능여부 미입력 건수 + 평균 입력일 (충포장filledAt→가능여부입력, 기한 2일)
+    const LIMIT_REV = 2;
+    const cisByMgr: Record<string, number> = {};
+    const cisTotal: Record<string, number> = {};
+    const cisAvg: Record<string, { total: number; cnt: number }> = {};
+    items.forEach(item => {
+      const ed = editData[item.id];
+      const mgr = (item.cisManager ?? '').trim() || '미지정';
+      cisTotal[mgr] = (cisTotal[mgr] || 0) + 1;
+
+      const pkgFilledD = parseDate(ed?.packagingFilledAt ?? '');
+
+      // 완료건: 가능여부 입력됨 (가능/불가능) + 충포장 입력 완료
+      if (ed?.revenuePossible && ed.revenuePossible !== '확인중') {
+        const revFilledD = parseDate(ed?.revenuePossibleFilledAt ?? '');
+        if (pkgFilledD && revFilledD) {
+          if (!cisAvg[mgr]) cisAvg[mgr] = { total: 0, cnt: 0 };
+          cisAvg[mgr].total += bizDays(pkgFilledD, revFilledD) - LIMIT_REV;
+          cisAvg[mgr].cnt += 1;
+        }
+      } else {
+        // 미회신: 가능여부 미입력 (확인중 또는 빈 값)
+        cisByMgr[mgr] = (cisByMgr[mgr] || 0) + 1;
+        // 충포장 입력 완료된 건만 경과일 평균에 포함
+        if (pkgFilledD) {
+          if (!cisAvg[mgr]) cisAvg[mgr] = { total: 0, cnt: 0 };
+          cisAvg[mgr].total += bizDays(pkgFilledD, today) - LIMIT_REV;
+          cisAvg[mgr].cnt += 1;
+        }
+      }
+    });
+    const cisNoReply = Object.entries(cisTotal)
+      .map(([name, total]) => {
+        const a = cisAvg[name];
+        const noReply = cisByMgr[name] || 0;
+        return { name, count: noReply, totalCount: total, avgDays: a && a.cnt > 0 ? +(a.total / a.cnt).toFixed(1) : undefined };
+      })
+      .filter(m => m.totalCount > 0)
+      .sort((a, b) => b.count - a.count);
+
+    // 2) 사급 건 CIS 담당자별 부자재 평균 입력일 (writeDate → materialSettingFilledAt)
+    const LIMIT_SAGUP = 3;
+    const sagupAvg: Record<string, { total: number; cnt: number }> = {};
+    const sagupTotal: Record<string, number> = {}; // 전체 사급 건수 (완료+미회신)
+    const sagupNoReply: Record<string, number> = {}; // 미회신 건수
+    items.forEach(item => {
+      const ed = editData[item.id];
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
+      if (!isSagup) return;
+      const mgr = (item.cisManager ?? '').trim() || '미지정';
+      sagupTotal[mgr] = (sagupTotal[mgr] || 0) + 1;
+
+      const writeD = parseDate(ed?.writeDate ?? '');
+
+      // 완료건: filledAt이 있으면 평균 계산 (사급은 CIS 담당자 직접 관리)
+      const matFilled = parseDate(ed?.materialSettingFilledAt ?? '');
+      if (writeD && matFilled) {
+        if (!sagupAvg[mgr]) sagupAvg[mgr] = { total: 0, cnt: 0 };
+        sagupAvg[mgr].total += bizDays(writeD, matFilled) - LIMIT_SAGUP;
+        sagupAvg[mgr].cnt += 1;
+      }
+
+      // 미회신 건 경과일도 평균에 포함
+      if (!(ed?.materialSettingDate ?? '').trim()) {
+        sagupNoReply[mgr] = (sagupNoReply[mgr] || 0) + 1;
+        if (writeD) {
+          if (!sagupAvg[mgr]) sagupAvg[mgr] = { total: 0, cnt: 0 };
+          sagupAvg[mgr].total += bizDays(writeD, today) - LIMIT_SAGUP;
+          sagupAvg[mgr].cnt += 1;
+        }
+      }
+    });
+    const sagupManagers = Object.entries(sagupTotal)
+      .map(([name, total]) => {
+        const a = sagupAvg[name];
+        const noReply = sagupNoReply[name] || 0;
+        return { name, count: total, noReplyCount: noReply, avgDays: a && a.cnt > 0 ? +(a.total / a.cnt).toFixed(1) : undefined };
+      })
+      .filter(m => m.count > 0)
+      .sort((a, b) => b.noReplyCount - a.noReplyCount);
+
+    return { cisNoReply, sagupManagers };
+  }, [items, editData]);
 
   // 고객사 드릴다운 데이터
   const customerModalData = useMemo(() => {
@@ -773,91 +875,80 @@ export default function App() {
 
           return (
           <div style={{ gap: 20, display: 'flex', flexDirection: 'column' as const }}>
-            {/* 1행 — 매출현황(도넛) + 진도현황 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
-              {/* 매출현황 도넛 차트 */}
-              <DonutChart
-                totalRevenue={stats.overall.totalRevenue}
-                totalCount={stats.overall.totalCount}
-                checkingRevenue={stats.overall.checkingRevenue}
-                checkingCount={stats.overall.checkingCount}
-                possibleRevenue={stats.overall.possibleRevenue}
-                possibleCount={stats.overall.possibleCount}
-                impossibleRevenue={stats.overall.impossibleRevenue}
-                impossibleCount={stats.overall.impossibleCount}
-              />
+            {/* 1행 — 좌: 매출현황+진도현황 / 우: 미회신 건수 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 items-start" style={{ gap: 20 }}>
+              {/* 좌측: 매출현황 + 진도현황 */}
+              <div className="flex flex-col" style={{ gap: 20 }}>
+                <DonutChart
+                  totalRevenue={stats.overall.totalRevenue}
+                  totalCount={stats.overall.totalCount}
+                  checkingRevenue={stats.overall.checkingRevenue}
+                  checkingCount={stats.overall.checkingCount}
+                  possibleRevenue={stats.overall.possibleRevenue}
+                  possibleCount={stats.overall.possibleCount}
+                  impossibleRevenue={stats.overall.impossibleRevenue}
+                  impossibleCount={stats.overall.impossibleCount}
+                />
 
-              {/* 진도현황 */}
-              <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
-                  <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">실시간</span>
-                </div>
-                {/* 목표 대비 가능금액 */}
-                <div className="mb-3">
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-[12px] font-medium text-gray-400">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
-                    <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
-                      {goalRate.toFixed(1)}%
-                    </span>
+                {/* 진도현황 */}
+                <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
+                    <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">실시간</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
-                  </div>
-                </div>
-
-                {/* 진도율 추이 라인 차트 */}
-                <div className="border-t border-gray-50 pt-3 flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[13px] font-semibold text-gray-700">진도율 추이</span>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
-                        <span className="text-[11px] text-gray-400">진도율</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 border-t border-dashed border-gray-300" />
-                        <span className="text-[11px] text-gray-400">목표</span>
-                      </div>
+                  <div className="mb-3">
+                    <div className="flex justify-between items-end mb-1.5">
+                      <span className="text-[12px] font-medium text-gray-400">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
+                      <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
+                        {goalRate.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
                     </div>
                   </div>
-                  <div style={{ height: 130 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} dy={4} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-4} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
-                        <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
-                        <Line type="monotone" dataKey="rate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div className="border-t border-gray-50 pt-3 flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[13px] font-semibold text-gray-700">진도율 추이</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
+                          <span className="text-[11px] text-gray-400">진도율</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 border-t border-dashed border-gray-300" />
+                          <span className="text-[11px] text-gray-400">목표</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ height: 130 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={trendData}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} dy={4} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-4} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
+                          <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
+                          <Line type="monotone" dataKey="rate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 mt-3" style={{ gap: 8 }}>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
+                      <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.overall.toFixed(0)}%</div>
+                    </div>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
+                      <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.totalRevenue)}</div>
+                    </div>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
+                      <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.possibleRevenue)}</div>
+                    </div>
                   </div>
                 </div>
-
-                {/* 하단 3개 스탯 박스 */}
-                <div className="grid grid-cols-3 mt-3" style={{ gap: 8 }}>
-                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
-                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
-                    <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.overall.toFixed(0)}%</div>
-                  </div>
-                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
-                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
-                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.totalRevenue)}</div>
-                  </div>
-                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
-                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
-                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.possibleRevenue)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3행 — 미회신 건수 + 귀책부서별 지연현황 & Top10 고객사 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              <NoReplyCard data={noReplyData} />
-
-              <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={delayByDeptData} onDeptClick={(dept) => setDelayDeptModal(dept)} />
                 <Top10CustomerCard
                   data={customerChartData.map((c) => ({
@@ -868,6 +959,9 @@ export default function App() {
                   onCustomerClick={(name) => setCustomerModal(name)}
                 />
               </div>
+
+              {/* 우측: 미회신 건수 */}
+              <NoReplyCard data={noReplyData} cisNoReply={cisNoReplyData.cisNoReply} sagupManagers={cisNoReplyData.sagupManagers} />
             </div>
           </div>
           );

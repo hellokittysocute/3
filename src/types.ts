@@ -55,6 +55,7 @@ export interface EditableData {
   materialSettingFilledAt: string;
   manufacturingFilledAt: string;
   packagingFilledAt: string;
+  revenuePossibleFilledAt: string;
   delayReason: string;
   importance: '상' | '중' | '하' | '';
   productionSite: string;

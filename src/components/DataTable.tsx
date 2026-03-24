@@ -174,7 +174,7 @@ function hasOverdueDday(row: EditableData | undefined): boolean {
   if (!row) return false;
   const checks: [string, string, number][] = [
     [row.writeDate, row.materialSettingFilledAt, 3],           // 부자재
-    [row.materialSettingFilledAt, row.manufacturingFilledAt, 2], // 제조
+    [row.materialSettingFilledAt, row.manufacturingFilledAt, 3], // 제조
     [row.manufacturingFilledAt, row.packagingFilledAt, 2],      // 충포장
   ];
   for (const [base, filled, limit] of checks) {
@@ -223,9 +223,10 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[218px] sm:z-20 whitespace-nowrap bg-white">{item.category}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[288px] sm:z-20 whitespace-nowrap bg-white">{item.customerCode}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] sm:sticky sm:left-[350px] sm:z-20 bg-white">{item.materialCode}</td>
-      <td className="px-2 py-1 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
+      <td className="px-2 py-1 border-r border-slate-100/60 sm:sticky sm:left-[460px] sm:z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
+      <td className="px-2 py-1 border-r-2 border-slate-300 text-right font-bold text-slate-900 text-[13px]">{formatCurrencyDetail(getRevenue(item))}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.createdDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.originalDueDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.changedDueDate)}</td>
@@ -246,7 +247,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
       </td>
-      {(() => { const d = calcDday(row?.materialSettingFilledAt ?? '', row?.manufacturingFilledAt ?? '', 2); return (
+      {(() => { const d = calcDday(row?.materialSettingFilledAt ?? '', row?.manufacturingFilledAt ?? '', 3); return (
         <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
       ); })()}
       <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
@@ -277,6 +278,23 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
         <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]", (row?.revenuePossible || '확인중') === '확인중' && "bg-slate-50 text-slate-300")} value={(row?.revenuePossible || '확인중') === '확인중' ? '' : (row?.revenuePossibleQuantity ? row.revenuePossibleQuantity.toLocaleString() : '')} placeholder={(row?.revenuePossible || '확인중') === '확인중' ? '' : '입력'} onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly || (row?.revenuePossible || '확인중') === '확인중'} />
       </td>
+      {(() => { const d = calcDday(row?.packagingFilledAt ?? '', row?.revenuePossible === '가능' || row?.revenuePossible === '불가능' ? (row?.packagingFilledAt ?? '') : '', 2);
+        // 충포장 미입력이면 none, 매출가능여부 미입력이면 경과일 표시
+        const show = (row?.packagingDate ?? '').trim() && (row?.packagingFilledAt ?? '').trim();
+        const pending = show && (row?.revenuePossible === '확인중' || !row?.revenuePossible);
+        if (pending) {
+          const parseD = (s: string): Date | null => { if (!s) return null; const v = s.trim().replace(/^~/, ''); const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/); if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2])); const dd = new Date(v); return isNaN(dd.getTime()) ? null : dd; };
+          const bizD = (from: Date, to: Date): number => { let c = 0; const dd = new Date(from); while (dd < to) { dd.setDate(dd.getDate() + 1); if (dd.getDay() !== 0 && dd.getDay() !== 6) c++; } return c; };
+          const pkgD = parseD(row?.packagingFilledAt ?? '');
+          const now = new Date(); now.setHours(0,0,0,0);
+          const elapsed = pkgD ? bizD(pkgD, now) : 0;
+          const diff = elapsed - 2;
+          const status = diff > 0 ? 'over' : diff === 0 ? 'today' : 'ok';
+          const label = diff <= 0 ? `D${diff}` : `D+${diff}`;
+          return <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[status])}>{label}</td>;
+        }
+        return <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", show ? DDAY_STYLE['done'] : DDAY_STYLE['none'])}>{show && row?.revenuePossible && row.revenuePossible !== '확인중' ? '✓' : ''}</td>;
+      })()}
       <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <span className="text-[13px] font-bold" style={{ color: color.text }}>
           {rate.toFixed(1)}%
@@ -301,7 +319,6 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
-      <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{formatCurrencyDetail(getRevenue(item))}</td>
       <td className="px-1 py-1">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} disabled={readOnly} />
       </td>
@@ -467,7 +484,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   }, [items, getTier, activeTier]);
 
   const sortedItems = useMemo(() => {
-    if (!sortConfig) return filteredItems;
+    if (!sortConfig) {
+      // 기본 정렬: 매출 내림차순
+      return [...filteredItems].sort((a, b) => getRevenue(b) - getRevenue(a));
+    }
     const { key, direction } = sortConfig;
     return [...filteredItems].sort((a, b) => {
       const aVal = getSortValue(a, editData, key);
@@ -627,7 +647,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <SortableTh sortKey="category" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[218px] sm:z-40 bg-slate-100">중분류</SortableTh>
               <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-40 bg-slate-100">고객약호</SortableTh>
               <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-40 bg-slate-100">자재</SortableTh>
-              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-40 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
+              <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[460px] sm:z-40 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
+              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 text-right bg-slate-100">매출<br/>(단가x잔량)</SortableTh>
 
               <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">생성일</SortableTh>
               <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">원납기일</SortableTh>
@@ -647,10 +668,10 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[82px]">생산처</SortableTh>
               <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600">매출<br/>가능여부</SortableTh>
               <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">가능여부<br/>D-day</th>
               <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>
               <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>
               {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
-              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">매출<br/>(단가x잔량)</SortableTh>
               <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center bg-slate-100">비고</SortableTh>
             </tr>
           </thead>
@@ -658,7 +679,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 30 : 29} />
+                <td colSpan={isAdmin ? 31 : 30} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -692,23 +713,32 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 30 : 29} />
+                <td colSpan={isAdmin ? 31 : 30} />
               </tr>
             )}
           </tbody>
           <tfoot className="sm:sticky sm:bottom-0 sm:z-25 border-t-2 border-slate-300">
             <tr className="bg-slate-100 font-extrabold text-slate-800 text-[15px]">
+              {/* sticky 8열: 작성일~내역 (헤더와 동일한 left 위치) */}
               <td className="px-3 py-3 border-r border-slate-200 text-center text-[14px] text-slate-500 sm:sticky sm:left-0 sm:z-20 bg-slate-100">합계</td>
-              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[44px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[58px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[102px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}></td>
-              <td colSpan={4} className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[218px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-20 bg-slate-100"></td>
+              <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[460px] sm:z-20 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}></td>
+              {/* 매출 합계 */}
+              <td className="px-4 py-3 text-right border-r-2 border-slate-300 bg-slate-100">{formatCurrencyDetail(totals.revenue)}</td>
+              {/* 생성일, 원납기일, 변경납기일 */}
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              {/* 총오더수량, 환산수량, 미납잔량 */}
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
+              {/* 생산완료요청일, 부자재, 부자재D-day, 제조요청여부, 현재제조계획, 제조, 제조D-day, 충포장, 충포장D-day, 생산처 */}
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
@@ -719,12 +749,19 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
+              {/* 매출가능여부 */}
               <td className="px-4 py-3 border-r border-slate-200"></td>
+              {/* 매출가능수량 */}
               <td className="px-4 py-3 text-right border-r border-slate-200">{totalRevenuePossibleQty.toLocaleString()}</td>
+              {/* 가능여부D-day */}
               <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200 text-right font-extrabold text-[14px] text-slate-500">전체 합계</td>
+              {/* 진도율 */}
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              {/* 지연사유 */}
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              {/* [admin] 단가 */}
               {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}
-              <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrencyDetail(totals.revenue)}</td>
+              {/* 비고 */}
               <td className="px-4 py-3"></td>
             </tr>
           </tfoot>

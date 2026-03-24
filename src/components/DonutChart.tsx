@@ -151,16 +151,15 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         height: '100%',
       }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px 14px' }}>
+        <div style={{ padding: '14px 18px 10px' }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', margin: 0 }}>매출 현황</h3>
-          <p style={{ fontSize: 12, fontWeight: 400, color: '#9ca3af', margin: '3px 0 0' }}>비율과 수치를 동시에 파악</p>
         </div>
-        <div style={{ height: 1, background: '#f1f5f9', margin: '0 24px' }} />
+        <div style={{ height: 1, background: '#f1f5f9', margin: '0 18px' }} />
 
         {/* Body */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '24px 24px 28px', flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '14px 18px 16px', flex: 1, minWidth: 0 }}>
           {/* Donut */}
-          <div style={{ position: 'relative', flexShrink: 0, width: 'min(180px, 35%)', aspectRatio: '1' }}>
+          <div style={{ position: 'relative', flexShrink: 0, width: 'min(150px, 32%)', aspectRatio: '1' }}>
             <svg ref={svgRef} viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }} />
             <div style={{
               position: 'absolute', inset: 0,
@@ -178,17 +177,16 @@ export const DonutChart: React.FC<DonutChartProps> = ({
           </div>
 
           {/* Legend */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
             {legendItems.map((item) => (
               <div
                 key={item.label}
                 className="legend-row"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '14px 14px', borderRadius: 12,
+                  padding: '10px 12px', borderRadius: 10,
                   background: '#f9fafb',
                   cursor: 'default',
-                  flex: 1,
                 }}
               >
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
