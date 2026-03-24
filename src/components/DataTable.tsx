@@ -226,9 +226,9 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.createdDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.originalDueDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center">{formatDateShort(item.changedDueDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.createdDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.originalDueDate)}</td>
+      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.changedDueDate)}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
       <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
@@ -629,9 +629,9 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-40 bg-slate-50">자재</SortableTh>
               <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 sm:sticky sm:left-[460px] sm:z-40 bg-slate-50" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
 
-              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">생성일</SortableTh>
-              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">원납기일</SortableTh>
-              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[62px] text-center">변경납기일</SortableTh>
+              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center">생성일</SortableTh>
+              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center">원납기일</SortableTh>
+              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center">변경납기일</SortableTh>
               <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px]">총오더수량</SortableTh>
               <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">환산수량</SortableTh>
               <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px]">미납잔량</SortableTh>
@@ -704,8 +704,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[160px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[230px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[292px] sm:z-20 bg-slate-100"></td>
-              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100 text-right" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>전체 합계</td>
-              <td colSpan={3} className="px-4 py-3 text-right border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r-2 border-slate-300 sm:sticky sm:left-[402px] sm:z-20 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}></td>
+              <td colSpan={4} className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
@@ -716,9 +716,13 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200"></td>
               <td className="px-4 py-3 text-right border-r border-slate-200">{totalRevenuePossibleQty.toLocaleString()}</td>
               <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
+              <td className="px-4 py-3 border-r border-slate-200 text-right font-extrabold text-[14px] text-slate-500">전체 합계</td>
               {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}
               <td className="px-4 py-3 border-r border-slate-200 text-right">{formatCurrencyDetail(totals.revenue)}</td>
               <td className="px-4 py-3"></td>
