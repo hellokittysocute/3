@@ -4,6 +4,7 @@ export interface NoReplyDeptItem {
   dept: string;
   count: number;
   managers: { name: string; count: number; avgDays?: number }[];
+  groupAvgDays?: number;
 }
 
 export interface CisNoReplyItem {
@@ -204,7 +205,7 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
   const prodCount = (mfg?.count || 0) + (pkg?.count || 0);
 
   const prodAvgDays = useMemo(() => computeGroupAvgDays([mfg, pkg]), [mfg, pkg]);
-  const purchaseAvgDays = useMemo(() => computeGroupAvgDays([purchase]), [purchase]);
+  const purchaseAvgDays = useMemo(() => purchase?.groupAvgDays ?? computeGroupAvgDays([purchase]), [purchase]);
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: '0.5px solid #e5e7eb', padding: 20, display: 'flex', flexDirection: 'column' }}>

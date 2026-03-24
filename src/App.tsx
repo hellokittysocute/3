@@ -561,14 +561,24 @@ export default function App() {
     const purchaseManagerList = Array.from(allPurchaseMgrNames).map(name => {
       const noReplyCount = Math.round(purchaseByMgr[name] || 0);
       const a = purchaseAvg[name];
-      return { name, count: noReplyCount, avgDays: a && a.cnt > 0 ? a.total / a.cnt : undefined };
+      const avgDays = a && a.cnt > 0 ? a.total / a.cnt : undefined;
+      const avgCnt = a?.cnt || 0; // 완료건 수 (가중평균용)
+      return { name, count: noReplyCount, avgDays, avgCnt };
     }).sort((a, b) => b.count - a.count || (a.avgDays ?? 0) - (b.avgDays ?? 0));
     const purchaseAllCount = purchaseManagerList.reduce((s, m) => s + m.count, 0);
+    // 구매 전체 평균: 완료건 수 기반 가중평균
+    const purchaseGroupAvg = (() => {
+      let tw = 0, tc = 0;
+      purchaseManagerList.forEach(m => {
+        if (m.avgDays != null) { tw += m.avgDays * m.avgCnt; tc += m.avgCnt; }
+      });
+      return tc > 0 ? +(tw / tc).toFixed(1) : undefined;
+    })();
 
     return [
       { dept: '제조', count: mfgCount, managers: toManagerList(mfgByMgr, mfgAvg) },
       { dept: '충포장', count: pkgCount, managers: toManagerList(pkgByMgr, pkgAvg) },
-      { dept: '구매', count: purchaseAllCount, managers: purchaseManagerList },
+      { dept: '구매', count: purchaseAllCount, managers: purchaseManagerList, groupAvgDays: purchaseGroupAvg },
     ].filter(d => d.count > 0 || d.dept === '구매');
   }, [items, editData]);
 
