@@ -183,10 +183,14 @@ export default function App() {
       if (field === 'packagingDate' && !old.packagingDate && value) {
         updated.packagingFilledAt = today;
       }
+      if (field === 'revenuePossible' && (!old.revenuePossible || old.revenuePossible === '확인중') && value && value !== '확인중') {
+        updated.revenuePossibleFilledAt = today;
+      }
       // 값 삭제 시 filledAt도 초기화
       if (field === 'materialSettingDate' && !value) updated.materialSettingFilledAt = '';
       if (field === 'manufacturingDate' && !value) updated.manufacturingFilledAt = '';
       if (field === 'packagingDate' && !value) updated.packagingFilledAt = '';
+      if (field === 'revenuePossible' && (!value || value === '확인중')) updated.revenuePossibleFilledAt = '';
       return { ...prev, [id]: updated };
     });
   }, []);
@@ -546,8 +550,110 @@ export default function App() {
     ].filter(d => d.count > 0);
   }, [items, editData]);
 
-  // 담당자별 평균 회신일 계산
+  // CIS 담당자별 미회신 건수 (사급 제외) + 사급 건 CIS 평균 입력일
+  const cisNoReplyData = useMemo(() => {
+    const parseDate = (s: string): Date | null => {
+      if (!s) return null;
+      const v = s.trim().replace(/^~/, '');
+      const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2]));
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const bizDays = (from: Date, to: Date): number => {
+      let c = 0; const d = new Date(from);
+      while (d < to) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) c++; }
+      return c;
+    };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
 
+    // 1) CIS 담당자별 매출 가능여부 미입력 건수 + 평균 입력일 (충포장filledAt→가능여부입력, 기한 2일)
+    const LIMIT_REV = 2;
+    const cisByMgr: Record<string, number> = {};
+    const cisTotal: Record<string, number> = {};
+    const cisAvg: Record<string, { total: number; cnt: number }> = {};
+    items.forEach(item => {
+      if (item.materialSource?.trim() === '사급') return;
+      const ed = editData[item.id];
+      if ((ed?.purchaseManager ?? '').trim() === '사급') return;
+      const mgr = (item.cisManager ?? '').trim() || '미지정';
+
+      // 충포장 입력 완료 건만 대상 (충포장 이후 가능여부 입력 추적)
+      if (!(ed?.packagingDate ?? '').trim()) return;
+      cisTotal[mgr] = (cisTotal[mgr] || 0) + 1;
+
+      const pkgFilledD = parseDate(ed?.packagingFilledAt ?? '');
+
+      // 완료건: 가능여부 입력됨 (가능/불가능)
+      if (ed?.revenuePossible && ed.revenuePossible !== '확인중') {
+        const revFilledD = parseDate(ed?.revenuePossibleFilledAt ?? '');
+        if (pkgFilledD && revFilledD) {
+          if (!cisAvg[mgr]) cisAvg[mgr] = { total: 0, cnt: 0 };
+          cisAvg[mgr].total += bizDays(pkgFilledD, revFilledD) - LIMIT_REV;
+          cisAvg[mgr].cnt += 1;
+        }
+      } else {
+        // 미회신: 충포장 입력 후 가능여부 미입력
+        cisByMgr[mgr] = (cisByMgr[mgr] || 0) + 1;
+        if (pkgFilledD) {
+          if (!cisAvg[mgr]) cisAvg[mgr] = { total: 0, cnt: 0 };
+          cisAvg[mgr].total += bizDays(pkgFilledD, today) - LIMIT_REV;
+          cisAvg[mgr].cnt += 1;
+        }
+      }
+    });
+    const cisNoReply = Object.entries(cisTotal)
+      .map(([name, total]) => {
+        const a = cisAvg[name];
+        const noReply = cisByMgr[name] || 0;
+        return { name, count: noReply, totalCount: total, avgDays: a && a.cnt > 0 ? +(a.total / a.cnt).toFixed(1) : undefined };
+      })
+      .filter(m => m.totalCount > 0)
+      .sort((a, b) => b.count - a.count);
+
+    // 2) 사급 건 CIS 담당자별 부자재 평균 입력일 (writeDate → materialSettingFilledAt)
+    const LIMIT_SAGUP = 3;
+    const sagupAvg: Record<string, { total: number; cnt: number }> = {};
+    const sagupTotal: Record<string, number> = {}; // 전체 사급 건수 (완료+미회신)
+    const sagupNoReply: Record<string, number> = {}; // 미회신 건수
+    items.forEach(item => {
+      const ed = editData[item.id];
+      const isSagup = item.materialSource?.trim() === '사급' || (ed?.purchaseManager ?? '').trim() === '사급';
+      if (!isSagup) return;
+      const mgr = (item.cisManager ?? '').trim() || '미지정';
+      sagupTotal[mgr] = (sagupTotal[mgr] || 0) + 1;
+
+      const writeD = parseDate(ed?.writeDate ?? '');
+
+      // 완료건: filledAt이 있으면 평균 계산 (사급은 CIS 담당자 직접 관리)
+      const matFilled = parseDate(ed?.materialSettingFilledAt ?? '');
+      if (writeD && matFilled) {
+        if (!sagupAvg[mgr]) sagupAvg[mgr] = { total: 0, cnt: 0 };
+        sagupAvg[mgr].total += bizDays(writeD, matFilled) - LIMIT_SAGUP;
+        sagupAvg[mgr].cnt += 1;
+      }
+
+      // 미회신 건 경과일도 평균에 포함
+      if (!(ed?.materialSettingDate ?? '').trim()) {
+        sagupNoReply[mgr] = (sagupNoReply[mgr] || 0) + 1;
+        if (writeD) {
+          if (!sagupAvg[mgr]) sagupAvg[mgr] = { total: 0, cnt: 0 };
+          sagupAvg[mgr].total += bizDays(writeD, today) - LIMIT_SAGUP;
+          sagupAvg[mgr].cnt += 1;
+        }
+      }
+    });
+    const sagupManagers = Object.entries(sagupTotal)
+      .map(([name, total]) => {
+        const a = sagupAvg[name];
+        const noReply = sagupNoReply[name] || 0;
+        return { name, count: total, noReplyCount: noReply, avgDays: a && a.cnt > 0 ? +(a.total / a.cnt).toFixed(1) : undefined };
+      })
+      .filter(m => m.count > 0)
+      .sort((a, b) => b.noReplyCount - a.noReplyCount);
+
+    return { cisNoReply, sagupManagers };
+  }, [items, editData]);
 
   // 고객사 드릴다운 데이터
   const customerModalData = useMemo(() => {
@@ -855,7 +961,7 @@ export default function App() {
 
             {/* 3행 — 미회신 건수 + 귀책부서별 지연현황 & Top10 고객사 (1:1) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              <NoReplyCard data={noReplyData} />
+              <NoReplyCard data={noReplyData} cisNoReply={cisNoReplyData.cisNoReply} sagupManagers={cisNoReplyData.sagupManagers} />
 
               <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={delayByDeptData} onDeptClick={(dept) => setDelayDeptModal(dept)} />

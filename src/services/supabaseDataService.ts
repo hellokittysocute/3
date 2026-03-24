@@ -77,6 +77,7 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
     materialSettingFilledAt: (row.material_setting_filled_at as string) || '',
     manufacturingFilledAt: (row.manufacturing_filled_at as string) || '',
     packagingFilledAt: (row.packaging_filled_at as string) || '',
+    revenuePossibleFilledAt: (row.revenue_possible_filled_at as string) || '',
     revenuePossible: (row.revenue_possible as '가능' | '확인중' | '불가능' | '') || '확인중',
     revenuePossibleQuantity: row.revenue_possible_quantity != null ? Number(row.revenue_possible_quantity) : 0,
     delayReason: (row.delay_reason as string) || '',

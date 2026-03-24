@@ -6,10 +6,28 @@ export interface NoReplyDeptItem {
   managers: { name: string; count: number; avgDays?: number }[];
 }
 
+export interface CisNoReplyItem {
+  name: string;
+  count: number;        // 미회신 건수
+  totalCount: number;   // 전체 대상 건수
+  avgDays?: number;     // 평균 입력일 (기한 대비 편차)
+}
+
+export interface SagupManagerItem {
+  name: string;
+  count: number;        // 전체 사급 건수
+  noReplyCount: number; // 미회신 건수
+  avgDays?: number;     // 부자재 평균 입력일 (기한 대비 편차)
+}
+
 interface NoReplyCardProps {
   data: NoReplyDeptItem[];
   /** 각 부서의 기한 (기본: 구매3, 제조2, 충포장2) */
   limits?: Record<string, number>;
+  /** CIS 담당자별 미회신 건수 */
+  cisNoReply?: CisNoReplyItem[];
+  /** 사급 건 CIS 담당자별 부자재 평균 입력일 */
+  sagupManagers?: SagupManagerItem[];
 }
 
 interface GroupStyle {
@@ -22,6 +40,8 @@ interface GroupStyle {
 
 const PROD_STYLE: GroupStyle = { dot: '#f59e0b', label: '#b45309', badgeBg: '#FFF8EB', badgeColor: '#b45309', border: '#f59e0b' };
 const PURCHASE_STYLE: GroupStyle = { dot: '#10b981', label: '#047857', badgeBg: '#ECFDF5', badgeColor: '#047857', border: '#10b981' };
+const CIS_STYLE: GroupStyle = { dot: '#6366f1', label: '#4338ca', badgeBg: '#EEF2FF', badgeColor: '#4338ca', border: '#6366f1' };
+const SAGUP_STYLE: GroupStyle = { dot: '#ec4899', label: '#be185d', badgeBg: '#FDF2F8', badgeColor: '#be185d', border: '#ec4899' };
 
 const MGR_CATEGORY: Record<string, string> = {
   '이정훈': '기초', '홍경의': '기초_색조', '정진숙': '파우더', '김영찬': 'PB담당',
@@ -122,11 +142,55 @@ const computeGroupAvgDays = (depts: (NoReplyDeptItem | undefined)[]): number | u
 };
 
 const formatAvgDays = (v: number | undefined): string => {
-  if (v == null) return '0일';
+  if (v == null) return '-일';
   return v <= 0 ? `${v}일` : `+${v}일`;
 };
 
-export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
+const CisRevenueChart: React.FC<{ data: CisNoReplyItem[]; style: GroupStyle }> = ({ data, style: s }) => {
+  const totalNoReply = data.reduce((sum, d) => sum + d.count, 0);
+  const groupAvg = (() => {
+    let tw = 0, tc = 0;
+    data.forEach(m => { if (m.avgDays != null) { tw += m.avgDays * m.totalCount; tc += m.totalCount; } });
+    return tc > 0 ? +(tw / tc).toFixed(1) : undefined;
+  })();
+  const managers = data.map(m => ({
+    name: m.name,
+    count: m.count,
+    avgDays: m.avgDays,
+  }));
+  return (
+    <div style={{ ...cardBase, borderLeft: `3px solid ${s.border}`, borderRadius: '0 12px 12px 0' }}>
+      <GroupHeader name="매출 가능여부" count={totalNoReply} style={s} avgLabel={`평균 ${formatAvgDays(groupAvg)}`} manager="김형석" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={2} />
+      </div>
+    </div>
+  );
+};
+
+const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> = ({ data, style: s }) => {
+  const totalNoReply = data.reduce((sum, d) => sum + d.noReplyCount, 0);
+  const groupAvg = (() => {
+    let tw = 0, tc = 0;
+    data.forEach(m => { if (m.avgDays != null) { tw += m.avgDays * m.count; tc += m.count; } });
+    return tc > 0 ? +(tw / tc).toFixed(1) : undefined;
+  })();
+  const managers = data.map(m => ({
+    name: m.name,
+    count: m.noReplyCount,
+    avgDays: m.avgDays,
+  }));
+  return (
+    <div style={{ ...cardBase, borderLeft: `3px solid ${s.border}`, borderRadius: '0 12px 12px 0' }}>
+      <GroupHeader name="CIS(사급 부자재)" count={totalNoReply} style={s} avgLabel={`평균 ${formatAvgDays(groupAvg)}`} manager="김형석" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={3} />
+      </div>
+    </div>
+  );
+};
+
+export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagupManagers }) => {
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
   const dataMap = useMemo(() => Object.fromEntries(data.map(d => [d.dept, d])), [data]);
 
@@ -174,6 +238,18 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data }) => {
           </div>
         </div>
       )}
+
+      {/* CIS 담당자 차트 */}
+      {(cisNoReply && cisNoReply.length > 0) || (sagupManagers && sagupManagers.length > 0) ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+          {cisNoReply && cisNoReply.length > 0 && (
+            <CisRevenueChart data={cisNoReply} style={CIS_STYLE} />
+          )}
+          {sagupManagers && sagupManagers.length > 0 && (
+            <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
+          )}
+        </div>
+      ) : null}
     </div>
   );
 };

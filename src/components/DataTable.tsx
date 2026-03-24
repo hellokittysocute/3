@@ -277,6 +277,23 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
         <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]", (row?.revenuePossible || '확인중') === '확인중' && "bg-slate-50 text-slate-300")} value={(row?.revenuePossible || '확인중') === '확인중' ? '' : (row?.revenuePossibleQuantity ? row.revenuePossibleQuantity.toLocaleString() : '')} placeholder={(row?.revenuePossible || '확인중') === '확인중' ? '' : '입력'} onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly || (row?.revenuePossible || '확인중') === '확인중'} />
       </td>
+      {(() => { const d = calcDday(row?.packagingFilledAt ?? '', row?.revenuePossible === '가능' || row?.revenuePossible === '불가능' ? (row?.packagingFilledAt ?? '') : '', 2);
+        // 충포장 미입력이면 none, 매출가능여부 미입력이면 경과일 표시
+        const show = (row?.packagingDate ?? '').trim() && (row?.packagingFilledAt ?? '').trim();
+        const pending = show && (row?.revenuePossible === '확인중' || !row?.revenuePossible);
+        if (pending) {
+          const parseD = (s: string): Date | null => { if (!s) return null; const v = s.trim().replace(/^~/, ''); const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/); if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2])); const dd = new Date(v); return isNaN(dd.getTime()) ? null : dd; };
+          const bizD = (from: Date, to: Date): number => { let c = 0; const dd = new Date(from); while (dd < to) { dd.setDate(dd.getDate() + 1); if (dd.getDay() !== 0 && dd.getDay() !== 6) c++; } return c; };
+          const pkgD = parseD(row?.packagingFilledAt ?? '');
+          const now = new Date(); now.setHours(0,0,0,0);
+          const elapsed = pkgD ? bizD(pkgD, now) : 0;
+          const diff = elapsed - 2;
+          const status = diff > 0 ? 'over' : diff === 0 ? 'today' : 'ok';
+          const label = diff <= 0 ? `D${diff}` : `D+${diff}`;
+          return <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[status])}>{label}</td>;
+        }
+        return <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", show ? DDAY_STYLE['done'] : DDAY_STYLE['none'])}>{show && row?.revenuePossible && row.revenuePossible !== '확인중' ? '✓' : ''}</td>;
+      })()}
       <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <span className="text-[13px] font-bold" style={{ color: color.text }}>
           {rate.toFixed(1)}%
@@ -647,6 +664,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[82px]">생산처</SortableTh>
               <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600">매출<br/>가능여부</SortableTh>
               <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
+              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">가능여부<br/>D-day</th>
               <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>
               <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>
               {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
@@ -658,7 +676,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 30 : 29} />
+                <td colSpan={isAdmin ? 31 : 30} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -692,7 +710,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 30 : 29} />
+                <td colSpan={isAdmin ? 31 : 30} />
               </tr>
             )}
           </tbody>
