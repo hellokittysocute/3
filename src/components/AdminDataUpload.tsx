@@ -366,25 +366,35 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
       }
 
       // edit_data: 기존 저장값 보존, 없는 항목만 CSV 값으로 초기화
-      const { data: existingEditData } = await supabase.from('edit_data').select('item_id');
+      const { data: existingEditData } = await supabase.from('edit_data').select('item_id,purchase_manager,material_setting_filled_at,manufacturing_filled_at,packaging_filled_at');
       const existingIds = new Set((existingEditData || []).map((r: any) => r.item_id));
+      const existingFilledAt = new Map((existingEditData || []).map((r: any) => [r.item_id, r]));
 
-      // 신규 항목: 전체 초기화
+      // 신규 항목: 전체 초기화 (값이 있으면 완료 시점도 자동 기록)
+      const uploadDate = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
       const newEditRows = rowsWithMonth
         .filter(row => !existingIds.has(row.id))
-        .map(row => ({
-          item_id: row.id,
-          production_complete_date: (row.production_request_date as string) || '',
-          material_setting_date: (row._material_setting_date as string) || '',
-          manufacturing_date: (row._manufacturing_date as string) || '',
-          packaging_date: (row._packaging_date as string) || '',
-          revenue_possible: (row._revenue_possible as string) || '확인중',
-          revenue_possible_quantity: row.remaining_quantity as number,
-          delay_reason: '',
-          importance: (row._importance as string) || '',
-          purchase_manager: (row._purchase_manager as string) || '',
-          note: (row._note as string) || '',
-        }));
+        .map(row => {
+          const matDate = (row._material_setting_date as string) || '';
+          const mfgDate = (row._manufacturing_date as string) || '';
+          const pkgDate = (row._packaging_date as string) || '';
+          return {
+            item_id: row.id,
+            production_complete_date: (row.production_request_date as string) || '',
+            material_setting_date: matDate,
+            manufacturing_date: mfgDate,
+            packaging_date: pkgDate,
+            revenue_possible: (row._revenue_possible as string) || '확인중',
+            revenue_possible_quantity: row.remaining_quantity as number,
+            delay_reason: '',
+            importance: (row._importance as string) || '',
+            purchase_manager: (row._purchase_manager as string) || '',
+            note: (row._note as string) || '',
+            material_setting_filled_at: matDate ? uploadDate : '',
+            manufacturing_filled_at: mfgDate ? uploadDate : '',
+            packaging_filled_at: pkgDate ? uploadDate : '',
+          };
+        });
 
       for (let i = 0; i < newEditRows.length; i += 100) {
         const batch = newEditRows.slice(i, i + 100);
@@ -393,15 +403,31 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
       }
 
       // 기존 항목: CSV에서 오는 필드를 개별 update (수동 입력값 중 해당 필드만 갱신)
+      // 새로 값이 채워지면 완료 시점도 자동 기록
       const existingRows = rowsWithMonth.filter(row => existingIds.has(row.id));
       for (const row of existingRows) {
         const updates: Record<string, string> = {};
-        if (row._purchase_manager) updates.purchase_manager = row._purchase_manager as string;
+        // CSV가 "사급"이면 기존 대시보드 값 우선 보존
+        const csvPm = (row._purchase_manager as string) || '';
+        const existingPm = (existing?.purchase_manager as string) || '';
+        if (csvPm && !(csvPm.includes('사급') && existingPm && !existingPm.includes('사급'))) {
+          updates.purchase_manager = csvPm;
+        }
         if (row._importance) updates.importance = row._importance as string;
         if (row.production_request_date) updates.production_complete_date = row.production_request_date as string;
-        if (row._material_setting_date) updates.material_setting_date = row._material_setting_date as string;
-        if (row._manufacturing_date) updates.manufacturing_date = row._manufacturing_date as string;
-        if (row._packaging_date) updates.packaging_date = row._packaging_date as string;
+        const existing = existingFilledAt.get(row.id);
+        if (row._material_setting_date) {
+          updates.material_setting_date = row._material_setting_date as string;
+          if (!existing?.material_setting_filled_at) updates.material_setting_filled_at = uploadDate;
+        }
+        if (row._manufacturing_date) {
+          updates.manufacturing_date = row._manufacturing_date as string;
+          if (!existing?.manufacturing_filled_at) updates.manufacturing_filled_at = uploadDate;
+        }
+        if (row._packaging_date) {
+          updates.packaging_date = row._packaging_date as string;
+          if (!existing?.packaging_filled_at) updates.packaging_filled_at = uploadDate;
+        }
         if (row._note) updates.note = row._note as string;
         if (Object.keys(updates).length > 0) {
           await supabase.from('edit_data').update(updates).eq('item_id', row.id);

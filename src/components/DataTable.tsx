@@ -276,7 +276,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         </select>
       </td>
       <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
-        <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]", (row?.revenuePossible || '확인중') === '확인중' && "bg-slate-50 text-slate-300")} value={(row?.revenuePossible || '확인중') === '확인중' ? '' : (row?.revenuePossibleQuantity ? row.revenuePossibleQuantity.toLocaleString() : '')} placeholder={(row?.revenuePossible || '확인중') === '확인중' ? '' : '입력'} onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly || (row?.revenuePossible || '확인중') === '확인중'} />
+        <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ? row.revenuePossibleQuantity.toLocaleString() : ''} placeholder="입력" onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly} />
       </td>
       {(() => { const d = calcDday(row?.packagingFilledAt ?? '', row?.revenuePossible === '가능' || row?.revenuePossible === '불가능' ? (row?.packagingFilledAt ?? '') : '', 2);
         // 충포장 미입력이면 none, 매출가능여부 미입력이면 경과일 표시

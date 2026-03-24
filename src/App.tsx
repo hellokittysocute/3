@@ -469,10 +469,10 @@ export default function App() {
       if (!ed) return;
       if ((ed.purchaseManager ?? '').includes('사급')) return;
 
-      // 업로드일과 동일한 건(기존 데이터) 제외: writeDate == filledAt이면 스킵
+      // 부자재 입력 완료건: 소요 영업일 - 기한
       const writeD = parseDate(ed.writeDate ?? '');
       const matFilled = parseDate(ed.materialSettingFilledAt ?? '');
-      if (writeD && matFilled && ed.writeDate !== ed.materialSettingFilledAt) {
+      if (writeD && matFilled) {
         const mgr = (ed.purchaseManager ?? '').trim() || '미지정';
         if (!purchaseAvg[mgr]) purchaseAvg[mgr] = { total: 0, cnt: 0 };
         purchaseAvg[mgr].total += bizDays(writeD, matFilled) - LIMIT_PURCHASE;
@@ -538,15 +538,34 @@ export default function App() {
       }
     });
 
+    // 구매 회신완료건: 담당자별 총 건수 + 평균 입력일 (미회신 건수가 0이어도 표시)
+    const purchaseCompletedByMgr: Record<string, number> = {};
+    items.forEach(item => {
+      const ed = editData[item.id];
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
+      if (!isSagup && (ed?.materialSettingDate ?? '').trim()) {
+        const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
+        purchaseCompletedByMgr[mgr] = (purchaseCompletedByMgr[mgr] || 0) + 1;
+      }
+    });
+
     const toManagerList = (map: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) =>
       Object.entries(map).map(([name, count]) => {
         const a = avgMap[name];
         return { name, count: Math.round(count), avgDays: a && a.cnt > 0 ? a.total / a.cnt : undefined };
       }).filter(m => m.count > 0).sort((a, b) => b.count - a.count);
+
+    // 구매: 미회신 + 회신완료 담당자 합쳐서 표시
+    const allPurchaseMgrs: Record<string, number> = { ...purchaseByMgr };
+    for (const [mgr, cnt] of Object.entries(purchaseCompletedByMgr)) {
+      allPurchaseMgrs[mgr] = (allPurchaseMgrs[mgr] || 0) + cnt;
+    }
+    const purchaseTotalCount = Object.values(allPurchaseMgrs).reduce((s, c) => s + c, 0);
+
     return [
       { dept: '제조', count: mfgCount, managers: toManagerList(mfgByMgr, mfgAvg) },
       { dept: '충포장', count: pkgCount, managers: toManagerList(pkgByMgr, pkgAvg) },
-      { dept: '구매', count: purchaseCount, managers: toManagerList(purchaseByMgr, purchaseAvg) },
+      { dept: '구매', count: purchaseTotalCount, managers: toManagerList(allPurchaseMgrs, purchaseAvg) },
     ].filter(d => d.count > 0);
   }, [items, editData]);
 
