@@ -506,12 +506,12 @@ export default function App() {
 
     // 미회신 건수 집계 + 미회신 건의 현재 경과일도 평균에 포함
     items.forEach(item => {
-      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').includes('사급')) return;
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
       const cat = item.category?.trim() || '';
 
-      if (!(ed?.materialSettingDate ?? '').trim()) {
+      // 구매 미회신: 사급 제외
+      if (!isSagup && !(ed?.materialSettingDate ?? '').trim()) {
         purchaseCount++;
         const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
         purchaseByMgr[mgr] = (purchaseByMgr[mgr] || 0) + 1;
