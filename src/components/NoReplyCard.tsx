@@ -219,37 +219,35 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
           <span style={{ fontSize: 13, color: '#9ca3af' }}>미회신 없음</span>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
-          {/* 생산 카드 */}
-          <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-            <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(prodAvgDays)}`} manager="최우정" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
-              {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* 1행: 구매 + CIS(사급 부자재) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
+            <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
+              <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgLabel={`평균 ${formatAvgDays(purchaseAvgDays)}`} manager="김태문" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {purchase && purchase.count > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
+              </div>
             </div>
+            {sagupManagers && sagupManagers.length > 0 && (
+              <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
+            )}
           </div>
 
-          {/* 구매 카드 */}
-          <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-            <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgLabel={`평균 ${formatAvgDays(purchaseAvgDays)}`} manager="김태문" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {purchase && purchase.count > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
+          {/* 2행: 생산(제조+충포장) + CIS(매출 가능여부) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
+            <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
+              <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(prodAvgDays)}`} manager="최우정" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {mfg && mfg.count > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
+                {pkg && pkg.count > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
+              </div>
             </div>
+            {cisNoReply && cisNoReply.length > 0 && (
+              <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
+            )}
           </div>
         </div>
       )}
-
-      {/* CIS 담당자 차트 */}
-      {(cisNoReply && cisNoReply.length > 0) || (sagupManagers && sagupManagers.length > 0) ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
-          {cisNoReply && cisNoReply.length > 0 && (
-            <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
-          )}
-          {sagupManagers && sagupManagers.length > 0 && (
-            <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
-          )}
-        </div>
-      ) : null}
     </div>
   );
 };

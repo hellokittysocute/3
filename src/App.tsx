@@ -456,7 +456,7 @@ export default function App() {
       return c;
     };
     // 담당자별 D-day 기준 평균 (소요일 - 기한 = 차이, 음수=빠름, 양수=초과)
-    const LIMIT_PURCHASE = 3, LIMIT_MFG = 2, LIMIT_PKG = 2;
+    const LIMIT_PURCHASE = 3, LIMIT_MFG = 3, LIMIT_PKG = 2;
     const purchaseAvg: Record<string, { total: number; cnt: number }> = {};
     const mfgAvg: Record<string, { total: number; cnt: number }> = {};
     const pkgAvg: Record<string, { total: number; cnt: number }> = {};
@@ -875,91 +875,80 @@ export default function App() {
 
           return (
           <div style={{ gap: 20, display: 'flex', flexDirection: 'column' as const }}>
-            {/* 1행 — 매출현황(도넛) + 진도현황 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
-              {/* 매출현황 도넛 차트 */}
-              <DonutChart
-                totalRevenue={stats.overall.totalRevenue}
-                totalCount={stats.overall.totalCount}
-                checkingRevenue={stats.overall.checkingRevenue}
-                checkingCount={stats.overall.checkingCount}
-                possibleRevenue={stats.overall.possibleRevenue}
-                possibleCount={stats.overall.possibleCount}
-                impossibleRevenue={stats.overall.impossibleRevenue}
-                impossibleCount={stats.overall.impossibleCount}
-              />
+            {/* 1행 — 좌: 매출현황+진도현황 / 우: 미회신 건수 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 items-start" style={{ gap: 20 }}>
+              {/* 좌측: 매출현황 + 진도현황 */}
+              <div className="flex flex-col" style={{ gap: 20 }}>
+                <DonutChart
+                  totalRevenue={stats.overall.totalRevenue}
+                  totalCount={stats.overall.totalCount}
+                  checkingRevenue={stats.overall.checkingRevenue}
+                  checkingCount={stats.overall.checkingCount}
+                  possibleRevenue={stats.overall.possibleRevenue}
+                  possibleCount={stats.overall.possibleCount}
+                  impossibleRevenue={stats.overall.impossibleRevenue}
+                  impossibleCount={stats.overall.impossibleCount}
+                />
 
-              {/* 진도현황 */}
-              <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
-                  <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">실시간</span>
-                </div>
-                {/* 목표 대비 가능금액 */}
-                <div className="mb-3">
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-[12px] font-medium text-gray-400">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
-                    <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
-                      {goalRate.toFixed(1)}%
-                    </span>
+                {/* 진도현황 */}
+                <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
+                    <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">실시간</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
-                  </div>
-                </div>
-
-                {/* 진도율 추이 라인 차트 */}
-                <div className="border-t border-gray-50 pt-3 flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[13px] font-semibold text-gray-700">진도율 추이</span>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
-                        <span className="text-[11px] text-gray-400">진도율</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 border-t border-dashed border-gray-300" />
-                        <span className="text-[11px] text-gray-400">목표</span>
-                      </div>
+                  <div className="mb-3">
+                    <div className="flex justify-between items-end mb-1.5">
+                      <span className="text-[12px] font-medium text-gray-400">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
+                      <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
+                        {goalRate.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
                     </div>
                   </div>
-                  <div style={{ height: 130 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} dy={4} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-4} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
-                        <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
-                        <Line type="monotone" dataKey="rate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div className="border-t border-gray-50 pt-3 flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[13px] font-semibold text-gray-700">진도율 추이</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
+                          <span className="text-[11px] text-gray-400">진도율</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 border-t border-dashed border-gray-300" />
+                          <span className="text-[11px] text-gray-400">목표</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ height: 130 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={trendData}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} dy={4} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-4} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
+                          <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
+                          <Line type="monotone" dataKey="rate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 mt-3" style={{ gap: 8 }}>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
+                      <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.overall.toFixed(0)}%</div>
+                    </div>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
+                      <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.totalRevenue)}</div>
+                    </div>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
+                      <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.possibleRevenue)}</div>
+                    </div>
                   </div>
                 </div>
-
-                {/* 하단 3개 스탯 박스 */}
-                <div className="grid grid-cols-3 mt-3" style={{ gap: 8 }}>
-                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
-                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
-                    <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.overall.toFixed(0)}%</div>
-                  </div>
-                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
-                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
-                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.totalRevenue)}</div>
-                  </div>
-                  <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
-                    <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 매출</div>
-                    <div className="text-[18px] font-extrabold text-gray-800">{formatCurrency(stats.overall.possibleRevenue)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3행 — 미회신 건수 + 귀책부서별 지연현황 & Top10 고객사 (1:1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch" style={{ gap: 20 }}>
-              <NoReplyCard data={noReplyData} cisNoReply={cisNoReplyData.cisNoReply} sagupManagers={cisNoReplyData.sagupManagers} />
-
-              <div className="flex flex-col" style={{ gap: 20 }}>
                 <DelayByDeptCard data={delayByDeptData} onDeptClick={(dept) => setDelayDeptModal(dept)} />
                 <Top10CustomerCard
                   data={customerChartData.map((c) => ({
@@ -970,6 +959,9 @@ export default function App() {
                   onCustomerClick={(name) => setCustomerModal(name)}
                 />
               </div>
+
+              {/* 우측: 미회신 건수 */}
+              <NoReplyCard data={noReplyData} cisNoReply={cisNoReplyData.cisNoReply} sagupManagers={cisNoReplyData.sagupManagers} />
             </div>
           </div>
           );
