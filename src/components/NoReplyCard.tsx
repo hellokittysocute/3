@@ -160,7 +160,7 @@ const CisRevenueChart: React.FC<{ data: CisNoReplyItem[]; style: GroupStyle }> =
   }));
   return (
     <div style={{ ...cardBase, borderLeft: `3px solid ${s.border}`, borderRadius: '0 12px 12px 0' }}>
-      <GroupHeader name="매출 가능여부" count={totalNoReply} style={s} avgLabel={`평균 ${formatAvgDays(groupAvg)}`} manager="김형석" />
+      <GroupHeader name="CIS(매출 가능여부)" count={totalNoReply} style={s} avgLabel={`평균 ${formatAvgDays(groupAvg)}`} manager="김형석" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={2} />
       </div>
