@@ -573,9 +573,7 @@ export default function App() {
     const cisTotal: Record<string, number> = {};
     const cisAvg: Record<string, { total: number; cnt: number }> = {};
     items.forEach(item => {
-      if ((item.materialSource ?? '').includes('사급')) return;
       const ed = editData[item.id];
-      if ((ed?.purchaseManager ?? '').includes('사급')) return;
       const mgr = (item.cisManager ?? '').trim() || '미지정';
       cisTotal[mgr] = (cisTotal[mgr] || 0) + 1;
 
