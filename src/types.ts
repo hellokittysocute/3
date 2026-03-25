@@ -57,6 +57,7 @@ export interface EditableData {
   packagingFilledAt: string;
   revenuePossibleFilledAt: string;
   delayReason: string;
+  revenueReflected: 'O' | 'X' | '';
   importance: '상' | '중' | '하' | '';
   productionSite: string;
   purchaseManager: string;

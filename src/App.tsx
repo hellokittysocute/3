@@ -28,7 +28,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('summary');
   const [detailView, setDetailView] = useState<'kanban' | 'table'>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
-  const [delayReasonFilter, setDelayReasonFilter] = useState('');
+  const [revenueReflectedFilter, setRevenueReflectedFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [revenuePossibleFilter, setRevenuePossibleFilter] = useState('');
   const [cisManagerFilter, setCisManagerFilter] = useState('');
@@ -76,8 +76,8 @@ export default function App() {
         const merged: Record<string, EditableData> = {};
         dashboardItems.forEach(item => {
           merged[item.id] = editDataFromDb[item.id] || {
-            writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
-            revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '', productionSite: '',
+            writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '', revenuePossibleFilledAt: '',
+            revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', revenueReflected: '', importance: '', productionSite: '',
             purchaseManager: '', note: '',
           };
         });
@@ -98,8 +98,8 @@ export default function App() {
     const initial: Record<string, EditableData> = {};
     items.forEach(item => {
       initial[item.id] = {
-        writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
-        revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '', productionSite: '',
+        writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '', revenuePossibleFilledAt: '',
+        revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', revenueReflected: '', importance: '', productionSite: '',
         purchaseManager: '', note: '',
       };
     });
@@ -145,8 +145,8 @@ export default function App() {
       const merged: Record<string, EditableData> = {};
       dashboardItems.forEach(item => {
         merged[item.id] = editDataFromDb[item.id] || {
-          writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '',
-          revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', importance: '',
+          writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '', materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '', revenuePossibleFilledAt: '',
+          revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', revenueReflected: '', importance: '',
           productionSite: '', purchaseManager: '', note: '',
         };
       });
@@ -267,22 +267,22 @@ export default function App() {
       const row = editData[item.id];
       const actualRevenuePossible = row?.revenuePossible || '확인중';
       const matchesRevenuePossible = !revenuePossibleFilter || actualRevenuePossible.toLowerCase().includes(revenuePossibleFilter.toLowerCase());
-      const matchesDelay = !delayReasonFilter || (row?.delayReason ?? '').toLowerCase().includes(delayReasonFilter.toLowerCase());
+      const matchesRevenueReflected = !revenueReflectedFilter || (row?.revenueReflected ?? '').toLowerCase().includes(revenueReflectedFilter.toLowerCase());
       const matchesCisManager = !cisManagerFilter || item.cisManager.toLowerCase().includes(cisManagerFilter.toLowerCase());
       const matchesPurchaseManager = !purchaseManagerFilter || (row?.purchaseManager ?? '').toLowerCase().includes(purchaseManagerFilter.toLowerCase());
       const matchesDueDate = !dueDateFilter || item.changedDueDate.toLowerCase().includes(dueDateFilter.toLowerCase());
-      return matchesSearch && matchesCategory && matchesMidCategory && matchesRevenuePossible && matchesDelay && matchesCisManager && matchesPurchaseManager && matchesDueDate;
+      return matchesSearch && matchesCategory && matchesMidCategory && matchesRevenuePossible && matchesRevenueReflected && matchesCisManager && matchesPurchaseManager && matchesDueDate;
     }).sort((a, b) => {
       const order: Record<string, number> = { '불가능': 0, '확인중': 1, '가능': 2 };
       const aStatus = savedEditData[a.id]?.revenuePossible || '확인중';
       const bStatus = savedEditData[b.id]?.revenuePossible || '확인중';
       return (order[aStatus] ?? 1) - (order[bStatus] ?? 1);
     });
-  }, [items, searchTerm, categoryFilter, midCategoryFilter, revenuePossibleFilter, delayReasonFilter, cisManagerFilter, purchaseManagerFilter, dueDateFilter, editData, savedEditData]);
+  }, [items, searchTerm, categoryFilter, midCategoryFilter, revenuePossibleFilter, revenueReflectedFilter, cisManagerFilter, purchaseManagerFilter, dueDateFilter, editData, savedEditData]);
 
   const stats = useMemo(() => calculateStats(filteredItems, editData), [filteredItems, editData]);
 
-  const hasActiveFilter = !!(searchTerm || categoryFilter || midCategoryFilter || revenuePossibleFilter || delayReasonFilter || cisManagerFilter || purchaseManagerFilter || dueDateFilter);
+  const hasActiveFilter = !!(searchTerm || categoryFilter || midCategoryFilter || revenuePossibleFilter || revenueReflectedFilter || cisManagerFilter || purchaseManagerFilter || dueDateFilter);
 
   // 미회신 판단: 작성일자 + 워킹데이 3일 후 마감일 기준
   const CREATION_DATE = new Date(2026, 2, 20); // 2026-03-20 (고정값, 추후 동적 변경 가능)
@@ -1166,13 +1166,13 @@ export default function App() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">지연사유</label>
+                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">매출반영여부</label>
                     <input
                       type="text"
-                      placeholder="부서명 검색..."
+                      placeholder="O/X"
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                      value={delayReasonFilter}
-                      onChange={(e) => setDelayReasonFilter(e.target.value)}
+                      value={revenueReflectedFilter}
+                      onChange={(e) => setRevenueReflectedFilter(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">

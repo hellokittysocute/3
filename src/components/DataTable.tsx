@@ -13,7 +13,7 @@ type SortKey =
   | 'productionCompleteDate' | 'materialSettingDate' | 'productionRequestYn' | 'mfg1'
   | 'manufacturingDate' | 'packagingDate' | 'productionSite'
   | 'revenuePossible' | 'revenuePossibleQuantity' | 'progressRate' | 'delayReason'
-  | 'unitPrice' | 'revenue' | 'note';
+  | 'revenueReflected' | 'unitPrice' | 'revenue' | 'note';
 
 type SortDirection = 'asc' | 'desc';
 type SortConfig = { key: SortKey; direction: SortDirection } | null;
@@ -318,6 +318,18 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="영업">영업</option>
         </select>
       </td>
+      <td className="px-1 py-1 border-r border-slate-100/60 text-center">
+        <select
+          className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]")}
+          value={row?.revenueReflected ?? ''}
+          onChange={(e) => onUpdateField(item.id, 'revenueReflected', e.target.value)}
+          disabled={readOnly}
+        >
+          <option value="">-</option>
+          <option value="O">O</option>
+          <option value="X">X</option>
+        </select>
+      </td>
       {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
       <td className="px-1 py-1">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} disabled={readOnly} />
@@ -356,6 +368,7 @@ function getSortValue(item: DashboardItem, editData: Record<string, EditableData
     case 'revenuePossibleQuantity': return row?.revenuePossibleQuantity || 0;
     case 'progressRate': return item.remainingQuantity > 0 ? ((row?.revenuePossibleQuantity || 0) / item.remainingQuantity) * 100 : 0;
     case 'delayReason': return row?.delayReason || '';
+    case 'revenueReflected': return row?.revenueReflected || '';
     case 'unitPrice': return item.unitPrice;
     case 'revenue': return getRevenue(item);
     case 'note': return row?.note || '';
@@ -459,6 +472,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '매출 가능 수량': row?.revenuePossibleQuantity || 0,
         '진도율(%)': Number(rate.toFixed(1)),
         '지연사유': row?.delayReason ?? '',
+        '매출반영여부': row?.revenueReflected ?? '',
         '단가': item.unitPrice,
         '매출(단가x잔량)': getRevenue(item),
         '관리구분': item.managementType,
@@ -671,6 +685,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">가능여부<br/>D-day</th>
               <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>
               <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>
+              <SortableTh sortKey="revenueReflected" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-slate-100">매출<br/>반영여부</SortableTh>
               {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
               <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center bg-slate-100">비고</SortableTh>
             </tr>
@@ -758,6 +773,8 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               {/* 진도율 */}
               <td className="px-4 py-3 border-r border-slate-200"></td>
               {/* 지연사유 */}
+              <td className="px-4 py-3 border-r border-slate-200"></td>
+              {/* 매출반영 */}
               <td className="px-4 py-3 border-r border-slate-200"></td>
               {/* [admin] 단가 */}
               {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}

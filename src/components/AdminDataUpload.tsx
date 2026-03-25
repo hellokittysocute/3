@@ -114,11 +114,18 @@ const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> =
   '중점관리사항': { field: 'management_note', type: 'string' },
   '단가': { field: 'unit_price', type: 'number' },
   // edit_data 필드 (_ 접두사 → dashboard_items upsert에서 제외)
+  '자재코드': { field: 'material_code', type: 'string' },
+  '진도율(%)': { field: 'progress_rate', type: 'string' },
   '구매담당': { field: '_purchase_manager', type: 'string' },
   '부자재': { field: '_material_setting_date', type: 'string' },
+  '부자재(일정)': { field: '_material_setting_date', type: 'string' },
   '제조': { field: '_manufacturing_date', type: 'string' },
   '충포장': { field: '_packaging_date', type: 'string' },
   '매출': { field: '_revenue_possible', type: 'string' },
+  '매출반영여부': { field: '_revenue_reflected', type: 'string' },
+  '매출반영여부(O,X)': { field: '_revenue_reflected', type: 'string' },
+  'AI': { field: '_revenue_reflected', type: 'string' },
+  '매출반영가능여부': { field: '_revenue_reflected', type: 'string' },
   '비고': { field: '_note', type: 'string' },
   '파셜여부': { field: '_partial', type: 'string' },
 };
@@ -161,21 +168,34 @@ function parseCSVToRows(csvText: string): ParseResult {
   detectedDelimiter = null; // 리셋
   const delimiter = detectDelimiter(cleaned);
 
-  // 8행(데이터 직전)을 우선 스캔하고, 못 찾은 헤더만 상위 행에서 보충
-  const headerMapping = new Map<string, number>();
-  const allHeaders: string[] = [];
-  // 1단계: 8행 (index 7) 우선 스캔
-  if (lines.length > 7) {
-    const cols = parseCSVLine(lines[7], delimiter);
-    cols.forEach((col, idx) => {
-      const trimmed = col.trim();
-      if (trimmed && HEADER_MAP[trimmed] && !headerMapping.has(trimmed)) {
-        headerMapping.set(trimmed, idx);
-      }
+  // 헤더 행 자동 감지: 상위 10행 중 HEADER_MAP 매칭이 가장 많은 행을 헤더로 사용
+  let bestHeaderRow = 0;
+  let bestMatchCount = 0;
+  const scanLimit = Math.min(10, lines.length);
+  for (let row = 0; row < scanLimit; row++) {
+    const cols = parseCSVLine(lines[row], delimiter);
+    let matchCount = 0;
+    cols.forEach(col => {
+      if (col.trim() && HEADER_MAP[col.trim()]) matchCount++;
     });
+    if (matchCount > bestMatchCount) {
+      bestMatchCount = matchCount;
+      bestHeaderRow = row;
+    }
   }
-  // 2단계: 1~7행에서 아직 매핑 안 된 헤더만 보충 (역순 — 데이터 행에 가까울수록 우선)
-  for (let row = Math.min(6, lines.length - 1); row >= 0; row--) {
+
+  // 감지된 헤더 행에서 매핑 구성
+  const headerMapping = new Map<string, number>();
+  const headerCols = parseCSVLine(lines[bestHeaderRow], delimiter);
+  headerCols.forEach((col, idx) => {
+    const trimmed = col.trim();
+    if (trimmed && HEADER_MAP[trimmed] && !headerMapping.has(trimmed)) {
+      headerMapping.set(trimmed, idx);
+    }
+  });
+
+  // 보충: 헤더 행 이전 행에서 아직 매핑 안 된 헤더 보충
+  for (let row = bestHeaderRow - 1; row >= 0; row--) {
     const cols = parseCSVLine(lines[row], delimiter);
     cols.forEach((col, idx) => {
       const trimmed = col.trim();
@@ -184,17 +204,17 @@ function parseCSVToRows(csvText: string): ParseResult {
       }
     });
   }
-  // 8행 기준으로 전체 헤더 목록 구성 (표시용)
-  const headers = parseCSVLine(lines[7] || '', delimiter);
-  // 1~8행에서 찾은 모든 매핑된 헤더
+
+  const headers = headerCols;
   const mappedHeaders = Array.from(headerMapping.keys());
-  // 8행에서 매핑 안 된 컬럼
   const unmappedHeaders = headers.filter(h => h.trim() && !HEADER_MAP[h.trim()] && !mappedHeaders.includes(h.trim()));
 
   // 고객약호 컬럼 인덱스 찾기 (빈 행 필터용)
   const customerCodeIdx = headerMapping.get('고객약호');
 
-  const dataLines = lines.slice(8).filter(line => {
+  // 데이터는 헤더 행 다음 행부터 시작
+  const dataStartRow = bestHeaderRow + 1;
+  const dataLines = lines.slice(dataStartRow).filter(line => {
     const cols = parseCSVLine(line, delimiter);
     if (customerCodeIdx !== undefined) {
       return cols[customerCodeIdx] && cols[customerCodeIdx].trim() !== '';
@@ -212,7 +232,7 @@ function parseCSVToRows(csvText: string): ParseResult {
     const mgmtType = getVal(cols, headerMapping, '관리구분', '내용');
     const parsedMgmt = mgmtType === '자재조정필요' ? '자재조정필요' : '중점관리품목';
 
-    const materialCode = getVal(cols, headerMapping, '자재');
+    const materialCode = getVal(cols, headerMapping, '자재', '자재코드');
     const orderQty = getNumVal(cols, headerMapping, '총오더수량');
     const importance = getVal(cols, headerMapping, '중요도');
     const validImportance = ['상', '중', '하'];
@@ -252,7 +272,7 @@ function parseCSVToRows(csvText: string): ParseResult {
       production_site: getVal(cols, headerMapping, '생산처'),
       lead_time: getVal(cols, headerMapping, '생산리드타임'),
       status: parsedStatus,
-      progress_rate: getVal(cols, headerMapping, '진도율'),
+      progress_rate: getVal(cols, headerMapping, '진도율', '진도율(%)'),
       delay_reason: getVal(cols, headerMapping, '지연사유'),
       management_type: parsedMgmt,
       management_note: getVal(cols, headerMapping, '중점관리사항'),
@@ -265,22 +285,23 @@ function parseCSVToRows(csvText: string): ParseResult {
       _manufacturing_date: getVal(cols, headerMapping, '제조'),
       _packaging_date: getVal(cols, headerMapping, '충포장'),
       _revenue_possible: getVal(cols, headerMapping, '매출'),
+      _revenue_reflected: getVal(cols, headerMapping, '매출반영여부', '매출반영여부(O,X)', 'AI', '매출반영가능여부'),
       _note: getVal(cols, headerMapping, '비고'),
       _partial: getVal(cols, headerMapping, '파셜여부'),
     };
   });
 
-  // 디버깅: 매핑된 헤더 → 컬럼 인덱스 + 8행 전체 헤더
+  // 디버깅: 매핑된 헤더 → 컬럼 인덱스 + 헤더 행 전체
   const debugParts: string[] = [];
   headerMapping.forEach((idx, name) => {
     debugParts.push(`${name}→[${idx}]`);
   });
-  const row8Parts: string[] = [];
+  const headerParts: string[] = [];
   headers.forEach((h, i) => {
     const trimmed = h.trim();
-    if (trimmed) row8Parts.push(`[${i}]=${trimmed}`);
+    if (trimmed) headerParts.push(`[${i}]=${trimmed}`);
   });
-  const headerDebug = `구분자: ${delimiter === '\t' ? 'TAB' : 'COMMA'} | 8행 총 ${headers.length}개 컬럼\n매핑: ${debugParts.join(', ')}\n8행: ${row8Parts.join(' | ')}`;
+  const headerDebug = `구분자: ${delimiter === '\t' ? 'TAB' : 'COMMA'} | 헤더 ${bestHeaderRow + 1}행 (${headers.length}개 컬럼)\n매핑: ${debugParts.join(', ')}\n헤더: ${headerParts.join(' | ')}`;
 
   return { rows, unmappedHeaders, mappedHeaders, headerDebug };
 }
@@ -389,6 +410,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
             delay_reason: '',
             importance: (row._importance as string) || '',
             purchase_manager: (row._purchase_manager as string) || '',
+            revenue_reflected: ((row._revenue_reflected as string) || '').toUpperCase(),
             note: (row._note as string) || '',
             material_setting_filled_at: matDate ? uploadDate : '',
             manufacturing_filled_at: mfgDate ? uploadDate : '',
@@ -406,6 +428,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
       // 새로 값이 채워지면 완료 시점도 자동 기록
       const existingRows = rowsWithMonth.filter(row => existingIds.has(row.id));
       for (const row of existingRows) {
+        const existing = existingFilledAt.get(row.id);
         const updates: Record<string, string> = {};
         // CSV가 "사급"이면 기존 대시보드 값 우선 보존
         const csvPm = (row._purchase_manager as string) || '';
@@ -415,7 +438,6 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
         }
         if (row._importance) updates.importance = row._importance as string;
         if (row.production_request_date) updates.production_complete_date = row.production_request_date as string;
-        const existing = existingFilledAt.get(row.id);
         if (row._material_setting_date) {
           updates.material_setting_date = row._material_setting_date as string;
           if (!existing?.material_setting_filled_at) updates.material_setting_filled_at = uploadDate;
@@ -428,6 +450,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
           updates.packaging_date = row._packaging_date as string;
           if (!existing?.packaging_filled_at) updates.packaging_filled_at = uploadDate;
         }
+        if (row._revenue_reflected) updates.revenue_reflected = (row._revenue_reflected as string).toUpperCase();
         if (row._note) updates.note = row._note as string;
         if (Object.keys(updates).length > 0) {
           await supabase.from('edit_data').update(updates).eq('item_id', row.id);
@@ -521,7 +544,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
               </div>
             )}
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-              <p className="text-xs font-bold text-slate-500 mb-1">8행 헤더 (인덱스:이름)</p>
+              <p className="text-xs font-bold text-slate-500 mb-1">헤더 정보 (인덱스:이름)</p>
               <p className="text-xs text-slate-400 break-all">{debug}</p>
             </div>
           </div>
@@ -611,7 +634,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
           <p className="font-bold mb-1">주의사항</p>
           <ul className="list-disc list-inside space-y-1 text-amber-600">
             <li>업로드 시 기존 데이터와 편집 내용이 모두 초기화됩니다.</li>
-            <li>CSV 파일의 8행이 컬럼 헤더, 9행부터 데이터여야 합니다. 컬럼 순서는 자유입니다.</li>
+            <li>CSV 파일의 헤더 행은 자동 감지됩니다. 컬럼 순서는 자유입니다.</li>
           </ul>
         </div>
       </div>
