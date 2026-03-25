@@ -88,7 +88,7 @@ function calcDday(baseDate: string, filledDate: string, limitDays: number): { la
   today.setHours(0, 0, 0, 0);
   deadline.setHours(0, 0, 0, 0);
   // 오늘과 마감일 사이의 영업일 차이
-  if (deadline.getTime() === today.getTime()) return { label: '당일', status: 'today' };
+  if (deadline.getTime() === today.getTime()) return { label: '0일', status: 'today' };
   if (deadline.getTime() > today.getTime()) {
     const remaining = countBusinessDays(today, deadline);
     return { label: `-${remaining}일`, status: 'ok' };
