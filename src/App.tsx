@@ -131,6 +131,8 @@ export default function App() {
       overall: calc(items),
       priority: calc(items.filter(i => i.managementType === '중점관리품목')),
       material: calc(items.filter(i => i.managementType === '자재조정필요')),
+      reflectedO: calc(items.filter(i => editData[i.id]?.revenueReflected === 'O')),
+      reflectedX: calc(items.filter(i => editData[i.id]?.revenueReflected === 'X')),
     };
   }, [items, editData]);
 
@@ -966,10 +968,14 @@ export default function App() {
                       </ResponsiveContainer>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 mt-3" style={{ gap: 8 }}>
+                  <div className="grid grid-cols-4 mt-3" style={{ gap: 8 }}>
                     <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
-                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">현재 진도율</div>
-                      <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.overall.toFixed(0)}%</div>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출반영 O 진도율</div>
+                      <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.reflectedO.toFixed(0)}%</div>
+                    </div>
+                    <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
+                      <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출반영 X 진도율</div>
+                      <div className="text-[18px] font-extrabold text-indigo-500">{editProgressRates.reflectedX.toFixed(0)}%</div>
                     </div>
                     <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#f8f9fb', borderRadius: 8 }}>
                       <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출금액</div>
