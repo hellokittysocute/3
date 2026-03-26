@@ -60,7 +60,7 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
       {managers.map(m => {
         const over = m.avgDays != null && m.avgDays > 0;
         const label = m.avgDays != null
-          ? (m.avgDays <= 0 ? `${m.avgDays.toFixed(1)}일` : `+${m.avgDays.toFixed(1)}일`)
+          ? (m.avgDays <= 0 ? `${Math.round(m.avgDays)}일` : `+${Math.round(m.avgDays)}일`)
           : null;
         return (
           <div
@@ -139,7 +139,7 @@ const computeGroupAvgDays = (depts: (NoReplyDeptItem | undefined)[]): number | u
       }
     });
   });
-  return totalCount > 0 ? +(totalWeighted / totalCount).toFixed(1) : undefined;
+  return totalCount > 0 ? +(totalWeighted / totalCount).toFixed(0) : undefined;
 };
 
 const formatAvgDays = (v: number | undefined): string => {
@@ -152,7 +152,7 @@ const CisRevenueChart: React.FC<{ data: CisNoReplyItem[]; style: GroupStyle }> =
   const groupAvg = (() => {
     let tw = 0, tc = 0;
     data.forEach(m => { if (m.avgDays != null) { tw += m.avgDays * m.totalCount; tc += m.totalCount; } });
-    return tc > 0 ? +(tw / tc).toFixed(1) : undefined;
+    return tc > 0 ? +(tw / tc).toFixed(0) : undefined;
   })();
   const managers = data.map(m => ({
     name: m.name,
@@ -174,7 +174,7 @@ const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> =
   const groupAvg = (() => {
     let tw = 0, tc = 0;
     data.forEach(m => { if (m.avgDays != null) { tw += m.avgDays * m.count; tc += m.count; } });
-    return tc > 0 ? +(tw / tc).toFixed(1) : undefined;
+    return tc > 0 ? +(tw / tc).toFixed(0) : undefined;
   })();
   const managers = data.map(m => ({
     name: m.name,

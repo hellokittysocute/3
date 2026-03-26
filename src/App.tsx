@@ -646,7 +646,7 @@ export default function App() {
       .map(([name, total]) => {
         const a = cisAvg[name];
         const noReply = cisByMgr[name] || 0;
-        return { name, count: noReply, totalCount: total, avgDays: a && a.cnt > 0 ? +(a.total / a.cnt).toFixed(1) : undefined };
+        return { name, count: noReply, totalCount: total, avgDays: a && a.cnt > 0 ? Math.round(a.total / a.cnt) : undefined };
       })
       .filter(m => m.totalCount > 0)
       .sort((a, b) => b.count - a.count);
@@ -687,7 +687,7 @@ export default function App() {
       .map(([name, total]) => {
         const a = sagupAvg[name];
         const noReply = sagupNoReply[name] || 0;
-        return { name, count: total, noReplyCount: noReply, avgDays: a && a.cnt > 0 ? +(a.total / a.cnt).toFixed(1) : undefined };
+        return { name, count: total, noReplyCount: noReply, avgDays: a && a.cnt > 0 ? Math.round(a.total / a.cnt) : undefined };
       })
       .filter(m => m.count > 0)
       .sort((a, b) => b.noReplyCount - a.noReplyCount);
