@@ -18,7 +18,7 @@ import { Top10CustomerCard } from './components/Top10CustomerCard';
 import { DrilldownModal } from './components/DrilldownModal';
 import { SnapshotHistory } from './components/SnapshotHistory';
 import { useAuth } from './contexts/AuthContext';
-import { cn, formatCurrency, addWorkingDays } from './lib/utils';
+import { cn, formatCurrency, addWorkingDays, isWorkingDay } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 type TabId = 'summary' | 'details' | 'delay' | 'snapshots' | 'admin-users' | 'admin-upload';
@@ -464,7 +464,7 @@ export default function App() {
     };
     const bizDays = (from: Date, to: Date): number => {
       let c = 0; const d = new Date(from);
-      while (d < to) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) c++; }
+      while (d < to) { d.setDate(d.getDate() + 1); if (isWorkingDay(d)) c++; }
       return c;
     };
     // 담당자별 D-day 기준 평균 (소요일 - 기한 = 차이, 음수=빠름, 양수=초과)
@@ -622,7 +622,7 @@ export default function App() {
     };
     const bizDays = (from: Date, to: Date): number => {
       let c = 0; const d = new Date(from);
-      while (d < to) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) c++; }
+      while (d < to) { d.setDate(d.getDate() + 1); if (isWorkingDay(d)) c++; }
       return c;
     };
     const today = new Date(); today.setHours(0, 0, 0, 0);

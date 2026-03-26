@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
 import { getRevenue } from '../services/dataService';
-import { formatCurrency, formatCurrencyDetail, cn } from '../lib/utils';
+import { formatCurrency, formatCurrencyDetail, cn, isWorkingDay } from '../lib/utils';
 
 type SortKey =
   | 'writeDate' | 'importance' | 'cisManager' | 'purchaseManager' | 'category' | 'customerCode'
@@ -34,8 +34,7 @@ function addBusinessDays(start: Date, days: number): Date {
   let added = 0;
   while (added < days) {
     d.setDate(d.getDate() + 1);
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) added++; // 토(6), 일(0) 제외
+    if (isWorkingDay(d)) added++; // 주말 + 공휴일 제외
   }
   return d;
 }
@@ -49,13 +48,13 @@ function countBusinessDays(from: Date, to: Date): number {
   if (direction === 1) {
     while (d.getTime() < target) {
       d.setDate(d.getDate() + 1);
-      if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+      if (isWorkingDay(d)) count++;
     }
     return count;
   } else {
     while (d.getTime() > target) {
       d.setDate(d.getDate() - 1);
-      if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+      if (isWorkingDay(d)) count++;
     }
     return -count;
   }
@@ -284,7 +283,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         const pending = show && (row?.revenuePossible === '확인중' || !row?.revenuePossible);
         if (pending) {
           const parseD = (s: string): Date | null => { if (!s) return null; const v = s.trim().replace(/^~/, ''); const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/); if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2])); const dd = new Date(v); return isNaN(dd.getTime()) ? null : dd; };
-          const bizD = (from: Date, to: Date): number => { let c = 0; const dd = new Date(from); while (dd < to) { dd.setDate(dd.getDate() + 1); if (dd.getDay() !== 0 && dd.getDay() !== 6) c++; } return c; };
+          const bizD = (from: Date, to: Date): number => { let c = 0; const dd = new Date(from); while (dd < to) { dd.setDate(dd.getDate() + 1); if (isWorkingDay(dd)) c++; } return c; };
           const pkgD = parseD(row?.packagingFilledAt ?? '');
           const now = new Date(); now.setHours(0,0,0,0);
           const elapsed = pkgD ? bizD(pkgD, now) : 0;
