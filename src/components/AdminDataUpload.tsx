@@ -406,7 +406,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
             manufacturing_date: mfgDate,
             packaging_date: pkgDate,
             revenue_possible: (row._revenue_possible as string) || '확인중',
-            revenue_possible_quantity: row.remaining_quantity as number,
+            revenue_possible_quantity: ((row._revenue_possible as string) || '확인중') === '가능' ? (row.remaining_quantity as number) : 0,
             delay_reason: '',
             importance: (row._importance as string) || '',
             purchase_manager: (row._purchase_manager as string) || '',
