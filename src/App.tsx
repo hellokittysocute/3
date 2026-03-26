@@ -131,8 +131,18 @@ export default function App() {
       overall: calc(items),
       priority: calc(items.filter(i => i.managementType === '중점관리품목')),
       material: calc(items.filter(i => i.managementType === '자재조정필요')),
-      reflectedO: calc(items.filter(i => editData[i.id]?.revenueReflected === 'O')),
-      reflectedX: calc(items.filter(i => editData[i.id]?.revenueReflected === 'X')),
+      reflectedO: (() => {
+        const oItems = items.filter(i => editData[i.id]?.revenueReflected === 'O');
+        const totalRev = oItems.reduce((s, i) => s + getRevenue(i), 0);
+        const possibleRev = oItems.filter(i => editData[i.id]?.revenuePossible === '가능').reduce((s, i) => s + getRevenue(i), 0);
+        return totalRev > 0 ? (possibleRev / totalRev) * 100 : 0;
+      })(),
+      reflectedX: (() => {
+        const xItems = items.filter(i => editData[i.id]?.revenueReflected === 'X');
+        const totalRev = xItems.reduce((s, i) => s + getRevenue(i), 0);
+        const possibleRev = xItems.filter(i => editData[i.id]?.revenuePossible === '가능').reduce((s, i) => s + getRevenue(i), 0);
+        return totalRev > 0 ? (possibleRev / totalRev) * 100 : 0;
+      })(),
     };
   }, [items, editData]);
 
