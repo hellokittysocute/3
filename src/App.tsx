@@ -771,11 +771,18 @@ export default function App() {
       if (Math.round(count) > 0) addCount('충포장', name, Math.round(count));
     });
     Object.entries(cisByMgr).forEach(([name, count]) => {
-      if (count > 0) addCount('CIS', name, count);
+      if (count > 0) addCount('CIS(매출가능여부)', name, count);
+    });
+
+    // 사급 부자재: CIS 담당자가 부자재 입력 담당
+    (cisNoReplyData?.sagupManagers || []).forEach(m => {
+      if (m.noReplyCount > 0 && m.name !== '미지정') {
+        addCount('CIS(사급부자재)', m.name, m.noReplyCount);
+      }
     });
 
     const noReplyManagers: { dept: string; name: string; count: number }[] = [];
-    ['구매', '제조', '충포장', 'CIS'].forEach(dept => {
+    ['구매', '제조', '충포장', 'CIS(매출가능여부)', 'CIS(사급부자재)'].forEach(dept => {
       if (mailByDept[dept]) {
         Object.entries(mailByDept[dept]).forEach(([name, count]) => {
           noReplyManagers.push({ dept, name, count });
