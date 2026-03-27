@@ -729,7 +729,7 @@ export default function App() {
         }
       });
     });
-    (cisNoReplyData || []).forEach(c => {
+    (cisNoReplyData?.cisNoReply || []).forEach(c => {
       if (c.count > 0 && c.name !== '미지정') {
         noReplyManagers.push({ dept: 'CIS', name: c.name, count: c.count });
       }
