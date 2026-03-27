@@ -580,7 +580,7 @@ export default function App() {
     const toManagerList = (map: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) =>
       Object.entries(map).map(([name, count]) => {
         const a = avgMap[name];
-        return { name, count: Math.round(count), avgDays: a && a.cnt > 0 ? a.total / a.cnt : undefined };
+        return { name, count: Math.round(count), avgDays: a && a.cnt > 0 ? a.total / a.cnt : -3 };
       }).filter(m => m.count > 0).sort((a, b) => b.count - a.count);
 
     // 구매: 모든 담당자 표시 (미기입 건수 + 평균 입력일)
@@ -589,7 +589,7 @@ export default function App() {
     const purchaseManagerList = Array.from(allPurchaseMgrNames).map(name => {
       const noReplyCount = Math.round(purchaseByMgr[name] || 0);
       const a = purchaseAvg[name];
-      const avgDays = a && a.cnt > 0 ? a.total / a.cnt : undefined;
+      const avgDays = a && a.cnt > 0 ? a.total / a.cnt : -3;
       const avgCnt = a?.cnt || 0; // 완료건 수 (가중평균용)
       return { name, count: noReplyCount, avgDays, avgCnt };
     }).sort((a, b) => b.count - a.count || (a.avgDays ?? 0) - (b.avgDays ?? 0));
@@ -662,7 +662,7 @@ export default function App() {
       .map(([name, total]) => {
         const a = cisAvg[name];
         const noReply = cisByMgr[name] || 0;
-        return { name, count: noReply, totalCount: total, avgDays: a && a.cnt > 0 ? Math.round(a.total / a.cnt) : undefined };
+        return { name, count: noReply, totalCount: total, avgDays: a && a.cnt > 0 ? Math.round(a.total / a.cnt) : -3 };
       })
       .filter(m => m.totalCount > 0)
       .sort((a, b) => b.count - a.count);
@@ -703,7 +703,7 @@ export default function App() {
       .map(([name, total]) => {
         const a = sagupAvg[name];
         const noReply = sagupNoReply[name] || 0;
-        return { name, count: total, noReplyCount: noReply, avgDays: a && a.cnt > 0 ? Math.round(a.total / a.cnt) : undefined };
+        return { name, count: total, noReplyCount: noReply, avgDays: a && a.cnt > 0 ? Math.round(a.total / a.cnt) : -3 };
       })
       .filter(m => m.count > 0)
       .sort((a, b) => b.noReplyCount - a.noReplyCount);
