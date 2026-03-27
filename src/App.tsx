@@ -711,13 +711,21 @@ export default function App() {
     return { cisNoReply, sagupManagers };
   }, [items, editData]);
 
-  // 담당자 이메일 매핑 (이름 → 이메일) — TODO: 이메일 주소 채우기
+  // 담당자 이메일 매핑 (이름 → 이메일) — TODO: 실제 이메일로 교체
+  const TEST_EMAIL = 'ahnsy@cosmax.com';
   const MANAGER_EMAIL: Record<string, string> = {
     // 구매담당
-    // '홍길동': 'gildong.hong@cosmax.com',
     // 제조담당
+    '이정훈': TEST_EMAIL, '홍경의': TEST_EMAIL, '정진숙': TEST_EMAIL,
+    '김영찬': TEST_EMAIL, '장건수': TEST_EMAIL,
     // 충포장담당
+    '송하림': TEST_EMAIL, '원대한': TEST_EMAIL, '오승연': TEST_EMAIL,
+    '장철환': TEST_EMAIL, '황아름': TEST_EMAIL, '박수진': TEST_EMAIL,
+    '정진영': TEST_EMAIL, '장재호': TEST_EMAIL, '송수빈': TEST_EMAIL,
+    '오정훈': TEST_EMAIL, '송진우': TEST_EMAIL, '장승상': TEST_EMAIL,
+    '조선혜': TEST_EMAIL, '양정빈': TEST_EMAIL, '유민지': TEST_EMAIL,
     // CIS담당
+    '김형석': TEST_EMAIL,
   };
 
   const handleNoReplyMail = useCallback(() => {
