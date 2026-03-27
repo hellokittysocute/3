@@ -740,15 +740,6 @@ export default function App() {
       return;
     }
 
-    const emails = [...new Set(
-      noReplyManagers.map(m => MANAGER_EMAIL[m.name]).filter(Boolean)
-    )];
-
-    if (emails.length === 0) {
-      alert('이메일이 등록된 담당자가 없습니다.\n코드 내 MANAGER_EMAIL 매핑을 업데이트해주세요.');
-      return;
-    }
-
     const [y, mo] = selectedMonth.split('-');
     const monthLabel = `${y}년 ${parseInt(mo)}월`;
 
@@ -761,12 +752,25 @@ export default function App() {
       .map(([dept, lines]) => `[${dept}]\n${lines.join('\n')}`)
       .join('\n\n');
 
-    const subject = encodeURIComponent(`[중점관리] ${monthLabel} 데이터 입력 요청의 건`);
-    const body = encodeURIComponent(
-      `안녕하세요,\n\n${monthLabel} 중점관리 품목 대시보드에 미입력 건이 있어 안내드립니다.\n\n${detailLines}\n\n확인 후 입력 부탁드립니다.\n감사합니다.`
-    );
+    const subjectText = `[중점관리] ${monthLabel} 데이터 입력 요청의 건`;
+    const bodyText = `안녕하세요,\n\n${monthLabel} 중점관리 품목 대시보드에 미입력 건이 있어 안내드립니다.\n\n${detailLines}\n\n확인 후 입력 부탁드립니다.\n감사합니다.`;
 
-    window.open(`mailto:${emails.join(',')}?subject=${subject}&body=${body}`, '_self');
+    const emails = [...new Set(
+      noReplyManagers.map(m => MANAGER_EMAIL[m.name]).filter(Boolean)
+    )];
+
+    if (emails.length > 0) {
+      window.open(`mailto:${emails.join(',')}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(bodyText)}`, '_self');
+    } else {
+      // 이메일 매핑 없으면 내용을 클립보드에 복사
+      const clipText = `제목: ${subjectText}\n\n${bodyText}`;
+      navigator.clipboard.writeText(clipText).then(() => {
+        alert('메일 내용이 클립보드에 복사되었습니다.\nOutlook에 붙여넣기 해주세요.');
+      }).catch(() => {
+        // clipboard API 실패 시 prompt로 표시
+        prompt('아래 내용을 복사하세요:', clipText);
+      });
+    }
   }, [noReplyData, cisNoReplyData, selectedMonth]);
 
   // 고객사 드릴다운 데이터
