@@ -310,7 +310,7 @@ export default function App() {
       .map(([dept, lines]) => `[${dept}]\n${lines.join('\n')}`)
       .join('\n\n');
 
-    const subject = encodeURIComponent(`[중점관리] ${monthLabel} 데이터 입력 요청`);
+    const subject = encodeURIComponent(`[중점관리] ${monthLabel} 데이터 입력 요청의 건`);
     const body = encodeURIComponent(
       `안녕하세요,\n\n${monthLabel} 중점관리 품목 대시보드에 미입력 건이 있어 안내드립니다.\n\n${detailLines}\n\n확인 후 입력 부탁드립니다.\n감사합니다.`
     );
