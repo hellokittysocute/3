@@ -491,16 +491,20 @@ export default function App() {
         purchaseAvg[mgr].cnt += 1;
       }
       // 제조: 양쪽 모두 실제 입력한 건만 (업로드 pre-fill 제외)
+      const cat2 = item.category?.trim() || '';
       const matFilled2 = parseDate(ed.materialSettingFilledAt ?? '');
       const mfgFilled = parseDate(ed.manufacturingFilledAt ?? '');
       if (matFilled2 && mfgFilled
         && ed.materialSettingFilledAt !== ed.manufacturingFilledAt
         && ed.materialSettingFilledAt !== ed.writeDate
         && ed.manufacturingFilledAt !== ed.writeDate) {
-        const mgr = (item.cisManager ?? '').trim() || '미지정';
-        if (!mfgAvg[mgr]) mfgAvg[mgr] = { total: 0, cnt: 0 };
-        mfgAvg[mgr].total += bizDays(matFilled2, mfgFilled) - LIMIT_MFG;
-        mfgAvg[mgr].cnt += 1;
+        const managers = getMfgManagers(cat2, item.itemName || '');
+        const share = 1 / managers.length;
+        managers.forEach(m => {
+          if (!mfgAvg[m]) mfgAvg[m] = { total: 0, cnt: 0 };
+          mfgAvg[m].total += (bizDays(matFilled2, mfgFilled) - LIMIT_MFG) * share;
+          mfgAvg[m].cnt += share;
+        });
       }
       // 충포장: 양쪽 모두 실제 입력한 건만 (업로드 pre-fill 제외)
       const mfgFilled2 = parseDate(ed.manufacturingFilledAt ?? '');
@@ -509,10 +513,13 @@ export default function App() {
         && ed.manufacturingFilledAt !== ed.packagingFilledAt
         && ed.manufacturingFilledAt !== ed.writeDate
         && ed.packagingFilledAt !== ed.writeDate) {
-        const mgr = (item.cisManager ?? '').trim() || '미지정';
-        if (!pkgAvg[mgr]) pkgAvg[mgr] = { total: 0, cnt: 0 };
-        pkgAvg[mgr].total += bizDays(mfgFilled2, pkgFilled) - LIMIT_PKG;
-        pkgAvg[mgr].cnt += 1;
+        const pkgManagers = getPkgManagers(cat2);
+        const share = 1 / pkgManagers.length;
+        pkgManagers.forEach(m => {
+          if (!pkgAvg[m]) pkgAvg[m] = { total: 0, cnt: 0 };
+          pkgAvg[m].total += (bizDays(mfgFilled2, pkgFilled) - LIMIT_PKG) * share;
+          pkgAvg[m].cnt += share;
+        });
       }
     });
 
