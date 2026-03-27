@@ -254,70 +254,6 @@ export default function App() {
     }
   }, [selectedMonth, items, editData, profile]);
 
-  // 담당자 이메일 매핑 (이름 → 이메일) — TODO: 이메일 주소 채우기
-  const MANAGER_EMAIL: Record<string, string> = {
-    // 구매담당
-    // '홍길동': 'gildong.hong@cosmax.com',
-    // 제조담당
-    // 충포장담당
-    // CIS담당
-  };
-
-  const handleNoReplyMail = useCallback(() => {
-    // 미입력 담당자 수집 (부서별)
-    const noReplyManagers: { dept: string; name: string; count: number }[] = [];
-    noReplyData.forEach(d => {
-      d.managers.forEach(m => {
-        if (m.count > 0 && m.name !== '미지정') {
-          noReplyManagers.push({ dept: d.dept, name: m.name, count: Math.round(m.count) });
-        }
-      });
-    });
-    // CIS 미회신
-    (cisNoReplyData || []).forEach(c => {
-      if (c.count > 0 && c.name !== '미지정') {
-        noReplyManagers.push({ dept: 'CIS', name: c.name, count: c.count });
-      }
-    });
-
-    if (noReplyManagers.length === 0) {
-      alert('미입력 담당자가 없습니다.');
-      return;
-    }
-
-    // 이메일이 매핑된 담당자만 수신자로
-    const emails = [...new Set(
-      noReplyManagers
-        .map(m => MANAGER_EMAIL[m.name])
-        .filter(Boolean)
-    )];
-
-    if (emails.length === 0) {
-      alert('이메일이 등록된 담당자가 없습니다.\n코드 내 MANAGER_EMAIL 매핑을 업데이트해주세요.');
-      return;
-    }
-
-    const [y, mo] = selectedMonth.split('-');
-    const monthLabel = `${y}년 ${parseInt(mo)}월`;
-
-    // 부서별 미입력 내역 정리
-    const deptSummary = new Map<string, string[]>();
-    noReplyManagers.forEach(m => {
-      if (!deptSummary.has(m.dept)) deptSummary.set(m.dept, []);
-      deptSummary.get(m.dept)!.push(`  - ${m.name}: ${m.count}건`);
-    });
-    const detailLines = Array.from(deptSummary.entries())
-      .map(([dept, lines]) => `[${dept}]\n${lines.join('\n')}`)
-      .join('\n\n');
-
-    const subject = encodeURIComponent(`[중점관리] ${monthLabel} 데이터 입력 요청의 건`);
-    const body = encodeURIComponent(
-      `안녕하세요,\n\n${monthLabel} 중점관리 품목 대시보드에 미입력 건이 있어 안내드립니다.\n\n${detailLines}\n\n확인 후 입력 부탁드립니다.\n감사합니다.`
-    );
-
-    window.open(`mailto:${emails.join(',')}?subject=${subject}&body=${body}`, '_self');
-  }, [noReplyData, cisNoReplyData, selectedMonth]);
-
   // 월 변경 시 이전 월 자동 스냅샷
   const prevMonthRef = React.useRef(selectedMonth);
   useEffect(() => {
@@ -774,6 +710,64 @@ export default function App() {
 
     return { cisNoReply, sagupManagers };
   }, [items, editData]);
+
+  // 담당자 이메일 매핑 (이름 → 이메일) — TODO: 이메일 주소 채우기
+  const MANAGER_EMAIL: Record<string, string> = {
+    // 구매담당
+    // '홍길동': 'gildong.hong@cosmax.com',
+    // 제조담당
+    // 충포장담당
+    // CIS담당
+  };
+
+  const handleNoReplyMail = useCallback(() => {
+    const noReplyManagers: { dept: string; name: string; count: number }[] = [];
+    noReplyData.forEach(d => {
+      d.managers.forEach(m => {
+        if (m.count > 0 && m.name !== '미지정') {
+          noReplyManagers.push({ dept: d.dept, name: m.name, count: Math.round(m.count) });
+        }
+      });
+    });
+    (cisNoReplyData || []).forEach(c => {
+      if (c.count > 0 && c.name !== '미지정') {
+        noReplyManagers.push({ dept: 'CIS', name: c.name, count: c.count });
+      }
+    });
+
+    if (noReplyManagers.length === 0) {
+      alert('미입력 담당자가 없습니다.');
+      return;
+    }
+
+    const emails = [...new Set(
+      noReplyManagers.map(m => MANAGER_EMAIL[m.name]).filter(Boolean)
+    )];
+
+    if (emails.length === 0) {
+      alert('이메일이 등록된 담당자가 없습니다.\n코드 내 MANAGER_EMAIL 매핑을 업데이트해주세요.');
+      return;
+    }
+
+    const [y, mo] = selectedMonth.split('-');
+    const monthLabel = `${y}년 ${parseInt(mo)}월`;
+
+    const deptSummary = new Map<string, string[]>();
+    noReplyManagers.forEach(m => {
+      if (!deptSummary.has(m.dept)) deptSummary.set(m.dept, []);
+      deptSummary.get(m.dept)!.push(`  - ${m.name}: ${m.count}건`);
+    });
+    const detailLines = Array.from(deptSummary.entries())
+      .map(([dept, lines]) => `[${dept}]\n${lines.join('\n')}`)
+      .join('\n\n');
+
+    const subject = encodeURIComponent(`[중점관리] ${monthLabel} 데이터 입력 요청의 건`);
+    const body = encodeURIComponent(
+      `안녕하세요,\n\n${monthLabel} 중점관리 품목 대시보드에 미입력 건이 있어 안내드립니다.\n\n${detailLines}\n\n확인 후 입력 부탁드립니다.\n감사합니다.`
+    );
+
+    window.open(`mailto:${emails.join(',')}?subject=${subject}&body=${body}`, '_self');
+  }, [noReplyData, cisNoReplyData, selectedMonth]);
 
   // 고객사 드릴다운 데이터
   const customerModalData = useMemo(() => {
