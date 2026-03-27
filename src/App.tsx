@@ -573,20 +573,35 @@ export default function App() {
       }
     });
 
-    // 구매 회신완료건: 담당자별 총 건수 + 평균 입력일 (미회신 건수가 0이어도 표시)
+    // 회신완료건: 담당자별 총 건수 (미회신 0건이라도 평균 입력일 표시하기 위해)
     const purchaseCompletedByMgr: Record<string, number> = {};
+    const mfgCompletedByMgr: Record<string, number> = {};
+    const pkgCompletedByMgr: Record<string, number> = {};
     items.forEach(item => {
       const ed = editData[item.id];
+      if (!ed) return;
       const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
-      if (!isSagup && (ed?.materialSettingDate ?? '').trim()) {
-        const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
+      const cat = item.category?.trim() || '';
+      // 구매 완료
+      if (!isSagup && (ed.materialSettingDate ?? '').trim()) {
+        const mgr = (ed.purchaseManager ?? '').trim() || '미지정';
         purchaseCompletedByMgr[mgr] = (purchaseCompletedByMgr[mgr] || 0) + 1;
+      }
+      // 제조 완료
+      if ((ed.manufacturingDate ?? '').trim()) {
+        const managers = getMfgManagers(cat, item.itemName || '');
+        managers.forEach(m => { mfgCompletedByMgr[m] = (mfgCompletedByMgr[m] || 0) + 1; });
+      }
+      // 충포장 완료
+      if ((ed.packagingDate ?? '').trim()) {
+        const managers = getPkgManagers(cat);
+        managers.forEach(m => { pkgCompletedByMgr[m] = (pkgCompletedByMgr[m] || 0) + 1; });
       }
     });
 
-    // 모든 부서 공통: 미기입 0건이라도 평균 입력일이 있으면 표시
-    const toManagerList = (noReplyMap: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) => {
-      const allNames = new Set([...Object.keys(noReplyMap), ...Object.keys(avgMap)]);
+    // 공통: 미기입 + 완료건 담당자 모두 표시
+    const buildManagerList = (noReplyMap: Record<string, number>, completedMap: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) => {
+      const allNames = new Set([...Object.keys(noReplyMap), ...Object.keys(completedMap), ...Object.keys(avgMap)]);
       return Array.from(allNames).map(name => {
         const count = Math.round(noReplyMap[name] || 0);
         const a = avgMap[name];
@@ -596,18 +611,9 @@ export default function App() {
       }).sort((a, b) => b.count - a.count || (a.avgDays ?? 0) - (b.avgDays ?? 0));
     };
 
-    // 구매: 모든 담당자 표시 (미기입 건수 + 평균 입력일)
-    const allPurchaseMgrNames = new Set([...Object.keys(purchaseByMgr), ...Object.keys(purchaseCompletedByMgr)]);
-    const purchaseManagerList = Array.from(allPurchaseMgrNames).map(name => {
-      const noReplyCount = Math.round(purchaseByMgr[name] || 0);
-      const a = purchaseAvg[name];
-      const avgDays = a && a.cnt > 0 ? a.total / a.cnt : -3;
-      const avgCnt = a?.cnt || 0;
-      return { name, count: noReplyCount, avgDays, avgCnt };
-    }).sort((a, b) => b.count - a.count || (a.avgDays ?? 0) - (b.avgDays ?? 0));
-
-    const mfgManagerList = toManagerList(mfgByMgr, mfgAvg);
-    const pkgManagerList = toManagerList(pkgByMgr, pkgAvg);
+    const purchaseManagerList = buildManagerList(purchaseByMgr, purchaseCompletedByMgr, purchaseAvg);
+    const mfgManagerList = buildManagerList(mfgByMgr, mfgCompletedByMgr, mfgAvg);
+    const pkgManagerList = buildManagerList(pkgByMgr, pkgCompletedByMgr, pkgAvg);
     const purchaseAllCount = purchaseManagerList.reduce((s, m) => s + m.count, 0);
 
     // 각 부서 전체 평균: 완료건 수 기반 가중평균
