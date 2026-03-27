@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users, Camera, Clock } from 'lucide-react';
+import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users, Camera, Clock, Mail } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
 import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths, createSnapshot, hasSnapshotForMonth } from './services/supabaseDataService';
@@ -253,6 +253,70 @@ export default function App() {
       setSnapshotStatus('idle');
     }
   }, [selectedMonth, items, editData, profile]);
+
+  // 담당자 이메일 매핑 (이름 → 이메일) — TODO: 이메일 주소 채우기
+  const MANAGER_EMAIL: Record<string, string> = {
+    // 구매담당
+    // '홍길동': 'gildong.hong@cosmax.com',
+    // 제조담당
+    // 충포장담당
+    // CIS담당
+  };
+
+  const handleNoReplyMail = useCallback(() => {
+    // 미입력 담당자 수집 (부서별)
+    const noReplyManagers: { dept: string; name: string; count: number }[] = [];
+    noReplyData.forEach(d => {
+      d.managers.forEach(m => {
+        if (m.count > 0 && m.name !== '미지정') {
+          noReplyManagers.push({ dept: d.dept, name: m.name, count: Math.round(m.count) });
+        }
+      });
+    });
+    // CIS 미회신
+    (cisNoReplyData || []).forEach(c => {
+      if (c.count > 0 && c.name !== '미지정') {
+        noReplyManagers.push({ dept: 'CIS', name: c.name, count: c.count });
+      }
+    });
+
+    if (noReplyManagers.length === 0) {
+      alert('미입력 담당자가 없습니다.');
+      return;
+    }
+
+    // 이메일이 매핑된 담당자만 수신자로
+    const emails = [...new Set(
+      noReplyManagers
+        .map(m => MANAGER_EMAIL[m.name])
+        .filter(Boolean)
+    )];
+
+    if (emails.length === 0) {
+      alert('이메일이 등록된 담당자가 없습니다.\n코드 내 MANAGER_EMAIL 매핑을 업데이트해주세요.');
+      return;
+    }
+
+    const [y, mo] = selectedMonth.split('-');
+    const monthLabel = `${y}년 ${parseInt(mo)}월`;
+
+    // 부서별 미입력 내역 정리
+    const deptSummary = new Map<string, string[]>();
+    noReplyManagers.forEach(m => {
+      if (!deptSummary.has(m.dept)) deptSummary.set(m.dept, []);
+      deptSummary.get(m.dept)!.push(`  - ${m.name}: ${m.count}건`);
+    });
+    const detailLines = Array.from(deptSummary.entries())
+      .map(([dept, lines]) => `[${dept}]\n${lines.join('\n')}`)
+      .join('\n\n');
+
+    const subject = encodeURIComponent(`[중점관리] ${monthLabel} 데이터 입력 요청`);
+    const body = encodeURIComponent(
+      `안녕하세요,\n\n${monthLabel} 중점관리 품목 대시보드에 미입력 건이 있어 안내드립니다.\n\n${detailLines}\n\n확인 후 입력 부탁드립니다.\n감사합니다.`
+    );
+
+    window.open(`mailto:${emails.join(',')}?subject=${subject}&body=${body}`, '_self');
+  }, [noReplyData, cisNoReplyData, selectedMonth]);
 
   // 월 변경 시 이전 월 자동 스냅샷
   const prevMonthRef = React.useRef(selectedMonth);
@@ -859,6 +923,13 @@ export default function App() {
             >
               <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {snapshotStatus === 'saved' ? '완료' : snapshotStatus === 'saving' ? '저장중' : '스냅샷'}
+            </button>
+            <button
+              onClick={handleNoReplyMail}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:pl-4 sm:pr-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all duration-300 shadow-xl shadow-rose-200 shrink-0"
+            >
+              <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">미입력 알림</span><span className="sm:hidden">알림</span>
             </button>
             <div className="h-10 w-px bg-slate-200 hidden sm:block" />
             {/* 사용자 정보 + 로그아웃 */}
