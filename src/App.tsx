@@ -577,37 +577,44 @@ export default function App() {
       }
     });
 
-    const toManagerList = (map: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) =>
-      Object.entries(map).map(([name, count]) => {
+    // 모든 부서 공통: 미기입 0건이라도 평균 입력일이 있으면 표시
+    const toManagerList = (noReplyMap: Record<string, number>, avgMap: Record<string, { total: number; cnt: number }>) => {
+      const allNames = new Set([...Object.keys(noReplyMap), ...Object.keys(avgMap)]);
+      return Array.from(allNames).map(name => {
+        const count = Math.round(noReplyMap[name] || 0);
         const a = avgMap[name];
-        return { name, count: Math.round(count), avgDays: a && a.cnt > 0 ? a.total / a.cnt : -3 };
-      }).filter(m => m.count > 0).sort((a, b) => b.count - a.count);
+        const avgDays = a && a.cnt > 0 ? a.total / a.cnt : -3;
+        const avgCnt = a?.cnt || 0;
+        return { name, count, avgDays, avgCnt };
+      }).sort((a, b) => b.count - a.count || (a.avgDays ?? 0) - (b.avgDays ?? 0));
+    };
 
     // 구매: 모든 담당자 표시 (미기입 건수 + 평균 입력일)
-    // 미기입 0건이라도 평균 입력일이 있으면 표시
     const allPurchaseMgrNames = new Set([...Object.keys(purchaseByMgr), ...Object.keys(purchaseCompletedByMgr)]);
     const purchaseManagerList = Array.from(allPurchaseMgrNames).map(name => {
       const noReplyCount = Math.round(purchaseByMgr[name] || 0);
       const a = purchaseAvg[name];
       const avgDays = a && a.cnt > 0 ? a.total / a.cnt : -3;
-      const avgCnt = a?.cnt || 0; // 완료건 수 (가중평균용)
+      const avgCnt = a?.cnt || 0;
       return { name, count: noReplyCount, avgDays, avgCnt };
     }).sort((a, b) => b.count - a.count || (a.avgDays ?? 0) - (b.avgDays ?? 0));
+
+    const mfgManagerList = toManagerList(mfgByMgr, mfgAvg);
+    const pkgManagerList = toManagerList(pkgByMgr, pkgAvg);
     const purchaseAllCount = purchaseManagerList.reduce((s, m) => s + m.count, 0);
-    // 구매 전체 평균: 완료건 수 기반 가중평균
-    const purchaseGroupAvg = (() => {
+
+    // 각 부서 전체 평균: 완료건 수 기반 가중평균
+    const computeGroupAvg = (list: { avgDays?: number; avgCnt: number }[]) => {
       let tw = 0, tc = 0;
-      purchaseManagerList.forEach(m => {
-        if (m.avgDays != null) { tw += m.avgDays * m.avgCnt; tc += m.avgCnt; }
-      });
+      list.forEach(m => { if (m.avgDays != null) { tw += m.avgDays * m.avgCnt; tc += m.avgCnt; } });
       return tc > 0 ? +(tw / tc).toFixed(1) : undefined;
-    })();
+    };
 
     return [
-      { dept: '제조', count: mfgCount, managers: toManagerList(mfgByMgr, mfgAvg) },
-      { dept: '충포장', count: pkgCount, managers: toManagerList(pkgByMgr, pkgAvg) },
-      { dept: '구매', count: purchaseAllCount, managers: purchaseManagerList, groupAvgDays: purchaseGroupAvg },
-    ].filter(d => d.count > 0 || d.dept === '구매');
+      { dept: '제조', count: mfgCount, managers: mfgManagerList, groupAvgDays: computeGroupAvg(mfgManagerList) },
+      { dept: '충포장', count: pkgCount, managers: pkgManagerList, groupAvgDays: computeGroupAvg(pkgManagerList) },
+      { dept: '구매', count: purchaseAllCount, managers: purchaseManagerList, groupAvgDays: computeGroupAvg(purchaseManagerList) },
+    ].filter(d => d.count > 0 || d.managers.some(m => m.avgDays != null) || d.dept === '구매');
   }, [items, editData]);
 
   // CIS 담당자별 미회신 건수 (사급 제외) + 사급 건 CIS 평균 입력일
