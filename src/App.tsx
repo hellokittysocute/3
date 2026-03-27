@@ -721,17 +721,65 @@ export default function App() {
   };
 
   const handleNoReplyMail = useCallback(() => {
-    const noReplyManagers: { dept: string; name: string; count: number }[] = [];
+    // 직전 단계 입력 완료된 건만 미입력으로 집계
+    // 구매: 무조건 포함 (직전 단계 없음)
+    // 제조: 구매(부자재) 입력 완료된 건만
+    // 충포장: 제조 입력 완료된 건만
+    // CIS: 충포장 입력 완료된 건만
+    const mailByDept: Record<string, Record<string, number>> = {};
+    const addCount = (dept: string, name: string, count: number) => {
+      if (!mailByDept[dept]) mailByDept[dept] = {};
+      mailByDept[dept][name] = (mailByDept[dept][name] || 0) + count;
+    };
+
+    // noReplyData에서 구매/제조는 그대로 사용
     noReplyData.forEach(d => {
-      d.managers.forEach(m => {
-        if (m.count > 0 && m.name !== '미지정') {
-          noReplyManagers.push({ dept: d.dept, name: m.name, count: Math.round(m.count) });
-        }
-      });
+      if (d.dept === '구매' || d.dept === '제조') {
+        d.managers.forEach(m => {
+          if (m.count > 0 && m.name !== '미지정') addCount(d.dept, m.name, Math.round(m.count));
+        });
+      }
     });
-    (cisNoReplyData?.cisNoReply || []).forEach(c => {
-      if (c.count > 0 && c.name !== '미지정') {
-        noReplyManagers.push({ dept: 'CIS', name: c.name, count: c.count });
+
+    // 충포장: 제조 입력 완료 + 충포장 미입력인 건만
+    // CIS: 충포장 입력 완료 + 매출가능여부 미입력인 건만
+    const pkgByMgr: Record<string, number> = {};
+    const cisByMgr: Record<string, number> = {};
+    items.forEach(item => {
+      const ed = editData[item.id];
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
+
+      // 충포장: 제조 입력됨 + 충포장 미입력
+      if ((ed?.manufacturingDate ?? '').trim() && !(ed?.packagingDate ?? '').trim()) {
+        const cat = item.category?.trim() || '';
+        const mgrs = noReplyData.find(d => d.dept === '충포장')?.managers.map(m => m.name) || [];
+        // 충포장 담당자가 있으면 1건씩 추가
+        if (mgrs.length > 0) {
+          const share = 1 / mgrs.length;
+          mgrs.forEach(m => { if (m !== '미지정') pkgByMgr[m] = (pkgByMgr[m] || 0) + share; });
+        }
+      }
+
+      // CIS: 충포장 입력됨 + 매출가능여부 미입력
+      if ((ed?.packagingDate ?? '').trim() && (!ed?.revenuePossible || ed.revenuePossible === '확인중')) {
+        const mgr = (item.cisManager ?? '').trim() || '미지정';
+        if (mgr !== '미지정') cisByMgr[mgr] = (cisByMgr[mgr] || 0) + 1;
+      }
+    });
+
+    Object.entries(pkgByMgr).forEach(([name, count]) => {
+      if (Math.round(count) > 0) addCount('충포장', name, Math.round(count));
+    });
+    Object.entries(cisByMgr).forEach(([name, count]) => {
+      if (count > 0) addCount('CIS', name, count);
+    });
+
+    const noReplyManagers: { dept: string; name: string; count: number }[] = [];
+    ['구매', '제조', '충포장', 'CIS'].forEach(dept => {
+      if (mailByDept[dept]) {
+        Object.entries(mailByDept[dept]).forEach(([name, count]) => {
+          noReplyManagers.push({ dept, name, count });
+        });
       }
     });
 
