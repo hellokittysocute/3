@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 
 export interface NoReplyDeptItem {
   dept: string;
@@ -39,8 +39,6 @@ interface GroupStyle {
   border: string;
 }
 
-type TabId = '전체' | '구매' | '제조' | '충포장' | 'CIS';
-
 const PROD_STYLE: GroupStyle = { dot: '#f59e0b', label: '#b45309', badgeBg: '#FFF8EB', badgeColor: '#b45309', border: '#f59e0b' };
 const PURCHASE_STYLE: GroupStyle = { dot: '#10b981', label: '#047857', badgeBg: '#ECFDF5', badgeColor: '#047857', border: '#10b981' };
 const CIS_STYLE: GroupStyle = { dot: '#6366f1', label: '#4338ca', badgeBg: '#EEF2FF', badgeColor: '#4338ca', border: '#6366f1' };
@@ -54,8 +52,6 @@ const MGR_CATEGORY: Record<string, string> = {
   '오정훈': '마스크시트, 캔', '송진우': '튜브 외주', '장승상': '기초', '조선혜': '견본',
   '양정빈': '파우더', '유민지': '튜브, 에어쿠션',
 };
-
-const TABS: TabId[] = ['전체', '구매', '제조', '충포장', 'CIS'];
 
 const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ managers, limit, showCategory }) => {
   if (managers.length === 0) return <span style={{ fontSize: 11, color: '#9ca3af' }}>담당자 없음</span>;
@@ -71,33 +67,22 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
             key={m.name}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '5px 10px', background: over ? '#fef2f2' : '#fff', borderRadius: 6,
-              transition: 'background 0.15s',
+              padding: '4px 8px', background: over ? '#fef2f2' : '#fff', borderRadius: 6,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = over ? '#fee2e2' : '#f8fafc'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = over ? '#fef2f2' : '#fff'; }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#374151' }}>
-                <b>{m.name}</b>
-                {showCategory && MGR_CATEGORY[m.name] && <span style={{ color: '#374151', fontWeight: 400, marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}
-              </span>
+              <span style={{ fontSize: 12, color: '#374151' }}><b>{m.name}</b>{showCategory && MGR_CATEGORY[m.name] && <span style={{ color: '#374151', fontWeight: 400, marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
               {label && (
                 <span style={{
-                  fontSize: 10, borderRadius: 4, padding: '1px 5px',
+                  fontSize: 10, fontWeight: 600, borderRadius: 4, padding: '1px 5px',
                   color: m.avgDays! <= -1 ? '#059669' : m.avgDays! <= 0 ? '#ca8a04' : '#dc2626',
                   background: m.avgDays! <= -1 ? '#ecfdf5' : m.avgDays! <= 0 ? '#fefce8' : '#fef2f2',
-                  fontWeight: over ? 700 : 600,
                 }}>
                   {label}
                 </span>
               )}
             </div>
-            <span style={{
-              fontSize: 12,
-              color: over ? '#dc2626' : '#374151',
-              fontWeight: over ? 700 : 400,
-            }}>{m.count.toLocaleString()}건</span>
+            <span style={{ fontSize: 12, color: '#374151' }}>{m.count.toLocaleString()}건</span>
           </div>
         );
       })}
@@ -106,8 +91,8 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
 };
 
 const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ title, count, style: s, managers, limit, showCategory }) => (
-  <div style={{ background: '#f8f9fb', borderRadius: 8, padding: '12px 14px' }}>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+  <div style={{ background: '#f8f9fb', borderRadius: 8, padding: '10px 12px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
       <span style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em' }}>{title}</span>
       <span style={{ fontSize: 10, fontWeight: 600, color: s.badgeColor, background: s.badgeBg, borderRadius: 6, padding: '1px 6px', opacity: 0.85 }}>
         {count.toLocaleString()}건
@@ -138,7 +123,7 @@ const GroupHeader: React.FC<{ name: string; count: number; style: GroupStyle; av
 const cardBase: React.CSSProperties = {
   background: '#fff',
   border: '0.5px solid #e5e7eb',
-  padding: '16px 18px',
+  padding: '14px 16px',
   display: 'flex',
   flexDirection: 'column',
 };
@@ -207,8 +192,6 @@ const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> =
 };
 
 export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagupManagers }) => {
-  const [activeTab, setActiveTab] = useState<TabId>('전체');
-
   const cisNoReplyCount = useMemo(() => (cisNoReply || []).reduce((s, c) => s + c.count, 0), [cisNoReply]);
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0) + cisNoReplyCount, [data, cisNoReplyCount]);
   const hasPurchaseManagers = useMemo(() => {
@@ -225,120 +208,10 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
   const prodAvgDays = useMemo(() => computeGroupAvgDays([mfg, pkg]), [mfg, pkg]);
   const purchaseAvgDays = useMemo(() => purchase?.groupAvgDays ?? computeGroupAvgDays([purchase]), [purchase]);
 
-  // Tab별 건수 계산
-  const tabCounts = useMemo(() => ({
-    '전체': totalCount,
-    '구매': purchase?.count || 0,
-    '제조': mfg?.count || 0,
-    '충포장': pkg?.count || 0,
-    'CIS': cisNoReplyCount + (sagupManagers || []).reduce((s, m) => s + m.noReplyCount, 0),
-  }), [totalCount, purchase, mfg, pkg, cisNoReplyCount, sagupManagers]);
-
-  const renderContent = () => {
-    if (totalCount === 0 && !hasPurchaseManagers) {
-      return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <span style={{ fontSize: 13, color: '#9ca3af' }}>미회신 없음</span>
-        </div>
-      );
-    }
-
-    // 구매 섹션
-    const purchaseSection = (purchase || hasPurchaseManagers) && (
-      <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-        <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgLabel={`평균 ${formatAvgDays(purchaseAvgDays)}`} manager="김태문" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {purchase && purchase.managers.length > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
-        </div>
-      </div>
-    );
-
-    // 생산(제조+충포장) 섹션
-    const prodSection = (mfg || pkg) && (
-      <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-        <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(prodAvgDays)}`} manager="최우정" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {mfg && mfg.managers.length > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
-          {pkg && pkg.managers.length > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
-        </div>
-      </div>
-    );
-
-    // 제조만
-    const mfgSection = mfg && (
-      <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-        <GroupHeader name="제조" count={mfg.count} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(computeGroupAvgDays([mfg]))}`} manager="최우정" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {mfg.managers.length > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
-        </div>
-      </div>
-    );
-
-    // 충포장만
-    const pkgSection = pkg && (
-      <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
-        <GroupHeader name="충포장" count={pkg.count} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(computeGroupAvgDays([pkg]))}`} manager="최우정" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {pkg.managers.length > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
-        </div>
-      </div>
-    );
-
-    // CIS 섹션 (사급 + 매출가능여부)
-    const cisSection = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {sagupManagers && sagupManagers.length > 0 && (
-          <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
-        )}
-        {cisNoReply && cisNoReply.length > 0 && (
-          <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
-        )}
-      </div>
-    );
-
-    switch (activeTab) {
-      case '구매':
-        return <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{purchaseSection}</div>;
-      case '제조':
-        return <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{mfgSection}</div>;
-      case '충포장':
-        return <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{pkgSection}</div>;
-      case 'CIS':
-        return cisSection;
-      default: // 전체
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* 1행: 구매 + CIS(사급 부자재) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
-              {purchaseSection}
-              {sagupManagers && sagupManagers.length > 0 && (
-                <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
-              )}
-            </div>
-            {/* 2행: 생산(제조+충포장) + CIS(매출 가능여부) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
-              {prodSection}
-              {cisNoReply && cisNoReply.length > 0 && (
-                <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
-              )}
-            </div>
-          </div>
-        );
-    }
-  };
-
   return (
-    <div style={{
-      background: '#fff',
-      borderRadius: 14,
-      border: '0.5px solid #e5e7eb',
-      padding: 24,
-      display: 'flex',
-      flexDirection: 'column',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-    }}>
+    <div style={{ background: '#fff', borderRadius: 14, border: '0.5px solid #e5e7eb', padding: 20, display: 'flex', flexDirection: 'column' }}>
       {/* 위젯 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', margin: 0 }}>미회신 건수</h3>
         {totalCount > 0 && (
           <span style={{ fontSize: 11, fontWeight: 700, color: '#A32D2D', background: '#FCEBEB', borderRadius: 8, padding: '2px 10px' }}>
@@ -347,60 +220,40 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
         )}
       </div>
 
-      {/* 탭 네비게이션 */}
-      <div style={{
-        display: 'flex',
-        gap: 4,
-        marginBottom: 16,
-        borderBottom: '1px solid #f1f5f9',
-        paddingBottom: 0,
-      }}>
-        {TABS.map(tab => {
-          const isActive = activeTab === tab;
-          const count = tabCounts[tab];
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '8px 12px',
-                fontSize: 12,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#312E81' : '#9ca3af',
-                background: 'none',
-                border: 'none',
-                borderBottom: isActive ? '2px solid #6366f1' : '2px solid transparent',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                marginBottom: -1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {tab}
-              {count > 0 && (
-                <span style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: isActive ? '#fff' : '#9ca3af',
-                  background: isActive ? '#6366f1' : '#f1f5f9',
-                  borderRadius: 10,
-                  padding: '1px 6px',
-                  minWidth: 18,
-                  textAlign: 'center',
-                }}>
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {totalCount === 0 && !hasPurchaseManagers ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <span style={{ fontSize: 13, color: '#9ca3af' }}>미회신 없음</span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* 1행: 구매 + CIS(사급 부자재) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
+            <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
+              <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgLabel={`평균 ${formatAvgDays(purchaseAvgDays)}`} manager="김태문" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {purchase && purchase.managers.length > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
+              </div>
+            </div>
+            {sagupManagers && sagupManagers.length > 0 && (
+              <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
+            )}
+          </div>
 
-      {/* 콘텐츠 */}
-      {renderContent()}
+          {/* 2행: 생산(제조+충포장) + CIS(매출 가능여부) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
+            <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
+              <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(prodAvgDays)}`} manager="최우정" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {mfg && mfg.managers.length > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
+                {pkg && pkg.managers.length > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
+              </div>
+            </div>
+            {cisNoReply && cisNoReply.length > 0 && (
+              <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
