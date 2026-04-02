@@ -1441,7 +1441,7 @@ export default function App() {
       </main>
 
       <footer className="max-w-[1600px] mx-auto px-8 py-12 border-t border-slate-200 text-slate-400 text-[13px] font-medium flex justify-between items-center">
-        <div>© 2026 Marketing Dashboard. All rights reserved.</div>
+        <div>© 2026 화장품 OEM/ODM 마케팅 대시보드. 모든 권리 보유.</div>
         <div className="flex gap-6">
           <a href="#" className="hover:text-slate-600 transition-colors">개인정보처리방침</a>
           <a href="#" className="hover:text-slate-600 transition-colors">이용약관</a>
