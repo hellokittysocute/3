@@ -190,7 +190,7 @@ const TOGGLEABLE_COLUMNS = [
   { id: 'revenuePossibleQuantity', label: '매출가능수량' },
   { id: 'revenuePossibleDday', label: '가능여부 D-day' },
   { id: 'progressRate', label: '진도율' },
-  { id: 'delayReason', label: '지연사유' },
+  { id: 'delayReason', label: '매출불가사유' },
   { id: 'revenueReflected', label: '매출반영여부' },
   { id: 'unitPrice', label: '단가' },
   { id: 'note', label: '비고' },
@@ -344,6 +344,7 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="연구소">연구소</option>
           <option value="물류">물류</option>
           <option value="영업">영업</option>
+          <option value="고객">고객</option>
         </select>
       </td>}
       {v('revenueReflected') && <td className="px-1 py-1 border-r border-slate-100/60 text-center">
@@ -524,7 +525,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         '매출 가능여부': row?.revenuePossible ?? '',
         '매출 가능 수량': row?.revenuePossibleQuantity || 0,
         '진도율(%)': Number(rate.toFixed(1)),
-        '지연사유': row?.delayReason ?? '',
+        '매출불가사유': row?.delayReason ?? '',
         '매출반영여부': row?.revenueReflected ?? '',
         '단가': item.unitPrice,
         '매출(단가x잔량)': getRevenue(item),
@@ -768,7 +769,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               {vis('revenuePossibleQuantity') && <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>}
               {vis('revenuePossibleDday') && <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">가능여부<br/>D-day</th>}
               {vis('progressRate') && <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>}
-              {vis('delayReason') && <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>}
+              {vis('delayReason') && <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">매출불가<br/>사유</SortableTh>}
               {vis('revenueReflected') && <SortableTh sortKey="revenueReflected" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-slate-100">매출<br/>반영여부</SortableTh>}
               {isAdmin && vis('unitPrice') && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
               {vis('note') && <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center bg-slate-100">비고</SortableTh>}

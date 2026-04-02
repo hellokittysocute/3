@@ -155,7 +155,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
         '생산처': edit?.productionSite ?? '',
         '매출 가능여부': edit?.revenuePossible ?? '',
         '매출 가능 수량': qty,
-        '지연사유': edit?.delayReason ?? '',
+        '매출불가사유': edit?.delayReason ?? '',
         '단가': item.unitPrice,
         '매출': qty * item.unitPrice,
         '비고': edit?.note ?? '',
@@ -333,7 +333,7 @@ export const SnapshotHistory: React.FC<SnapshotHistoryProps> = ({ isAdmin }) => 
                     <th className="px-3 py-2.5 text-center font-bold text-slate-500 whitespace-nowrap">매출가능</th>
                     <th className="px-3 py-2.5 text-right font-bold text-slate-500 whitespace-nowrap">가능수량</th>
                     <th className="px-3 py-2.5 text-right font-bold text-slate-500 whitespace-nowrap">매출</th>
-                    <th className="px-3 py-2.5 text-left font-bold text-slate-500 whitespace-nowrap">지연사유</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-slate-500 whitespace-nowrap">매출불가사유</th>
                     <th className="px-3 py-2.5 text-left font-bold text-slate-500 whitespace-nowrap">비고</th>
                   </tr>
                 </thead>

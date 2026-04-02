@@ -109,6 +109,7 @@ const HEADER_MAP: Record<string, { field: string; type: 'string' | 'number' }> =
   '매출가능여부': { field: 'status', type: 'string' },
   '진도율': { field: 'progress_rate', type: 'string' },
   '지연사유': { field: 'delay_reason', type: 'string' },
+  '매출불가사유': { field: 'delay_reason', type: 'string' },
   '관리구분': { field: 'management_type', type: 'string' },
   '내용': { field: 'management_type', type: 'string' },
   '중점관리사항': { field: 'management_note', type: 'string' },
