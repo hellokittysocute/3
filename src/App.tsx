@@ -920,9 +920,43 @@ export default function App() {
     return { deptName: delayDeptModal, totalCount: deptItems.length, items: itemList };
   }, [delayDeptModal, items, editData]);
 
-  const trendData = [
-    { date: '3/20', rate: 0 },
-  ];
+  const trendData = useMemo(() => {
+    const totalRevenue = items.reduce((s, i) => s + getRevenue(i), 0);
+    if (totalRevenue === 0 || items.length === 0) return [];
+
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const today = new Date();
+    const daysInMonth = new Date(y, m, 0).getDate();
+
+    // 매일 체크포인트, 오늘 이후 미래 날짜 제외
+    const lastDay = (today.getFullYear() === y && today.getMonth() === m - 1)
+      ? today.getDate()
+      : (new Date(y, m, 0) <= today ? daysInMonth : 0);
+    const checkpoints: number[] = [];
+    for (let d = 1; d <= lastDay; d++) {
+      checkpoints.push(d);
+    }
+
+    if (checkpoints.length === 0) return [];
+
+    return checkpoints.map(day => {
+      const cutoff = new Date(y, m - 1, day, 23, 59, 59);
+      const possibleRevenue = items
+        .filter(i => {
+          const ed = editData[i.id];
+          if (!ed || ed.revenuePossible !== '가능') return false;
+          const filledAt = ed.revenuePossibleFilledAt;
+          if (!filledAt) return true; // 타임스탬프 없으면 기존 데이터로 간주
+          return new Date(filledAt) <= cutoff;
+        })
+        .reduce((s, i) => s + getRevenue(i), 0);
+
+      return {
+        date: `${m}/${day}`,
+        rate: Number(((possibleRevenue / totalRevenue) * 100).toFixed(1))
+      };
+    });
+  }, [items, editData, selectedMonth]);
 
   // 인증 가드
   if (authLoading) {
@@ -1104,48 +1138,61 @@ export default function App() {
 
                 {/* 진도현황 */}
                 <div className="bg-white flex flex-col" style={{ ...cardStyle, padding: 20 }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
-                    <span className="text-[11px] font-medium bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md">실시간</span>
-                  </div>
-                  <div className="mb-3">
-                    <div className="flex justify-between items-end mb-1.5">
-                      <span className="text-[12px] font-medium text-gray-400">목표 대비 가능금액 ({formatCurrency(stats.overall.possibleRevenue)} / {formatCurrency(stats.overall.totalRevenue)})</span>
-                      <span className={`text-[24px] font-extrabold ${goalRate >= 100 ? 'text-indigo-500' : 'text-red-400'}`}>
-                        {goalRate.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(goalRate, 100)}%`, backgroundColor: '#6366f1' }} />
+                  {/* 상단 헤더 + 실시간 펄스 배지 */}
+                  <div className="flex items-center justify-between mb-1">
+                    <div>
+                      <h3 className="text-[14px] font-bold text-gray-800">진도현황</h3>
                     </div>
                   </div>
-                  <div className="border-t border-gray-50 pt-3 flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[13px] font-semibold text-gray-700">진도율 추이</span>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
-                          <span className="text-[11px] text-gray-400">진도율</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 border-t border-dashed border-gray-300" />
-                          <span className="text-[11px] text-gray-400">목표</span>
-                        </div>
-                      </div>
+
+                  {/* 현재 진도율 대형 수치 */}
+                  <div className="flex items-baseline gap-1 mb-0.5">
+                    <span className="text-[40px] font-black leading-none text-indigo-500">
+                      {trendData.length > 0 ? trendData[trendData.length - 1].rate : 0}
+                    </span>
+                    <span className="text-[16px] font-bold text-gray-300">%</span>
+                  </div>
+
+                  {/* Area Chart */}
+                  <div style={{ height: 160 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }} dy={6} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#d1d5db', fontSize: 10 }} domain={[0, (max: number) => Math.ceil(Math.max(max * 1.3, 10))]} dx={-4} tickFormatter={(v: number) => `${v}%`} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }}
+                          itemStyle={{ color: '#fff' }}
+                          labelStyle={{ color: '#9ca3af', fontSize: 10 }}
+                          formatter={(value: number) => [`${value}%`, '진도율']}
+                          labelFormatter={(label: string) => `${label} 기준`}
+                        />
+                        <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
+                        <Line
+                          type="monotone"
+                          dataKey="rate"
+                          stroke="#6366f1"
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* 범례 */}
+                  <div className="flex items-center justify-end gap-4 mt-2 pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3.5 h-0.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
+                      <span className="text-[11px] font-medium text-gray-400">진도율</span>
                     </div>
-                    <div style={{ height: 130 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={trendData}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} dy={4} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#b0b0b0', fontSize: 11 }} domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax * 1.3, 30))]} dx={-4} />
-                          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: 8, color: '#fff', padding: '5px 10px', fontSize: 11 }} itemStyle={{ color: '#fff' }} labelStyle={{ color: '#9ca3af', fontSize: 10 }} />
-                          <ReferenceLine y={100} stroke="#d1d5db" strokeDasharray="6 4" strokeWidth={1} />
-                          <Line type="monotone" dataKey="rate" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3.5 border-t border-dashed border-gray-300" />
+                      <span className="text-[11px] font-medium text-gray-400">목표</span>
                     </div>
                   </div>
+
+                  {/* 핵심 지표 4카드 */}
                   <div className="grid grid-cols-4 mt-3" style={{ gap: 8 }}>
                     <div className="text-center py-2.5 px-2" style={{ backgroundColor: '#eef2ff', borderRadius: 8 }}>
                       <div className="text-[11px] font-medium text-gray-400 mb-0.5">매출반영 O 진도율</div>
