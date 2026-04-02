@@ -92,7 +92,8 @@ export const DelayByDeptCard: React.FC<DelayByDeptCardProps> = ({ data, onDeptCl
         background: '#fff',
         borderRadius: 14,
         border: '0.5px solid #e5e7eb',
-        padding: 20,
+        padding: 24,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}
     >
       {/* 헤더 */}

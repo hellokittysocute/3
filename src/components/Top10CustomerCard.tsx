@@ -18,16 +18,16 @@ const BADGE_COLORS: Record<number, { bg: string; color: string }> = {
 };
 
 const BAR_COLORS: Record<number, string> = {
-  1: '#3C3489',
-  2: '#534AB7',
-  3: '#7F77DD',
-  4: '#AFA9EC',
-  5: '#C5C1F4',
-  6: '#D5D2F8',
-  7: '#DDDAF9',
-  8: '#E5E3FA',
-  9: '#ECEAFB',
-  10: '#F2F1FC',
+  1: '#312E81',
+  2: '#94A3B8',
+  3: '#94A3B8',
+  4: '#A8B4C4',
+  5: '#A8B4C4',
+  6: '#B8C2CF',
+  7: '#B8C2CF',
+  8: '#CBD5E1',
+  9: '#CBD5E1',
+  10: '#CBD5E1',
 };
 
 function formatAmount(amount: number): string {
@@ -48,11 +48,11 @@ export const Top10CustomerCard: React.FC<Top10CustomerCardProps> = ({ data, onCu
         background: '#fff',
         borderRadius: 14,
         border: '0.5px solid #e5e7eb',
-        padding: 20,
+        padding: 24,
         height: '100%',
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', marginBottom: 12 }}>Top 10 고객사</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', marginBottom: 14 }}>Top 10 고객사</div>
 
       {data.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>데이터 없음</div>
@@ -80,10 +80,10 @@ export const Top10CustomerCard: React.FC<Top10CustomerCardProps> = ({ data, onCu
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  height: 32,
-                  padding: '0 4px',
-                  margin: '0 -4px',
+                  gap: 10,
+                  height: 36,
+                  padding: '0 8px',
+                  margin: '0 -8px',
                   borderRadius: 8,
                   cursor: onCustomerClick ? 'pointer' : 'default',
                   transition: 'background 0.15s',
@@ -127,11 +127,11 @@ export const Top10CustomerCard: React.FC<Top10CustomerCardProps> = ({ data, onCu
                 </span>
 
                 {/* 프로그레스 바 */}
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#f1f5f9' }}>
+                <div style={{ flex: 1, height: 12, borderRadius: 6, background: '#f1f5f9' }}>
                   <div
                     style={{
                       height: '100%',
-                      borderRadius: 3,
+                      borderRadius: 6,
                       background: barColor,
                       width: `${barWidth}%`,
                       transition: 'width 0.4s',

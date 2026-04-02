@@ -24,7 +24,7 @@
 
 @layer base {
   body {
-    @apply bg-[#f5f6fa] text-slate-900 antialiased;
+    @apply bg-[#F8F9FA] text-slate-900 antialiased;
   }
 }
 
