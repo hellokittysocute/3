@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
-import { Save, Check, Download, Camera, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Save, Check, Download, Camera, ChevronUp, ChevronDown, ChevronsUpDown, Columns3 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import * as XLSX from 'xlsx';
 import { DashboardItem, EditableData } from '../types';
@@ -168,6 +168,34 @@ const TIER_COLORS = {
 
 const INPUT_CLASS = "w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all";
 
+const TOGGLEABLE_COLUMNS = [
+  { id: 'revenue', label: '매출(단가x잔량)' },
+  { id: 'createdDate', label: '생성일' },
+  { id: 'originalDueDate', label: '원납기일' },
+  { id: 'changedDueDate', label: '변경납기일' },
+  { id: 'orderQuantity', label: '총오더수량' },
+  { id: 'totalQuantity', label: '환산수량' },
+  { id: 'remainingQuantity', label: '미납잔량' },
+  { id: 'productionCompleteDate', label: '생산완료요청일' },
+  { id: 'materialSettingDate', label: '부자재' },
+  { id: 'materialDday', label: '부자재 D-day' },
+  { id: 'productionRequestYn', label: '제조요청여부' },
+  { id: 'mfg1', label: '현재제조계획' },
+  { id: 'manufacturingDate', label: '제조' },
+  { id: 'mfgDday', label: '제조 D-day' },
+  { id: 'packagingDate', label: '충포장' },
+  { id: 'pkgDday', label: '충포장 D-day' },
+  { id: 'productionSite', label: '생산처' },
+  { id: 'revenuePossible', label: '매출가능여부' },
+  { id: 'revenuePossibleQuantity', label: '매출가능수량' },
+  { id: 'revenuePossibleDday', label: '가능여부 D-day' },
+  { id: 'progressRate', label: '진도율' },
+  { id: 'delayReason', label: '지연사유' },
+  { id: 'revenueReflected', label: '매출반영여부' },
+  { id: 'unitPrice', label: '단가' },
+  { id: 'note', label: '비고' },
+] as const;
+
 /** 행에 D-day 초과 건이 있는지 판단 */
 function hasOverdueDday(row: EditableData | undefined): boolean {
   if (!row) return false;
@@ -193,9 +221,11 @@ interface TableRowProps {
   isAdmin?: boolean;
   readOnly?: boolean;
   onUpdateField: (id: string, field: keyof EditableData, value: string | number) => void;
+  hiddenColumns: Set<string>;
 }
 
-const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, readOnly, onUpdateField }) => {
+const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAdmin, readOnly, onUpdateField, hiddenColumns }) => {
+  const v = (id: string) => !hiddenColumns.has(id);
   return (
     <>
       {/* 작성일 컬럼 (고정) */}
@@ -225,40 +255,40 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
       <td className="px-2 py-1 border-r border-slate-100/60 sm:sticky sm:left-[460px] sm:z-20 bg-white" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>
         <div className="min-w-[150px] text-slate-500 text-[13px]">{item.itemName}</div>
       </td>
-      <td className="px-2 py-1 border-r-2 border-slate-300 text-right font-bold text-slate-900 text-[13px]">{formatCurrencyDetail(getRevenue(item))}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.createdDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.originalDueDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.changedDueDate)}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+      {v('revenue') && <td className="px-2 py-1 border-r-2 border-slate-300 text-right font-bold text-slate-900 text-[13px]">{formatCurrencyDetail(getRevenue(item))}</td>}
+      {v('createdDate') && <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.createdDate)}</td>}
+      {v('originalDueDate') && <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.originalDueDate)}</td>}
+      {v('changedDueDate') && <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center w-[76px] min-w-[76px] max-w-[76px]">{formatDateShort(item.changedDueDate)}</td>}
+      {v('orderQuantity') && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.orderQuantity.toLocaleString()}</td>}
+      {v('totalQuantity') && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-600 text-[13px]">{item.totalQuantity.toLocaleString()}</td>}
+      {v('remainingQuantity') && <td className="px-2 py-1 border-r border-slate-100/60 text-right font-bold text-slate-900 text-[13px]">{item.remainingQuantity.toLocaleString()}</td>}
+      {v('productionCompleteDate') && <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionCompleteDate ?? ''} onChange={(e) => onUpdateField(item.id, 'productionCompleteDate', e.target.value)} disabled={readOnly} />
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+      </td>}
+      {v('materialSettingDate') && <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.materialSettingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'materialSettingDate', e.target.value)} disabled={readOnly} />
-      </td>
-      {(() => { const d = calcDday(row?.writeDate ?? '', row?.materialSettingFilledAt ?? '', 3); return (
+      </td>}
+      {v('materialDday') && (() => { const d = calcDday(row?.writeDate ?? '', row?.materialSettingFilledAt ?? '', 3); return (
         <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
       ); })()}
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center whitespace-nowrap">{item.productionRequestYn}</td>
-      <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.mfg1)}</td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+      {v('productionRequestYn') && <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] text-center whitespace-nowrap">{item.productionRequestYn}</td>}
+      {v('mfg1') && <td className="px-2 py-1 border-r border-slate-100/60 text-slate-500 text-[13px] whitespace-nowrap">{formatDateShort(item.mfg1)}</td>}
+      {v('manufacturingDate') && <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.manufacturingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'manufacturingDate', e.target.value)} disabled={readOnly} />
-      </td>
-      {(() => { const d = calcDday(row?.materialSettingFilledAt ?? '', row?.manufacturingFilledAt ?? '', 3); return (
+      </td>}
+      {v('mfgDday') && (() => { const d = calcDday(row?.materialSettingFilledAt ?? '', row?.manufacturingFilledAt ?? '', 3); return (
         <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
       ); })()}
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+      {v('packagingDate') && <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.packagingDate ?? ''} onChange={(e) => onUpdateField(item.id, 'packagingDate', e.target.value)} disabled={readOnly} />
-      </td>
-      {(() => { const d = calcDday(row?.manufacturingFilledAt ?? '', row?.packagingFilledAt ?? '', 2); return (
+      </td>}
+      {v('pkgDday') && (() => { const d = calcDday(row?.manufacturingFilledAt ?? '', row?.packagingFilledAt ?? '', 2); return (
         <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", DDAY_STYLE[d.status])}>{d.label}</td>
       ); })()}
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
+      {v('productionSite') && <td className="px-1 py-1 border-r border-slate-100/60 bg-indigo-50/20">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.productionSite ?? ''} onChange={(e) => onUpdateField(item.id, 'productionSite', e.target.value)} disabled={readOnly} />
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20 text-center">
+      </td>}
+      {v('revenuePossible') && <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20 text-center">
         <select
           className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]",
             row?.revenuePossible === '가능' && "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold",
@@ -273,16 +303,15 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="가능">가능</option>
           <option value="불가능">불가능</option>
         </select>
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
+      </td>}
+      {v('revenuePossibleQuantity') && <td className="px-1 py-1 border-r border-slate-100/60 bg-emerald-50/20">
         <input type="text" className={cn(INPUT_CLASS, "text-right text-[13px]")} value={row?.revenuePossibleQuantity ? row.revenuePossibleQuantity.toLocaleString() : ''} placeholder="입력" onChange={(e) => { const num = Number(e.target.value.replace(/,/g, '')); if (!isNaN(num)) onUpdateField(item.id, 'revenuePossibleQuantity', num); }} disabled={readOnly} />
-      </td>
-      {(() => { const d = calcDday(row?.packagingFilledAt ?? '', row?.revenuePossible === '가능' || row?.revenuePossible === '불가능' ? (row?.packagingFilledAt ?? '') : '', 2);
-        // 충포장 미입력이면 none, 매출가능여부 미입력이면 경과일 표시
+      </td>}
+      {v('revenuePossibleDday') && (() => { const d = calcDday(row?.packagingFilledAt ?? '', row?.revenuePossible === '가능' || row?.revenuePossible === '불가능' ? (row?.packagingFilledAt ?? '') : '', 2);
         const show = (row?.packagingDate ?? '').trim() && (row?.packagingFilledAt ?? '').trim();
         const pending = show && (row?.revenuePossible === '확인중' || !row?.revenuePossible);
         if (pending) {
-          const parseD = (s: string): Date | null => { if (!s) return null; const v = s.trim().replace(/^~/, ''); const mt = v.match(/^(\d{1,2})\/(\d{1,2})$/); if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2])); const dd = new Date(v); return isNaN(dd.getTime()) ? null : dd; };
+          const parseD = (s: string): Date | null => { if (!s) return null; const vv = s.trim().replace(/^~/, ''); const mt = vv.match(/^(\d{1,2})\/(\d{1,2})$/); if (mt) return new Date(new Date().getFullYear(), Number(mt[1]) - 1, Number(mt[2])); const dd = new Date(vv); return isNaN(dd.getTime()) ? null : dd; };
           const bizD = (from: Date, to: Date): number => { let c = 0; const dd = new Date(from); while (dd < to) { dd.setDate(dd.getDate() + 1); if (isWorkingDay(dd)) c++; } return c; };
           const pkgD = parseD(row?.packagingFilledAt ?? '');
           const now = new Date(); now.setHours(0,0,0,0);
@@ -294,12 +323,12 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
         }
         return <td className={cn("px-1 py-1 border-r border-slate-100/60 text-center text-[12px] whitespace-nowrap", show ? DDAY_STYLE['done'] : DDAY_STYLE['none'])}>{show && row?.revenuePossible && row.revenuePossible !== '확인중' ? '✓' : ''}</td>;
       })()}
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
+      {v('progressRate') && <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <span className="text-[13px] font-bold" style={{ color: color.text }}>
           {rate.toFixed(1)}%
         </span>
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
+      </td>}
+      {v('delayReason') && <td className="px-1 py-1 border-r border-slate-100/60 bg-amber-50/20 text-center">
         <select
           className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]",
             row?.delayReason && "font-bold text-amber-700 bg-amber-50 border-amber-300",
@@ -316,8 +345,8 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="물류">물류</option>
           <option value="영업">영업</option>
         </select>
-      </td>
-      <td className="px-1 py-1 border-r border-slate-100/60 text-center">
+      </td>}
+      {v('revenueReflected') && <td className="px-1 py-1 border-r border-slate-100/60 text-center">
         <select
           className={cn(INPUT_CLASS, "text-center appearance-none cursor-pointer text-[13px]")}
           value={row?.revenueReflected ?? ''}
@@ -328,11 +357,11 @@ const TableRow = React.memo<TableRowProps>(({ item, row, tier, color, rate, isAd
           <option value="O">O</option>
           <option value="X">X</option>
         </select>
-      </td>
-      {isAdmin && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
-      <td className="px-1 py-1">
+      </td>}
+      {isAdmin && v('unitPrice') && <td className="px-2 py-1 border-r border-slate-100/60 text-right text-slate-500 text-[13px]">{item.unitPrice.toLocaleString()}</td>}
+      {v('note') && <td className="px-1 py-1">
         <input type="text" placeholder="입력" className={cn(INPUT_CLASS, "text-[13px]")} value={row?.note ?? ''} onChange={(e) => onUpdateField(item.id, 'note', e.target.value)} disabled={readOnly} />
-      </td>
+      </td>}
     </>
   );
 });
@@ -413,6 +442,31 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
   const [activeTier, setActiveTier] = useState<Tier>('전체');
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: SortKey } | null>(null);
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const columnPickerRef = useRef<HTMLDivElement>(null);
+
+  const toggleColumn = useCallback((id: string) => {
+    setHiddenColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const visibleColCount = 8 + TOGGLEABLE_COLUMNS.filter(c => !hiddenColumns.has(c.id) && (c.id !== 'unitPrice' || isAdmin)).length;
+  const vis = (id: string) => !hiddenColumns.has(id);
+
+  // 열 설정 패널 외부 클릭 닫기
+  useEffect(() => {
+    if (!showColumnPicker) return;
+    const close = (e: MouseEvent) => {
+      if (columnPickerRef.current && !columnPickerRef.current.contains(e.target as Node)) setShowColumnPicker(false);
+    };
+    window.addEventListener('mousedown', close);
+    return () => window.removeEventListener('mousedown', close);
+  }, [showColumnPicker]);
 
   const handleSort = useCallback((key: SortKey) => {
     setSortConfig(prev => {
@@ -615,6 +669,37 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="relative" ref={columnPickerRef}>
+            <button
+              onClick={() => setShowColumnPicker(p => !p)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[13px] sm:text-[15px] font-bold transition-all border",
+                showColumnPicker ? "bg-indigo-50 text-indigo-600 border-indigo-300" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+              )}
+            >
+              <Columns3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 열 설정
+              {hiddenColumns.size > 0 && <span className="text-[11px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full">{hiddenColumns.size}</span>}
+            </button>
+            {showColumnPicker && (
+              <div className="absolute right-0 top-full mt-2 z-[9999] bg-white rounded-xl shadow-2xl border border-slate-200 py-2 w-[220px] max-h-[400px] overflow-y-auto">
+                <div className="px-3 py-1.5 flex items-center justify-between border-b border-slate-100 mb-1">
+                  <span className="text-[12px] font-bold text-slate-500">표시할 열 선택</span>
+                  <button className="text-[11px] text-indigo-500 font-bold hover:underline" onClick={() => setHiddenColumns(new Set())}>전체 표시</button>
+                </div>
+                {TOGGLEABLE_COLUMNS.filter(c => c.id !== 'unitPrice' || isAdmin).map(col => (
+                  <label key={col.id} className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!hiddenColumns.has(col.id)}
+                      onChange={() => toggleColumn(col.id)}
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500/20"
+                    />
+                    <span className="text-[13px] font-medium text-slate-600">{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={handleExcelDownload}
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[13px] sm:text-[15px] font-bold transition-all duration-300 shadow-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
@@ -661,39 +746,39 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <SortableTh sortKey="customerCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-40 bg-slate-100">고객약호</SortableTh>
               <SortableTh sortKey="materialCode" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-40 bg-slate-100">자재</SortableTh>
               <SortableTh sortKey="itemName" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 sm:sticky sm:left-[460px] sm:z-40 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}>내역</SortableTh>
-              <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 text-right bg-slate-100">매출<br/>(단가x잔량)</SortableTh>
+              {vis('revenue') && <SortableTh sortKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r-2 border-slate-300 text-right bg-slate-100">매출<br/>(단가x잔량)</SortableTh>}
 
-              <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">생성일</SortableTh>
-              <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">원납기일</SortableTh>
-              <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">변경납기일</SortableTh>
-              <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px] bg-slate-100">총오더수량</SortableTh>
-              <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px] bg-slate-100">환산수량</SortableTh>
-              <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px] bg-slate-100">미납잔량</SortableTh>
-              <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[76px]">생산완료<br/>요청일</SortableTh>
-              <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[68px]">부자재</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">부자재<br/>D-day</th>
-              <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[62px] bg-slate-100">제조<br/>요청여부</SortableTh>
-              <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[72px] bg-slate-100">현재<br/>제조계획</SortableTh>
-              <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[68px]">제조</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">제조<br/>D-day</th>
-              <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[200px]">충포장</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">충포장<br/>D-day</th>
-              <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[82px]">생산처</SortableTh>
-              <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600">매출<br/>가능여부</SortableTh>
-              <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>
-              <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">가능여부<br/>D-day</th>
-              <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>
-              <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>
-              <SortableTh sortKey="revenueReflected" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-slate-100">매출<br/>반영여부</SortableTh>
-              {isAdmin && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
-              <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center bg-slate-100">비고</SortableTh>
+              {vis('createdDate') && <SortableTh sortKey="createdDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">생성일</SortableTh>}
+              {vis('originalDueDate') && <SortableTh sortKey="originalDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">원납기일</SortableTh>}
+              {vis('changedDueDate') && <SortableTh sortKey="changedDueDate" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 w-[76px] min-w-[76px] max-w-[76px] text-center bg-slate-100">변경납기일</SortableTh>}
+              {vis('orderQuantity') && <SortableTh sortKey="orderQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[78px] bg-slate-100">총오더수량</SortableTh>}
+              {vis('totalQuantity') && <SortableTh sortKey="totalQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px] bg-slate-100">환산수량</SortableTh>}
+              {vis('remainingQuantity') && <SortableTh sortKey="remainingQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right w-[72px] bg-slate-100">미납잔량</SortableTh>}
+              {vis('productionCompleteDate') && <SortableTh sortKey="productionCompleteDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[76px]">생산완료<br/>요청일</SortableTh>}
+              {vis('materialSettingDate') && <SortableTh sortKey="materialSettingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[68px]">부자재</SortableTh>}
+              {vis('materialDday') && <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">부자재<br/>D-day</th>}
+              {vis('productionRequestYn') && <SortableTh sortKey="productionRequestYn" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[62px] bg-slate-100">제조<br/>요청여부</SortableTh>}
+              {vis('mfg1') && <SortableTh sortKey="mfg1" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-center w-[72px] bg-slate-100">현재<br/>제조계획</SortableTh>}
+              {vis('manufacturingDate') && <SortableTh sortKey="manufacturingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[68px]">제조</SortableTh>}
+              {vis('mfgDday') && <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">제조<br/>D-day</th>}
+              {vis('packagingDate') && <SortableTh sortKey="packagingDate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[200px]">충포장</SortableTh>}
+              {vis('pkgDday') && <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">충포장<br/>D-day</th>}
+              {vis('productionSite') && <SortableTh sortKey="productionSite" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-indigo-100 text-indigo-600 w-[82px]">생산처</SortableTh>}
+              {vis('revenuePossible') && <SortableTh sortKey="revenuePossible" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600">매출<br/>가능여부</SortableTh>}
+              {vis('revenuePossibleQuantity') && <SortableTh sortKey="revenuePossibleQuantity" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-emerald-100 text-emerald-600 w-[100px]">매출<br/>가능수량</SortableTh>}
+              {vis('revenuePossibleDday') && <th className="px-1 py-2 border-r border-slate-200 text-center bg-rose-100 text-rose-500 w-[48px] text-[11px]">가능여부<br/>D-day</th>}
+              {vis('progressRate') && <SortableTh sortKey="progressRate" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">진도율</SortableTh>}
+              {vis('delayReason') && <SortableTh sortKey="delayReason" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-amber-100 text-amber-600">지연<br/>사유</SortableTh>}
+              {vis('revenueReflected') && <SortableTh sortKey="revenueReflected" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 border-r border-slate-200 text-center bg-slate-100">매출<br/>반영여부</SortableTh>}
+              {isAdmin && vis('unitPrice') && <SortableTh sortKey="unitPrice" sortConfig={sortConfig} onSort={handleSort} className="px-2 py-2 border-r border-slate-200 text-right bg-slate-100">단가</SortableTh>}
+              {vis('note') && <SortableTh sortKey="note" sortConfig={sortConfig} onSort={handleSort} className="px-1 py-2 text-center bg-slate-100">비고</SortableTh>}
             </tr>
           </thead>
           <tbody className="text-[15px]">
             {/* 가상화: 전체 높이를 확보하는 빈 행 (상단 패딩) */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                <td colSpan={isAdmin ? 31 : 30} />
+                <td colSpan={visibleColCount} />
               </tr>
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -720,6 +805,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
                     isAdmin={isAdmin}
                     readOnly={readOnly}
                     onUpdateField={onUpdateField}
+                    hiddenColumns={hiddenColumns}
                   />
                 </tr>
               );
@@ -727,7 +813,7 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
             {/* 가상화: 하단 패딩 */}
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end) }}>
-                <td colSpan={isAdmin ? 31 : 30} />
+                <td colSpan={visibleColCount} />
               </tr>
             )}
           </tbody>
@@ -742,43 +828,31 @@ export const DataTable: React.FC<DataTableProps> = ({ items, editData, onUpdateF
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[288px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[350px] sm:z-20 bg-slate-100"></td>
               <td className="px-4 py-3 border-r border-slate-200 sm:sticky sm:left-[460px] sm:z-20 bg-slate-100" style={{ boxShadow: '4px 0 8px -2px rgba(0,0,0,0.08)' }}></td>
-              {/* 매출 합계 */}
-              <td className="px-4 py-3 text-right border-r-2 border-slate-300 bg-slate-100">{formatCurrencyDetail(totals.revenue)}</td>
-              {/* 생성일, 원납기일, 변경납기일 */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* 총오더수량, 환산수량, 미납잔량 */}
-              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>
-              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>
-              <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>
-              {/* 생산완료요청일, 부자재, 부자재D-day, 제조요청여부, 현재제조계획, 제조, 제조D-day, 충포장, 충포장D-day, 생산처 */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* 매출가능여부 */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* 매출가능수량 */}
-              <td className="px-4 py-3 text-right border-r border-slate-200">{totalRevenuePossibleQty.toLocaleString()}</td>
-              {/* 가능여부D-day */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* 진도율 */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* 지연사유 */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* 매출반영 */}
-              <td className="px-4 py-3 border-r border-slate-200"></td>
-              {/* [admin] 단가 */}
-              {isAdmin && <td className="px-4 py-3 border-r border-slate-200"></td>}
-              {/* 비고 */}
-              <td className="px-4 py-3"></td>
+              {vis('revenue') && <td className="px-4 py-3 text-right border-r-2 border-slate-300 bg-slate-100">{formatCurrencyDetail(totals.revenue)}</td>}
+              {vis('createdDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('originalDueDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('changedDueDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('orderQuantity') && <td className="px-4 py-3 text-right border-r border-slate-200">{totals.orderQuantity.toLocaleString()}</td>}
+              {vis('totalQuantity') && <td className="px-4 py-3 text-right border-r border-slate-200">{totals.totalQuantity.toLocaleString()}</td>}
+              {vis('remainingQuantity') && <td className="px-4 py-3 text-right border-r border-slate-200">{totals.remainingQuantity.toLocaleString()}</td>}
+              {vis('productionCompleteDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('materialSettingDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('materialDday') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('productionRequestYn') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('mfg1') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('manufacturingDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('mfgDday') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('packagingDate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('pkgDday') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('productionSite') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('revenuePossible') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('revenuePossibleQuantity') && <td className="px-4 py-3 text-right border-r border-slate-200">{totalRevenuePossibleQty.toLocaleString()}</td>}
+              {vis('revenuePossibleDday') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('progressRate') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('delayReason') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('revenueReflected') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {isAdmin && vis('unitPrice') && <td className="px-4 py-3 border-r border-slate-200"></td>}
+              {vis('note') && <td className="px-4 py-3"></td>}
             </tr>
           </tfoot>
         </table>
