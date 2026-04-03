@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Camera, ArrowLeft, Trash2, Download, Calendar, Database, Clock, LayoutDashboard, Table } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { DashboardItem, SnapshotMeta, SnapshotRow, EditableData } from '../types';
-import { fetchSnapshots, fetchSnapshotData, deleteSnapshot } from '../services/supabaseDataService';
+import { fetchSnapshots, fetchSnapshotData, deleteSnapshot } from '../services/apiDataService';
 import { getRevenue, calculateStats } from '../services/dataService';
 import { formatCurrency } from '../lib/utils';
 import { DonutChart } from './DonutChart';

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -26,37 +26,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function fetchProfileFromAPI(userId: string, email: string, name: string, avatarUrl: string): Promise<UserProfile | null> {
+  try {
+    // upsert: 프로필이 없으면 생성, 있으면 반환
+    const res = await fetch(`/api/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, avatar_url: avatarUrl }),
+    });
+    if (res.ok) return await res.json();
+  } catch (err: any) {
+    console.error('프로필 조회 오류:', err.message);
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const profileFetchRef = useRef<string | null>(null);
-
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      console.error('프로필 조회 오류:', error.message);
-      return null;
-    }
-    return data as UserProfile;
-  };
 
   const refreshProfile = async () => {
     if (!user) return;
-    const p = await fetchProfile(user.id);
+    const p = await fetchProfileFromAPI(
+      user.id,
+      user.email || '',
+      user.user_metadata?.full_name || user.user_metadata?.name || '',
+      user.user_metadata?.avatar_url || '',
+    );
     if (p) setProfile(p);
   };
 
   useEffect(() => {
     let mounted = true;
 
-    // 안전장치: 8초 내 초기화 안 되면 강제로 loading 해제
     const safetyTimeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('Auth 초기화 타임아웃 - 로그인 페이지로 이동');
@@ -64,8 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, 8000);
 
-    // onAuthStateChange만 사용 (getSession 별도 호출하지 않음)
-    // INITIAL_SESSION 이벤트로 초기 세션 수신
+    // Supabase Auth는 Google OAuth 처리용으로만 유지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         if (!mounted) return;
@@ -74,19 +77,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          // 프로필 fetch는 콜백 밖에서 비동기로 처리 (데드락 방지)
-          const userId = newSession.user.id;
-          if (profileFetchRef.current !== userId) {
-            profileFetchRef.current = userId;
-            fetchProfile(userId).then((p) => {
-              if (mounted) {
-                setProfile(p);
-                setLoading(false);
-              }
-            });
-          } else {
-            setLoading(false);
-          }
+          const u = newSession.user;
+          fetchProfileFromAPI(
+            u.id,
+            u.email || '',
+            u.user_metadata?.full_name || u.user_metadata?.name || '',
+            u.user_metadata?.avatar_url || '',
+          ).then((p) => {
+            if (mounted) {
+              setProfile(p);
+              setLoading(false);
+            }
+          });
         } else {
           setProfile(null);
           setLoading(false);
@@ -112,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    profileFetchRef.current = null;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);

@@ -11,3 +11,6 @@ run:
   network:
     port: 8080
     env: PORT
+  secrets:
+    - name: DB_SECRET
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_mktdashboard_prd-coaV51"

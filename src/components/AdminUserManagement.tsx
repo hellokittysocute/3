@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { UserProfile } from '../contexts/AuthContext';
 import { Shield, User, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -10,15 +9,14 @@ export function AdminUserManagement() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('사용자 목록 조회 오류:', error.message);
-    } else {
-      setUsers(data as UserProfile[]);
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data as UserProfile[]);
+      }
+    } catch (err: any) {
+      console.error('사용자 목록 조회 오류:', err.message);
     }
     setLoading(false);
   };
@@ -27,28 +25,24 @@ export function AdminUserManagement() {
 
   const toggleStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ status: newStatus })
-      .eq('id', userId);
-
-    if (error) {
-      console.error('상태 변경 오류:', error.message);
-    } else {
+    const res = await fetch(`/api/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as 'active' | 'inactive' } : u));
     }
   };
 
   const toggleRole = async (userId: string, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ role: newRole })
-      .eq('id', userId);
-
-    if (error) {
-      console.error('역할 변경 오류:', error.message);
-    } else {
+    const res = await fetch(`/api/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (res.ok) {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole as 'admin' | 'user' } : u));
     }
   };

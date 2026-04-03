@@ -1,10 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { supabase } from '../lib/supabase';
 import { Upload, FileSpreadsheet, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 interface ParsedRow {
   id: string;
@@ -356,45 +352,32 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded, targetTable = 
 
     try {
       const editTable = targetTable === 'all_items' ? 'all_items_edit_data' : 'edit_data';
-      // 1단계: 해당 월의 기존 데이터 수 확인
-      const { count: oldCount } = await supabase
-        .from(targetTable)
-        .select('*', { count: 'exact', head: true });
+      const apiTable = targetTable === 'all_items' ? 'all-items' : 'dashboard-items';
+      const apiEditTable = targetTable === 'all_items' ? 'all-items-edit-data' : 'edit-data';
 
-      // 2단계: 새 데이터 upsert (month 제외 — PostgREST 캐시 이슈 우회, DEFAULT 사용)
-      for (let i = 0; i < rowsWithMonth.length; i += 100) {
-        const batch = rowsWithMonth.slice(i, i + 100).map((row) => {
-          const clean: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(row)) {
-            if (!k.startsWith('_')) clean[k] = v;
-          }
-          return clean;
-        });
-        const { error } = await supabase.from(targetTable).upsert(batch);
-        if (error) throw new Error(`${targetTable} 업로드 실패 (행 ${i}): ${error.message}`);
-      }
-
-      // 3단계: 초과 old 행 일괄 무효화
-      if (oldCount && oldCount > rowsWithMonth.length) {
-        const excessIds = Array.from(
-          { length: oldCount - rowsWithMonth.length },
-          (_, i) => `${monthPrefix}item-${rowsWithMonth.length + i}`
-        );
-        for (let i = 0; i < excessIds.length; i += 100) {
-          const batch = excessIds.slice(i, i + 100);
-          await supabase
-            .from(targetTable)
-            .update({ customer_code: '', item_name: '[삭제됨]' })
-            .in('id', batch);
-        }
-      }
-
-      // edit_data: 기존 저장값 보존, 없는 항목만 CSV 값으로 초기화
-      const { data: existingEditData } = await supabase.from(editTable).select('item_id,purchase_manager,material_setting_filled_at,manufacturing_filled_at,packaging_filled_at');
+      // 1단계: 기존 데이터 조회
+      const existingRes = await fetch(`/api/${apiEditTable}`);
+      const existingEditData = existingRes.ok ? await existingRes.json() : [];
       const existingIds = new Set((existingEditData || []).map((r: any) => r.item_id));
       const existingFilledAt = new Map((existingEditData || []).map((r: any) => [r.item_id, r]));
 
-      // 신규 항목: 전체 초기화 (값이 있으면 완료 시점도 자동 기록)
+      // 2단계: 새 데이터 업로드 (items)
+      const cleanRows = rowsWithMonth.map((row) => {
+        const clean: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(row)) {
+          if (!k.startsWith('_')) clean[k] = v;
+        }
+        return clean;
+      });
+
+      const uploadRes = await fetch(`/api/upload/${targetTable}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: cleanRows, editTable }),
+      });
+      if (!uploadRes.ok) throw new Error(`${targetTable} 업로드 실패`);
+
+      // 3단계: edit_data 신규 항목 초기화
       const uploadDate = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
       const newEditRows = rowsWithMonth
         .filter(row => !existingIds.has(row.id))
@@ -403,13 +386,14 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded, targetTable = 
           const mfgDate = (row._manufacturing_date as string) || '';
           const pkgDate = (row._packaging_date as string) || '';
           return {
-            item_id: row.id,
+            write_date: '',
             production_complete_date: (row.production_request_date as string) || '',
             material_setting_date: matDate,
             manufacturing_date: mfgDate,
             packaging_date: pkgDate,
             revenue_possible: (row._revenue_possible as string) || '확인중',
             revenue_possible_quantity: ((row._revenue_possible as string) || '확인중') === '가능' ? (row.remaining_quantity as number) : 0,
+            revenue_possible_filled_at: '',
             delay_reason: '',
             importance: (row._importance as string) || '',
             purchase_manager: (row._purchase_manager as string) || '',
@@ -421,19 +405,23 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded, targetTable = 
           };
         });
 
-      for (let i = 0; i < newEditRows.length; i += 100) {
-        const batch = newEditRows.slice(i, i + 100);
-        const { error } = await supabase.from(editTable).upsert(batch);
-        if (error) throw new Error(`${editTable} 업로드 실패 (행 ${i}): ${error.message}`);
+      // 신규 항목 upsert
+      for (const [idx, row] of newEditRows.entries()) {
+        const itemId = rowsWithMonth.filter(r => !existingIds.has(r.id))[idx]?.id;
+        if (itemId) {
+          await fetch(`/api/${apiEditTable}/${encodeURIComponent(itemId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(row),
+          });
+        }
       }
 
-      // 기존 항목: CSV에서 오는 필드를 개별 update (수동 입력값 중 해당 필드만 갱신)
-      // 새로 값이 채워지면 완료 시점도 자동 기록
+      // 4단계: 기존 항목 부분 업데이트
       const existingRows = rowsWithMonth.filter(row => existingIds.has(row.id));
       for (const row of existingRows) {
         const existing = existingFilledAt.get(row.id);
         const updates: Record<string, string> = {};
-        // CSV가 "사급"이면 기존 대시보드 값 우선 보존
         const csvPm = (row._purchase_manager as string) || '';
         const existingPm = (existing?.purchase_manager as string) || '';
         if (csvPm && !(csvPm.includes('사급') && existingPm && !existingPm.includes('사급'))) {
@@ -456,7 +444,11 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded, targetTable = 
         if (row._revenue_reflected) updates.revenue_reflected = (row._revenue_reflected as string).toUpperCase();
         if (row._note) updates.note = row._note as string;
         if (Object.keys(updates).length > 0) {
-          await supabase.from(editTable).update(updates).eq('item_id', row.id);
+          await fetch(`/api/${apiEditTable}/${encodeURIComponent(row.id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          });
         }
       }
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users, Camera, Clock, Mail } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
-import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths, createSnapshot, hasSnapshotForMonth, fetchAllItems, fetchAllItemsEditData, saveAllItemsEditData, updateAllItemsEditData } from './services/supabaseDataService';
+import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths, createSnapshot, hasSnapshotForMonth, fetchAllItems, fetchAllItemsEditData, saveAllItemsEditData, updateAllItemsEditData } from './services/apiDataService';
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
