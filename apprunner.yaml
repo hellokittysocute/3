@@ -7,7 +7,7 @@ build:
     build:
       - npm run build
 run:
-  command: ./node_modules/.bin/serve -s dist -l $PORT
+  command: node start.cjs
   network:
     port: 8080
     env: PORT
