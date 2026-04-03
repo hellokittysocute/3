@@ -1,0 +1,13 @@
+version: 1.0
+runtime: nodejs22
+build:
+  commands:
+    pre-build:
+      - npm install
+    build:
+      - npm run build
+run:
+  command: ./node_modules/.bin/serve -s dist -l $PORT
+  network:
+    port: 8080
+    env: PORT
