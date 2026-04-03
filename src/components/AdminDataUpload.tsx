@@ -310,9 +310,10 @@ function parseCSVToRows(csvText: string): ParseResult {
 interface AdminDataUploadProps {
   selectedMonth?: string;
   onMonthUploaded?: (month: string) => void;
+  targetTable?: 'dashboard_items' | 'all_items';
 }
 
-export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUploadProps) {
+export function AdminDataUpload({ selectedMonth, onMonthUploaded, targetTable = 'dashboard_items' }: AdminDataUploadProps) {
   const [uploadMonth, setUploadMonth] = useState(selectedMonth || new Date().toISOString().slice(0, 7));
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
@@ -354,9 +355,10 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
     }));
 
     try {
+      const editTable = targetTable === 'all_items' ? 'all_items_edit_data' : 'edit_data';
       // 1단계: 해당 월의 기존 데이터 수 확인
       const { count: oldCount } = await supabase
-        .from('dashboard_items')
+        .from(targetTable)
         .select('*', { count: 'exact', head: true });
 
       // 2단계: 새 데이터 upsert (month 제외 — PostgREST 캐시 이슈 우회, DEFAULT 사용)
@@ -368,8 +370,8 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
           }
           return clean;
         });
-        const { error } = await supabase.from('dashboard_items').upsert(batch);
-        if (error) throw new Error(`dashboard_items 업로드 실패 (행 ${i}): ${error.message}`);
+        const { error } = await supabase.from(targetTable).upsert(batch);
+        if (error) throw new Error(`${targetTable} 업로드 실패 (행 ${i}): ${error.message}`);
       }
 
       // 3단계: 초과 old 행 일괄 무효화
@@ -381,14 +383,14 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
         for (let i = 0; i < excessIds.length; i += 100) {
           const batch = excessIds.slice(i, i + 100);
           await supabase
-            .from('dashboard_items')
+            .from(targetTable)
             .update({ customer_code: '', item_name: '[삭제됨]' })
             .in('id', batch);
         }
       }
 
       // edit_data: 기존 저장값 보존, 없는 항목만 CSV 값으로 초기화
-      const { data: existingEditData } = await supabase.from('edit_data').select('item_id,purchase_manager,material_setting_filled_at,manufacturing_filled_at,packaging_filled_at');
+      const { data: existingEditData } = await supabase.from(editTable).select('item_id,purchase_manager,material_setting_filled_at,manufacturing_filled_at,packaging_filled_at');
       const existingIds = new Set((existingEditData || []).map((r: any) => r.item_id));
       const existingFilledAt = new Map((existingEditData || []).map((r: any) => [r.item_id, r]));
 
@@ -421,8 +423,8 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
 
       for (let i = 0; i < newEditRows.length; i += 100) {
         const batch = newEditRows.slice(i, i + 100);
-        const { error } = await supabase.from('edit_data').upsert(batch);
-        if (error) throw new Error(`edit_data 업로드 실패 (행 ${i}): ${error.message}`);
+        const { error } = await supabase.from(editTable).upsert(batch);
+        if (error) throw new Error(`${editTable} 업로드 실패 (행 ${i}): ${error.message}`);
       }
 
       // 기존 항목: CSV에서 오는 필드를 개별 update (수동 입력값 중 해당 필드만 갱신)
@@ -454,7 +456,7 @@ export function AdminDataUpload({ selectedMonth, onMonthUploaded }: AdminDataUpl
         if (row._revenue_reflected) updates.revenue_reflected = (row._revenue_reflected as string).toUpperCase();
         if (row._note) updates.note = row._note as string;
         if (Object.keys(updates).length > 0) {
-          await supabase.from('edit_data').update(updates).eq('item_id', row.id);
+          await supabase.from(editTable).update(updates).eq('item_id', row.id);
         }
       }
 

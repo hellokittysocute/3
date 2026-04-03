@@ -62,6 +62,10 @@ export interface EditableData {
   productionSite: string;
   purchaseManager: string;
   note: string;
+  // 전체품목 전용 필드
+  materialArrivalExpected?: string;  // 부자재 입고 예상일
+  materialArrivalActual?: string;    // 부자재 실 입고일
+  productionCompleteActual?: string; // 실 생산 완료일
 }
 
 export interface SnapshotMeta {

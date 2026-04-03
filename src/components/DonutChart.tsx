@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 
+interface ReflectedData {
+  totalRevenue: number;
+  possibleRevenue: number;
+  count: number;
+}
+
 interface DonutChartProps {
   totalRevenue: number;
   totalCount: number;
@@ -9,6 +15,8 @@ interface DonutChartProps {
   possibleCount: number;
   impossibleRevenue: number;
   impossibleCount: number;
+  reflectedO?: ReflectedData;
+  reflectedX?: ReflectedData;
 }
 
 const COLORS = {
@@ -33,11 +41,27 @@ function formatShort(v: number): string {
   return man.toLocaleString() + '만';
 }
 
+/** 작은 도넛: 가능 금액 vs 나머지 금액 */
+const MiniDonut: React.FC<{ possible: number; total: number; color: string }> = ({ possible, total, color }) => {
+  const R = 34, C = 2 * Math.PI * R;
+  const rate = total > 0 ? possible / total : 0;
+  const seg = rate * C;
+  return (
+    <svg viewBox="0 0 80 80" style={{ width: 70, height: 70, transform: 'rotate(-90deg)' }}>
+      <circle cx="40" cy="40" r={R} fill="none" stroke="#f1f5f9" strokeWidth="10" />
+      <circle cx="40" cy="40" r={R} fill="none" stroke={color} strokeWidth="10"
+        strokeDasharray={`${seg} ${C - seg}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 0.8s ease' }} />
+    </svg>
+  );
+};
+
 export const DonutChart: React.FC<DonutChartProps> = ({
   totalRevenue, totalCount,
   checkingRevenue, checkingCount,
   possibleRevenue, possibleCount,
   impossibleRevenue, impossibleCount,
+  reflectedO, reflectedX,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const animatedRef = useRef(false);
@@ -127,6 +151,9 @@ export const DonutChart: React.FC<DonutChartProps> = ({
     }
   }, [totalRevenue, checkingRevenue, possibleRevenue, impossibleRevenue]);
 
+  const oRate = reflectedO && reflectedO.totalRevenue > 0 ? (reflectedO.possibleRevenue / reflectedO.totalRevenue) * 100 : 0;
+  const xRate = reflectedX && reflectedX.totalRevenue > 0 ? (reflectedX.possibleRevenue / reflectedX.totalRevenue) * 100 : 0;
+
   return (
     <>
       <style>{`
@@ -156,7 +183,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         </div>
         <div style={{ height: 1, background: '#f1f5f9', margin: '0 18px' }} />
 
-        {/* Body */}
+        {/* Body - 기존 도넛 + 범례 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '14px 18px 16px', flex: 1, minWidth: 0 }}>
           {/* Donut */}
           <div style={{ position: 'relative', flexShrink: 0, width: 'min(150px, 32%)', aspectRatio: '1' }}>
@@ -206,6 +233,57 @@ export const DonutChart: React.FC<DonutChartProps> = ({
             ))}
           </div>
         </div>
+
+        {/* 매출반영 O/X 달성율 */}
+        {reflectedO && reflectedX && (
+          <>
+            <div style={{ height: 1, background: '#f1f5f9', margin: '0 18px' }} />
+            <div style={{ padding: '14px 18px 16px' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 12 }}>매출반영 달성율</div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                {/* 매출반영 O */}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#f0fdf4', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <MiniDonut possible={reflectedO.possibleRevenue} total={reflectedO.totalRevenue} color="#22c55e" />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#22c55e' }}>{oRate.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#22c55e', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>O</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>반영</span>
+                      <span style={{ fontSize: 11, color: '#9ca3af' }}>{reflectedO.count}건</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>
+                      가능 <strong style={{ color: '#111827' }}>{formatShort(reflectedO.possibleRevenue)}</strong> / {formatShort(reflectedO.totalRevenue)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 매출반영 X */}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#fef2f2', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <MiniDonut possible={reflectedX.possibleRevenue} total={reflectedX.totalRevenue} color="#ef4444" />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#ef4444' }}>{xRate.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>X</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>미반영</span>
+                      <span style={{ fontSize: 11, color: '#9ca3af' }}>{reflectedX.count}건</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>
+                      가능 <strong style={{ color: '#111827' }}>{formatShort(reflectedX.possibleRevenue)}</strong> / {formatShort(reflectedX.totalRevenue)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

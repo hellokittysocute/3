@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LayoutDashboard, Package, AlertTriangle, List, Search, Filter, RefreshCw, ChevronRight, Shield, Upload, LogOut, Users, Camera, Clock, Mail } from 'lucide-react';
 import { DashboardItem, SummaryStats, EditableData } from './types';
 import { calculateStats, getRevenue, getMaterialByCustomer } from './services/dataService';
-import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths, createSnapshot, hasSnapshotForMonth } from './services/supabaseDataService';
+import { fetchDashboardItems, fetchAllEditData, saveAllEditData, updateEditData, fetchAvailableMonths, createSnapshot, hasSnapshotForMonth, fetchAllItems, fetchAllItemsEditData, saveAllItemsEditData, updateAllItemsEditData } from './services/supabaseDataService';
 import { KPICard } from './components/KPICard';
 import { DataTable } from './components/DataTable';
 import { StackedBarChart } from './components/StackedBarChart';
@@ -16,12 +16,13 @@ import { DelayByDeptCard } from './components/DelayByDeptCard';
 import { NoReplyCard } from './components/NoReplyCard';
 import { Top10CustomerCard } from './components/Top10CustomerCard';
 import { DrilldownModal } from './components/DrilldownModal';
+import { AllItemsSummary } from './components/AllItemsSummary';
 import { SnapshotHistory } from './components/SnapshotHistory';
 import { useAuth } from './contexts/AuthContext';
 import { cn, formatCurrency, addWorkingDays, isWorkingDay } from './lib/utils';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-type TabId = 'summary' | 'details' | 'delay' | 'snapshots' | 'admin-users' | 'admin-upload';
+type TabId = 'summary' | 'details' | 'delay' | 'snapshots' | 'admin-users' | 'admin-upload' | 'all-summary' | 'all-details' | 'all-upload';
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isActive, signOut } = useAuth();
@@ -39,9 +40,15 @@ export default function App() {
   // 드릴다운 모달 상태
   const [customerModal, setCustomerModal] = useState<string | null>(null); // customerCode
   const [delayDeptModal, setDelayDeptModal] = useState<string | null>(null); // deptName
+  const [noReplyModal, setNoReplyModal] = useState<{ dept: string; manager: string } | null>(null);
 
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 전체품목 상태
+  const [allItems, setAllItems] = useState<DashboardItem[]>([]);
+  const [allEditData, setAllEditData] = useState<Record<string, EditableData>>({});
+  const [allLoading, setAllLoading] = useState(false);
 
   // 월 관리
   const [availableMonths, setAvailableMonths] = useState<string[]>(['2026-03']);
@@ -92,7 +99,68 @@ export default function App() {
     loadData();
   }, [selectedMonth]);
 
+  // 전체품목 데이터 로드 (관리자만)
+  useEffect(() => {
+    if (!isAdmin) return;
+    async function loadAllItems() {
+      setAllLoading(true);
+      try {
+        const [aiItems, aiEditData] = await Promise.all([
+          fetchAllItems(),
+          fetchAllItemsEditData(),
+        ]);
+        setAllItems(aiItems);
+        const merged: Record<string, EditableData> = {};
+        aiItems.forEach(item => {
+          merged[item.id] = aiEditData[item.id] || {
+            writeDate: '', productionCompleteDate: '', materialSettingDate: '', manufacturingDate: '', packagingDate: '',
+            materialSettingFilledAt: '', manufacturingFilledAt: '', packagingFilledAt: '', revenuePossibleFilledAt: '',
+            revenuePossible: '확인중', revenuePossibleQuantity: 0, delayReason: '', revenueReflected: '', importance: '',
+            productionSite: '', purchaseManager: '', note: '',
+          };
+        });
+        setAllEditData(merged);
+      } catch (err) {
+        console.error('전체품목 로드 실패:', err);
+      } finally {
+        setAllLoading(false);
+      }
+    }
+    loadAllItems();
+  }, [isAdmin]);
 
+  const allStats = useMemo(() => calculateStats(allItems, allEditData), [allItems, allEditData]);
+
+  const handleAllUpdateField = useCallback((id: string, field: keyof EditableData, value: string | number) => {
+    setAllEditData(prev => {
+      const old = prev[id] || {} as EditableData;
+      const updated = { ...old, [field]: value };
+      const today = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
+      if (field === 'materialSettingDate' && !old.materialSettingDate && value) updated.materialSettingFilledAt = today;
+      if (field === 'manufacturingDate' && !old.manufacturingDate && value) updated.manufacturingFilledAt = today;
+      if (field === 'packagingDate' && !old.packagingDate && value) updated.packagingFilledAt = today;
+      if (field === 'revenuePossible' && (!old.revenuePossible || old.revenuePossible === '확인중') && value && value !== '확인중') updated.revenuePossibleFilledAt = today;
+      if (field === 'materialSettingDate' && !value) updated.materialSettingFilledAt = '';
+      if (field === 'manufacturingDate' && !value) updated.manufacturingFilledAt = '';
+      if (field === 'packagingDate' && !value) updated.packagingFilledAt = '';
+      if (field === 'revenuePossible' && (!value || value === '확인중')) updated.revenuePossibleFilledAt = '';
+      if (field === 'revenuePossible' && value !== '가능') updated.revenuePossibleQuantity = 0;
+      return { ...prev, [id]: updated };
+    });
+  }, []);
+
+  const [allSaveStatus, setAllSaveStatus] = useState<'idle' | 'saved' | 'loading'>('idle');
+  const handleAllSave = useCallback(async () => {
+    setAllSaveStatus('loading');
+    try {
+      await saveAllItemsEditData(allEditData);
+      setAllSaveStatus('saved');
+      setTimeout(() => setAllSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error('전체품목 저장 실패:', err);
+      setAllSaveStatus('idle');
+    }
+  }, [allEditData]);
 
   const buildInitialEditData = useCallback(() => {
     const initial: Record<string, EditableData> = {};
@@ -920,6 +988,61 @@ export default function App() {
     return { deptName: delayDeptModal, totalCount: deptItems.length, items: itemList };
   }, [delayDeptModal, items, editData]);
 
+  // 미회신 드릴다운 데이터
+  const noReplyModalData = useMemo(() => {
+    if (!noReplyModal) return null;
+    const { dept, manager } = noReplyModal;
+    const result: { itemCode: string; itemName: string; customerCode: string; remainingQuantity: number; daysElapsed: number }[] = [];
+
+    items.forEach(item => {
+      const ed = editData[item.id];
+      const isSagup = (item.materialSource ?? '').includes('사급') || (ed?.purchaseManager ?? '').includes('사급');
+      const cat = item.category?.trim() || '';
+
+      if (dept === '구매') {
+        const mgr = (ed?.purchaseManager ?? '').trim() || '미지정';
+        if (mgr === manager && !isSagup && !(ed?.materialSettingDate ?? '').trim()) {
+          const writeD = ed?.writeDate ? new Date(new Date().getFullYear(), ...ed.writeDate.split('/').map((v: string, i: number) => i === 0 ? Number(v) - 1 : Number(v))) : null;
+          result.push({ itemCode: item.materialCode, itemName: item.itemName, customerCode: item.customerCode, remainingQuantity: item.remainingQuantity, daysElapsed: 0 });
+        }
+      } else if (dept === '제조') {
+        if (!(ed?.manufacturingDate ?? '').trim()) {
+          // 제조담당 매핑 확인 (동일 로직)
+          const managers = (() => {
+            const MFG_EXACT: Record<string, string[]> = { '기초': ['이정훈', '장승상'], '색조': ['홍경의'], '파우더': ['정진숙', '원대한', '양정빈'], '립': ['장건수', '오승연'], '선밤': ['장철환'], '쿠션': ['황아름'], '튜브': ['박수진', '유민지'], '마스크시트': ['오정훈'], '캔': ['오정훈'], '겔마스크': ['정진영'], '아이패치': ['정진영'] };
+            if (MFG_EXACT[cat]) return MFG_EXACT[cat];
+            return ['미지정'];
+          })();
+          if (managers.includes(manager)) {
+            result.push({ itemCode: item.materialCode, itemName: item.itemName, customerCode: item.customerCode, remainingQuantity: item.remainingQuantity, daysElapsed: 0 });
+          }
+        }
+      } else if (dept === '충포장') {
+        if (!(ed?.packagingDate ?? '').trim()) {
+          const managers = (() => {
+            const PKG_EXACT: Record<string, string[]> = { '기초': ['이정훈', '송하림', '장승상'], '색조': ['홍경의'], '파우더': ['정진숙', '원대한', '양정빈'], '립': ['장건수', '오승연'], '선밤': ['장철환'], '쿠션': ['황아름'], '튜브': ['박수진', '유민지'], '마스크시트': ['오정훈'], '캔': ['오정훈'], '겔마스크': ['정진영'], '아이패치': ['정진영'] };
+            if (PKG_EXACT[cat]) return PKG_EXACT[cat];
+            return ['미지정'];
+          })();
+          if (managers.includes(manager)) {
+            result.push({ itemCode: item.materialCode, itemName: item.itemName, customerCode: item.customerCode, remainingQuantity: item.remainingQuantity, daysElapsed: 0 });
+          }
+        }
+      } else if (dept === 'CIS') {
+        const mgr = (item.cisManager ?? '').trim() || '미지정';
+        if (mgr === manager && (!ed?.revenuePossible || ed.revenuePossible === '확인중')) {
+          result.push({ itemCode: item.materialCode, itemName: item.itemName, customerCode: item.customerCode, remainingQuantity: item.remainingQuantity, daysElapsed: 0 });
+        }
+      } else if (dept === '사급') {
+        const mgr = (item.cisManager ?? '').trim() || '미지정';
+        if (mgr === manager && (isSagup) && !(ed?.materialSettingDate ?? '').trim()) {
+          result.push({ itemCode: item.materialCode, itemName: item.itemName, customerCode: item.customerCode, remainingQuantity: item.remainingQuantity, daysElapsed: 0 });
+        }
+      }
+    });
+    return { dept, manager, items: result };
+  }, [noReplyModal, items, editData]);
+
   const trendData = useMemo(() => {
     const totalRevenue = items.reduce((s, i) => s + getRevenue(i), 0);
     if (totalRevenue === 0 || items.length === 0) return [];
@@ -1081,8 +1204,11 @@ export default function App() {
             { id: 'details', label: '상세데이터', icon: List },
             { id: 'snapshots', label: '월별 이력', icon: Camera },
             ...(isAdmin ? [
+              { id: 'all-summary', label: '전체품목 현황', icon: Package },
+              { id: 'all-details', label: '전체품목 상세', icon: List },
               { id: 'admin-users', label: '회원관리', icon: Users },
-              { id: 'admin-upload', label: '데이터 업로드', icon: Upload },
+              { id: 'admin-upload', label: '중점관리 업로드', icon: Upload },
+              { id: 'all-upload', label: '전체품목 업로드', icon: Upload },
             ] : []),
           ].map((tab) => (
             <button
@@ -1134,6 +1260,16 @@ export default function App() {
                   possibleCount={stats.overall.possibleCount}
                   impossibleRevenue={stats.overall.impossibleRevenue}
                   impossibleCount={stats.overall.impossibleCount}
+                  reflectedO={{
+                    totalRevenue: items.filter(i => editData[i.id]?.revenueReflected === 'O').reduce((s, i) => s + getRevenue(i), 0),
+                    possibleRevenue: items.filter(i => editData[i.id]?.revenueReflected === 'O' && editData[i.id]?.revenuePossible === '가능').reduce((s, i) => s + getRevenue(i), 0),
+                    count: items.filter(i => editData[i.id]?.revenueReflected === 'O').length,
+                  }}
+                  reflectedX={{
+                    totalRevenue: items.filter(i => editData[i.id]?.revenueReflected === 'X').reduce((s, i) => s + getRevenue(i), 0),
+                    possibleRevenue: items.filter(i => editData[i.id]?.revenueReflected === 'X' && editData[i.id]?.revenuePossible === '가능').reduce((s, i) => s + getRevenue(i), 0),
+                    count: items.filter(i => editData[i.id]?.revenueReflected === 'X').length,
+                  }}
                 />
 
                 {/* 진도현황 */}
@@ -1224,7 +1360,7 @@ export default function App() {
               </div>
 
               {/* 우측: 미회신 건수 */}
-              <NoReplyCard data={noReplyData} cisNoReply={cisNoReplyData.cisNoReply} sagupManagers={cisNoReplyData.sagupManagers} />
+              <NoReplyCard data={noReplyData} cisNoReply={cisNoReplyData.cisNoReply} sagupManagers={cisNoReplyData.sagupManagers} onManagerClick={(dept, name) => setNoReplyModal({ dept, manager: name })} />
             </div>
           </div>
           );
@@ -1338,6 +1474,50 @@ export default function App() {
           )}
         </DrilldownModal>
 
+        {/* 미회신 드릴다운 모달 */}
+        <DrilldownModal
+          isOpen={!!noReplyModal}
+          onClose={() => setNoReplyModal(null)}
+          title={
+            <>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{noReplyModal?.manager}</span>
+              <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, background: '#ef4444', padding: '2px 8px', borderRadius: 6 }}>
+                {noReplyModal?.dept} 미회신 {noReplyModalData?.items.length || 0}건
+              </span>
+            </>
+          }
+        >
+          {noReplyModalData && (
+            <div>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e5e7eb', color: '#9ca3af' }}>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>품번</th>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>품명</th>
+                    <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 500 }}>고객약호</th>
+                    <th style={{ textAlign: 'right', padding: '6px 4px', fontWeight: 500 }}>미납잔량</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {noReplyModalData.items.map((item, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '6px 4px', color: '#6b7280', whiteSpace: 'nowrap' }}>{item.itemCode}</td>
+                      <td style={{ padding: '6px 4px', color: '#374151', whiteSpace: 'normal', wordBreak: 'break-word' as const }}>{item.itemName}</td>
+                      <td style={{ padding: '6px 4px', color: '#6b7280' }}>{item.customerCode}</td>
+                      <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 600, color: '#1f2937' }}>{item.remainingQuantity.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {noReplyModalData.items.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af', fontSize: 13 }}>
+                  미회신 항목이 없습니다.
+                </div>
+              )}
+            </div>
+          )}
+        </DrilldownModal>
+
         {activeTab === 'details' && (
           <div className="-mx-4 sm:-mx-10 space-y-8 animate-in fade-in duration-700">
             <div className="bg-white overflow-hidden">
@@ -1436,6 +1616,38 @@ export default function App() {
               setAvailableMonths(prev => [...prev, month].sort());
             }
             setSelectedMonth(month);
+          }} />
+        )}
+
+        {activeTab === 'all-summary' && isAdmin && (
+          allLoading ? (
+            <div className="text-center py-20 text-slate-400">전체품목 데이터 로딩 중...</div>
+          ) : allItems.length === 0 ? (
+            <div className="text-center py-20 text-slate-400">전체품목 데이터가 없습니다. '전체품목 업로드' 탭에서 데이터를 업로드해주세요.</div>
+          ) : (
+            <AllItemsSummary items={allItems} editData={allEditData} />
+          )
+        )}
+
+        {activeTab === 'all-details' && isAdmin && (
+          <div className="-mx-4 sm:-mx-10 space-y-8 animate-in fade-in duration-700">
+            {allLoading ? (
+              <div className="text-center py-20 text-slate-400">전체품목 데이터 로딩 중...</div>
+            ) : allItems.length === 0 ? (
+              <div className="text-center py-20 text-slate-400">전체품목 데이터가 없습니다.</div>
+            ) : (
+              <div className="bg-white overflow-hidden">
+                <DataTable items={allItems} editData={allEditData} onUpdateField={handleAllUpdateField} onSave={handleAllSave} saveStatus={allSaveStatus} isAdmin={isAdmin} allItemsMode />
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'all-upload' && isAdmin && (
+          <AdminDataUpload selectedMonth="" targetTable="all_items" onMonthUploaded={() => {
+            // 업로드 후 전체품목 다시 로드
+            fetchAllItems().then(setAllItems);
+            fetchAllItemsEditData().then(setAllEditData);
           }} />
         )}
       </main>

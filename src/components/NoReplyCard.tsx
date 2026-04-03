@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 export interface NoReplyDeptItem {
   dept: string;
   count: number;
-  managers: { name: string; count: number; avgDays?: number }[];
+  managers: { name: string; count: number; avgDays?: number; avgCnt: number }[];
   groupAvgDays?: number;
 }
 
@@ -29,6 +29,8 @@ interface NoReplyCardProps {
   cisNoReply?: CisNoReplyItem[];
   /** 사급 건 CIS 담당자별 부자재 평균 입력일 */
   sagupManagers?: SagupManagerItem[];
+  /** 담당자 클릭 콜백 (dept: 부서명, managerName: 담당자명) */
+  onManagerClick?: (dept: string, managerName: string) => void;
 }
 
 interface GroupStyle {
@@ -53,7 +55,7 @@ const MGR_CATEGORY: Record<string, string> = {
   '양정빈': '파우더', '유민지': '튜브, 에어쿠션',
 };
 
-const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ managers, limit, showCategory }) => {
+const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean; onClickManager?: (name: string) => void }> = ({ managers, limit, showCategory, onClickManager }) => {
   if (managers.length === 0) return <span style={{ fontSize: 11, color: '#9ca3af' }}>담당자 없음</span>;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -62,13 +64,19 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
         const label = m.avgDays != null
           ? (m.avgDays <= 0 ? `${Math.round(m.avgDays)}일` : `+${Math.round(m.avgDays)}일`)
           : null;
+        const clickable = onClickManager && m.count > 0;
         return (
           <div
             key={m.name}
+            onClick={() => clickable && onClickManager(m.name)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '4px 8px', background: over ? '#fef2f2' : '#fff', borderRadius: 6,
+              cursor: clickable ? 'pointer' : 'default',
+              transition: 'background 0.15s',
             }}
+            onMouseEnter={(e) => { if (clickable) (e.currentTarget as HTMLDivElement).style.background = '#f1f5f9'; }}
+            onMouseLeave={(e) => { if (clickable) (e.currentTarget as HTMLDivElement).style.background = over ? '#fef2f2' : '#fff'; }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 12, color: '#374151' }}><b>{m.name}</b>{showCategory && MGR_CATEGORY[m.name] && <span style={{ color: '#374151', fontWeight: 400, marginLeft: 2 }}>({MGR_CATEGORY[m.name]})</span>}</span>
@@ -90,7 +98,7 @@ const ManagerList: React.FC<{ managers: { name: string; count: number; avgDays?:
   );
 };
 
-const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean }> = ({ title, count, style: s, managers, limit, showCategory }) => (
+const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; managers: { name: string; count: number; avgDays?: number }[]; limit: number; showCategory?: boolean; onClickManager?: (name: string) => void }> = ({ title, count, style: s, managers, limit, showCategory, onClickManager }) => (
   <div style={{ background: '#f8f9fb', borderRadius: 8, padding: '10px 12px' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
       <span style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', letterSpacing: '0.04em' }}>{title}</span>
@@ -98,7 +106,7 @@ const SubCard: React.FC<{ title: string; count: number; style: GroupStyle; manag
         {count.toLocaleString()}건
       </span>
     </div>
-    <ManagerList managers={managers} limit={limit} showCategory={showCategory} />
+    <ManagerList managers={managers} limit={limit} showCategory={showCategory} onClickManager={onClickManager} />
   </div>
 );
 
@@ -133,9 +141,9 @@ const computeGroupAvgDays = (depts: (NoReplyDeptItem | undefined)[]): number | u
   depts.forEach(dept => {
     if (!dept) return;
     dept.managers.forEach(m => {
-      if (m.avgDays != null) {
-        totalWeighted += m.avgDays * m.count;
-        totalCount += m.count;
+      if (m.avgDays != null && m.avgCnt > 0) {
+        totalWeighted += m.avgDays * m.avgCnt;
+        totalCount += m.avgCnt;
       }
     });
   });
@@ -147,7 +155,7 @@ const formatAvgDays = (v: number | undefined): string => {
   return v <= 0 ? `${v}일` : `+${v}일`;
 };
 
-const CisRevenueChart: React.FC<{ data: CisNoReplyItem[]; style: GroupStyle }> = ({ data, style: s }) => {
+const CisRevenueChart: React.FC<{ data: CisNoReplyItem[]; style: GroupStyle; onClickManager?: (name: string) => void }> = ({ data, style: s, onClickManager }) => {
   const totalNoReply = data.reduce((sum, d) => sum + d.count, 0);
   const groupAvg = (() => {
     let tw = 0, tc = 0;
@@ -163,13 +171,13 @@ const CisRevenueChart: React.FC<{ data: CisNoReplyItem[]; style: GroupStyle }> =
     <div style={{ ...cardBase, borderLeft: `3px solid ${s.border}`, borderRadius: '0 12px 12px 0' }}>
       <GroupHeader name="CIS(매출 가능여부)" count={totalNoReply} style={s} avgLabel={`평균 ${formatAvgDays(groupAvg)}`} manager="김형석" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={2} />
+        <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={2} onClickManager={onClickManager} />
       </div>
     </div>
   );
 };
 
-const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> = ({ data, style: s }) => {
+const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle; onClickManager?: (name: string) => void }> = ({ data, style: s, onClickManager }) => {
   const totalNoReply = data.reduce((sum, d) => sum + d.noReplyCount, 0);
   const groupAvg = (() => {
     let tw = 0, tc = 0;
@@ -185,13 +193,13 @@ const SagupAvgChart: React.FC<{ data: SagupManagerItem[]; style: GroupStyle }> =
     <div style={{ ...cardBase, borderLeft: `3px solid ${s.border}`, borderRadius: '0 12px 12px 0' }}>
       <GroupHeader name="CIS(사급 부자재)" count={totalNoReply} style={s} avgLabel={`평균 ${formatAvgDays(groupAvg)}`} manager="김형석" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={3} />
+        <SubCard title="CIS담당" count={totalNoReply} style={s} managers={managers} limit={3} onClickManager={onClickManager} />
       </div>
     </div>
   );
 };
 
-export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagupManagers }) => {
+export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagupManagers, onManagerClick }) => {
   const cisNoReplyCount = useMemo(() => (cisNoReply || []).reduce((s, c) => s + c.count, 0), [cisNoReply]);
   const totalCount = useMemo(() => data.reduce((s, d) => s + d.count, 0) + cisNoReplyCount, [data, cisNoReplyCount]);
   const hasPurchaseManagers = useMemo(() => {
@@ -231,11 +239,11 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
             <div style={{ ...cardBase, borderLeft: `3px solid ${PURCHASE_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
               <GroupHeader name="구매" count={purchase?.count || 0} style={PURCHASE_STYLE} avgLabel={`평균 ${formatAvgDays(purchaseAvgDays)}`} manager="김태문" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {purchase && purchase.managers.length > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} />}
+                {purchase && purchase.managers.length > 0 && <SubCard title="구매담당" count={purchase.count} style={PURCHASE_STYLE} managers={purchase.managers} limit={3} onClickManager={(name) => onManagerClick?.('구매', name)} />}
               </div>
             </div>
             {sagupManagers && sagupManagers.length > 0 && (
-              <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} />
+              <SagupAvgChart data={sagupManagers} style={SAGUP_STYLE} onClickManager={(name) => onManagerClick?.('사급', name)} />
             )}
           </div>
 
@@ -244,12 +252,12 @@ export const NoReplyCard: React.FC<NoReplyCardProps> = ({ data, cisNoReply, sagu
             <div style={{ ...cardBase, borderLeft: `3px solid ${PROD_STYLE.border}`, borderRadius: '0 12px 12px 0' }}>
               <GroupHeader name="생산(제조 + 충포장)" count={prodCount} style={PROD_STYLE} avgLabel={`평균 ${formatAvgDays(prodAvgDays)}`} manager="최우정" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {mfg && mfg.managers.length > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory />}
-                {pkg && pkg.managers.length > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory />}
+                {mfg && mfg.managers.length > 0 && <SubCard title="제조담당" count={mfg.count} style={PROD_STYLE} managers={mfg.managers} limit={2} showCategory onClickManager={(name) => onManagerClick?.('제조', name)} />}
+                {pkg && pkg.managers.length > 0 && <SubCard title="충포장담당" count={pkg.count} style={PROD_STYLE} managers={pkg.managers} limit={2} showCategory onClickManager={(name) => onManagerClick?.('충포장', name)} />}
               </div>
             </div>
             {cisNoReply && cisNoReply.length > 0 && (
-              <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} />
+              <CisRevenueChart data={cisNoReply} style={SAGUP_STYLE} onClickManager={(name) => onManagerClick?.('CIS', name)} />
             )}
           </div>
         </div>

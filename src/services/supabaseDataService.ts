@@ -86,6 +86,9 @@ function rowToEditData(row: Record<string, unknown>): EditableData {
     productionSite: (row.production_site as string) || '',
     purchaseManager: (row.purchase_manager as string) || '',
     note: (row.note as string) || '',
+    materialArrivalExpected: (row.material_arrival_expected as string) || '',
+    materialArrivalActual: (row.material_arrival_actual as string) || '',
+    productionCompleteActual: (row.production_complete_actual as string) || '',
   };
 }
 
@@ -180,6 +183,7 @@ export async function updateEditData(itemId: string, editableData: EditableData,
       packaging_filled_at: editableData.packagingFilledAt,
       revenue_possible: editableData.revenuePossible,
       revenue_possible_quantity: editableData.revenuePossibleQuantity,
+      revenue_possible_filled_at: editableData.revenuePossibleFilledAt,
       delay_reason: editableData.delayReason,
       revenue_reflected: editableData.revenueReflected,
       importance: editableData.importance,
@@ -255,6 +259,7 @@ export async function saveAllEditData(allData: Record<string, EditableData>, mon
     packaging_filled_at: d.packagingFilledAt,
     revenue_possible: d.revenuePossible,
     revenue_possible_quantity: d.revenuePossibleQuantity,
+    revenue_possible_filled_at: d.revenuePossibleFilledAt,
     delay_reason: d.delayReason,
     revenue_reflected: d.revenueReflected,
     importance: d.importance,
@@ -269,6 +274,100 @@ export async function saveAllEditData(allData: Record<string, EditableData>, mon
     const { error } = await supabase.from('edit_data').upsert(batch);
     if (error) {
       throw new Error(`edit_data 일괄 저장 오류 (${i}-${i + batch.length}): ${error.message}`);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+// 전체 품목 (all_items / all_items_edit_data)
+// ══════════════════════════════════════════════
+
+export async function fetchAllItems(): Promise<DashboardItem[]> {
+  const { data, error } = await supabase
+    .from('all_items')
+    .select('*')
+    .neq('customer_code', '')
+    .order('id');
+
+  if (error) {
+    console.error('all_items 조회 오류:', error.message);
+    return [];
+  }
+  return (data || []).map(rowToItem);
+}
+
+export async function fetchAllItemsEditData(): Promise<Record<string, EditableData>> {
+  const { data, error } = await supabase.from('all_items_edit_data').select('*');
+  if (error) {
+    console.error('all_items_edit_data 조회 오류:', error.message);
+    return {};
+  }
+  const result: Record<string, EditableData> = {};
+  (data || []).forEach((row: Record<string, unknown>) => {
+    result[row.item_id as string] = rowToEditData(row);
+  });
+  return result;
+}
+
+export async function updateAllItemsEditData(itemId: string, editableData: EditableData): Promise<void> {
+  const { error } = await supabase
+    .from('all_items_edit_data')
+    .upsert({
+      item_id: itemId,
+      write_date: editableData.writeDate,
+      production_complete_date: editableData.productionCompleteDate,
+      material_setting_date: editableData.materialSettingDate,
+      manufacturing_date: editableData.manufacturingDate,
+      packaging_date: editableData.packagingDate,
+      material_setting_filled_at: editableData.materialSettingFilledAt,
+      manufacturing_filled_at: editableData.manufacturingFilledAt,
+      packaging_filled_at: editableData.packagingFilledAt,
+      revenue_possible: editableData.revenuePossible,
+      revenue_possible_quantity: editableData.revenuePossibleQuantity,
+      revenue_possible_filled_at: editableData.revenuePossibleFilledAt,
+      delay_reason: editableData.delayReason,
+      revenue_reflected: editableData.revenueReflected,
+      importance: editableData.importance,
+      purchase_manager: editableData.purchaseManager,
+      note: editableData.note,
+      material_arrival_expected: editableData.materialArrivalExpected || '',
+      material_arrival_actual: editableData.materialArrivalActual || '',
+      production_complete_actual: editableData.productionCompleteActual || '',
+      updated_at: new Date().toISOString(),
+    });
+  if (error) console.error('all_items_edit_data 업데이트 오류:', error.message);
+}
+
+export async function saveAllItemsEditData(allData: Record<string, EditableData>): Promise<void> {
+  const rows = Object.entries(allData).map(([itemId, d]) => ({
+    item_id: itemId,
+    write_date: d.writeDate,
+    production_complete_date: d.productionCompleteDate,
+    material_setting_date: d.materialSettingDate,
+    manufacturing_date: d.manufacturingDate,
+    packaging_date: d.packagingDate,
+    material_setting_filled_at: d.materialSettingFilledAt,
+    manufacturing_filled_at: d.manufacturingFilledAt,
+    packaging_filled_at: d.packagingFilledAt,
+    revenue_possible: d.revenuePossible,
+    revenue_possible_quantity: d.revenuePossibleQuantity,
+    revenue_possible_filled_at: d.revenuePossibleFilledAt,
+    delay_reason: d.delayReason,
+    revenue_reflected: d.revenueReflected,
+    importance: d.importance,
+    purchase_manager: d.purchaseManager,
+    note: d.note,
+    material_arrival_expected: d.materialArrivalExpected || '',
+    material_arrival_actual: d.materialArrivalActual || '',
+    production_complete_actual: d.productionCompleteActual || '',
+    updated_at: new Date().toISOString(),
+  }));
+
+  for (let i = 0; i < rows.length; i += 100) {
+    const batch = rows.slice(i, i + 100);
+    const { error } = await supabase.from('all_items_edit_data').upsert(batch);
+    if (error) {
+      throw new Error(`all_items_edit_data 일괄 저장 오류: ${error.message}`);
     }
   }
 }

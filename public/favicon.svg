@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 사과 몸통 (위쪽 움푹 들어간 형태) -->
+  <path d="M16 8C11 8 4 12 4 20C4 26 9 30 16 30C23 30 28 26 28 20C28 12 21 8 16 8Z" fill="#ef4444"/>
+  <path d="M16 8C11 8 4 12 4 20C4 26 9 30 16 30" fill="#dc2626"/>
+  <!-- 위쪽 좌우 볼록한 부분 -->
+  <path d="M10 9C7 9 4 12 4 16" fill="none" stroke="#dc2626" stroke-width="0"/>
+  <path d="M8 8Q4 10 4 15" fill="#ef4444"/>
+  <path d="M24 8Q28 10 28 15" fill="#dc2626"/>
+  <!-- 꼭지 -->
+  <rect x="15" y="3" width="2" height="6" rx="1" fill="#78350f"/>
+  <!-- 잎 -->
+  <path d="M17 5C19 3 23 2 24 3C25 4 22 6 18 6Z" fill="#15803d"/>
+  <!-- 하이라이트 -->
+  <ellipse cx="11" cy="17" rx="2.5" ry="4" fill="#fff" opacity="0.18" transform="rotate(-15 11 17)"/>
+</svg>
