@@ -1,8 +1,24 @@
 import { Configuration, LogLevel } from '@azure/msal-browser';
 
+async function getAuthConfig(): Promise<{ clientId: string; tenantId: string }> {
+  // 빌드 시 환경변수 우선 (Vercel 등 정적 호스팅)
+  const envClientId = import.meta.env.VITE_AZURE_CLIENT_ID;
+  const envTenantId = import.meta.env.VITE_AZURE_TENANT_ID;
+  if (envClientId && envTenantId) {
+    return { clientId: envClientId, tenantId: envTenantId };
+  }
+
+  // 런타임 API 조회 (App Runner 등 백엔드 포함 환경)
+  try {
+    const res = await fetch('/api/auth/config');
+    if (res.ok) return await res.json();
+  } catch { /* ignore */ }
+
+  return { clientId: '', tenantId: '' };
+}
+
 export async function fetchMsalConfig(): Promise<Configuration> {
-  const res = await fetch('/api/auth/config');
-  const { clientId, tenantId } = await res.json();
+  const { clientId, tenantId } = await getAuthConfig();
 
   return {
     auth: {
