@@ -12,18 +12,18 @@
 import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
 
-// ── Supabase (소스) ──
-const SUPABASE_URL = 'https://luaifjsnvuamkhdkwwhd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1YWlmanNudnVhbWtoZGt3d2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMTAwNTQsImV4cCI6MjA4ODU4NjA1NH0.zX9vgn-IKfGbPtl2Sc2bA7hxY-izzReivjOg1pWyEwU';
+// ── Supabase (소스) — 마이그레이션 완료, 더 이상 사용하지 않음 ──
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── 사내 PostgreSQL (대상) ──
 const pool = new pg.Pool({
-  host: 'cip001.cosmaxhub.com',
-  port: 5432,
-  database: 'Postgres',
-  user: 'app_mktdashboard_prd',
-  password: 'hnFLna*HvxOZ2$k9z%A*gAVZ',
+  host: process.env.DB_HOST || 'cip001.cosmaxhub.com',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'Postgres',
+  user: process.env.DB_USER || 'app_mktdashboard_prd',
+  password: process.env.DB_PASSWORD || '',
   ssl: false,
 });
 

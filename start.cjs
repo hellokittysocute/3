@@ -37,8 +37,24 @@ pool.on('connect', (client) => {
   client.query(`SET search_path TO ${SCHEMA}`);
 });
 
+// ── Azure SSO 설정 (Secrets Manager → 환경변수 → 빌드 시 Vite에 주입) ──
+let azureSsoConfig = {};
+if (process.env.AZURE_SSO) {
+  try {
+    azureSsoConfig = JSON.parse(process.env.AZURE_SSO);
+  } catch { /* ignore */ }
+}
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'dist')));
+
+// ── Azure SSO 설정 API (프론트엔드에서 런타임에 조회) ──
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    clientId: azureSsoConfig.AZURE_CLIENT_ID || '',
+    tenantId: azureSsoConfig.AZURE_TENANT_ID || '',
+  });
+});
 
 // ══════════════════════════════════════
 // API 엔드포인트

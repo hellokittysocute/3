@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
+import { InteractionStatus } from '@azure/msal-browser';
+import { loginRequest } from '../lib/msalConfig';
 
 export interface UserProfile {
   id: string;
@@ -13,26 +14,24 @@ export interface UserProfile {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: { id: string; email: string; name: string } | null;
   profile: UserProfile | null;
-  session: Session | null;
   loading: boolean;
   isAdmin: boolean;
   isActive: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function fetchProfileFromAPI(userId: string, email: string, name: string, avatarUrl: string): Promise<UserProfile | null> {
+async function fetchProfileFromAPI(userId: string, email: string, name: string): Promise<UserProfile | null> {
   try {
-    // upsert: 프로필이 없으면 생성, 있으면 반환
     const res = await fetch(`/api/users/${userId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name, avatar_url: avatarUrl }),
+      body: JSON.stringify({ email, name, avatar_url: '' }),
     });
     if (res.ok) return await res.json();
   } catch (err: any) {
@@ -42,82 +41,52 @@ async function fetchProfileFromAPI(userId: string, email: string, name: string, 
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const { instance, accounts, inProgress } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = async () => {
+  const account = accounts[0] ?? null;
+
+  const user = account
+    ? {
+        id: account.localAccountId,
+        email: account.username,
+        name: account.name || account.username,
+      }
+    : null;
+
+  const refreshProfile = useCallback(async () => {
     if (!user) return;
-    const p = await fetchProfileFromAPI(
-      user.id,
-      user.email || '',
-      user.user_metadata?.full_name || user.user_metadata?.name || '',
-      user.user_metadata?.avatar_url || '',
-    );
+    const p = await fetchProfileFromAPI(user.id, user.email, user.name);
     if (p) setProfile(p);
-  };
+  }, [user?.id, user?.email, user?.name]);
 
   useEffect(() => {
-    let mounted = true;
+    if (inProgress !== InteractionStatus.None) return;
 
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('Auth 초기화 타임아웃 - 로그인 페이지로 이동');
+    if (isAuthenticated && user) {
+      fetchProfileFromAPI(user.id, user.email, user.name).then((p) => {
+        setProfile(p);
         setLoading(false);
-      }
-    }, 8000);
+      });
+    } else {
+      setProfile(null);
+      setLoading(false);
+    }
+  }, [isAuthenticated, inProgress, user?.id]);
 
-    // Supabase Auth는 Google OAuth 처리용으로만 유지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        if (!mounted) return;
-
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          const u = newSession.user;
-          fetchProfileFromAPI(
-            u.id,
-            u.email || '',
-            u.user_metadata?.full_name || u.user_metadata?.name || '',
-            u.user_metadata?.avatar_url || '',
-          ).then((p) => {
-            if (mounted) {
-              setProfile(p);
-              setLoading(false);
-            }
-          });
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      clearTimeout(safetyTimeout);
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) console.error('Google 로그인 오류:', error.message);
+  const signIn = async () => {
+    try {
+      await instance.loginRedirect(loginRequest);
+    } catch (err: any) {
+      console.error('로그인 오류:', err.message);
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
     setProfile(null);
-    setSession(null);
+    await instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin });
   };
 
   return (
@@ -125,11 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         profile,
-        session,
         loading,
         isAdmin: profile?.role === 'admin',
         isActive: profile?.status === 'active',
-        signInWithGoogle,
+        signIn,
         signOut,
         refreshProfile,
       }}

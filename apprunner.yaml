@@ -14,3 +14,5 @@ run:
   secrets:
     - name: DB_SECRET
       value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_mktdashboard_prd-coaV51"
+    - name: AZURE_SSO
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_mktdashboard_prd/AzureSSO-1EZmUe"
