@@ -51,8 +51,8 @@ export default function App() {
   const [allLoading, setAllLoading] = useState(false);
 
   // 월 관리
-  const [availableMonths, setAvailableMonths] = useState<string[]>(['2026-03']);
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-03');
+  const [availableMonths, setAvailableMonths] = useState<string[]>([new Date().toISOString().slice(0, 7)]);
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
   const currentMonth = new Date().toISOString().slice(0, 7); // e.g. '2026-03'
   const isReadOnly = selectedMonth < currentMonth;
 
