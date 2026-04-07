@@ -76,25 +76,27 @@ export function calculateStats(items: DashboardItem[], editData?: Record<string,
     return item.status;
   };
 
+  // 가능 매출액: 단가 × 매출가능수량
+  const getPossibleRevenue = (item: DashboardItem): number => {
+    const qty = editData?.[item.id]?.revenuePossibleQuantity || 0;
+    return item.unitPrice * qty;
+  };
+
+  // 확인중/불가능 매출액: (미납잔량 - 매출가능수량) × 단가
+  const getUnpossibleRevenue = (item: DashboardItem): number => {
+    const qty = editData?.[item.id]?.revenuePossibleQuantity || 0;
+    return item.unitPrice * (item.remainingQuantity - qty);
+  };
+
   const getStats = (filteredItems: DashboardItem[]) => {
     const totalRevenue = filteredItems.reduce((sum, item) => sum + getRevenue(item), 0);
     const possible = filteredItems.filter(i => getStatus(i) === '가능');
     const checking = filteredItems.filter(i => getStatus(i) === '확인중');
     const impossible = filteredItems.filter(i => getStatus(i) === '불가능');
 
-    // 가능: 단가 × 매출가능수량
-    const possibleRevenue = possible.reduce((sum, item) => {
-      const qty = editData?.[item.id]?.revenuePossibleQuantity || 0;
-      return sum + item.unitPrice * qty;
-    }, 0);
-    // 확인중: 단가 × 미납잔량
+    const possibleRevenue = possible.reduce((sum, item) => sum + getPossibleRevenue(item), 0);
     const checkingRevenue = checking.reduce((sum, item) => sum + getRevenue(item), 0);
-    // 불가능: 불가능 품목(단가 × 미납잔량) + 가능 품목 중 매출가능수량 미달분(단가 × (미납잔량 - 매출가능수량))
-    const impossibleRevenue = impossible.reduce((sum, item) => sum + getRevenue(item), 0)
-      + possible.reduce((sum, item) => {
-        const qty = editData?.[item.id]?.revenuePossibleQuantity || 0;
-        return sum + item.unitPrice * (item.remainingQuantity - qty);
-      }, 0);
+    const impossibleRevenue = impossible.reduce((sum, item) => sum + getUnpossibleRevenue(item), 0);
 
     return {
       totalRevenue,
