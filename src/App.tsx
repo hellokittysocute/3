@@ -69,7 +69,7 @@ export default function App() {
     });
   }, []);
 
-  // Supabase에서 월별 데이터 로드
+  // 월별 데이터 로드
   useEffect(() => {
     async function loadData() {
       setLoading(true);
