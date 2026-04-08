@@ -388,9 +388,7 @@ app.put('/api/users/:id', async (req, res) => {
        ON CONFLICT (id) DO UPDATE SET
         email=COALESCE(EXCLUDED.email, user_profiles.email),
         name=COALESCE(EXCLUDED.name, user_profiles.name),
-        avatar_url=COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url),
-        role=COALESCE(EXCLUDED.role, user_profiles.role),
-        status=COALESCE(EXCLUDED.status, user_profiles.status)`,
+        avatar_url=COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url)`,
       [id, email, name, avatar_url||'', role||'user', status||'inactive']
     );
     const { rows } = await pool.query(`SELECT * FROM user_profiles WHERE id = $1`, [id]);
