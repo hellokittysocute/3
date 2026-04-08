@@ -1094,7 +1094,6 @@ export default function App() {
   }
 
   if (!user) return <LoginPage />;
-  if (!isActive) return <InactivePage />;
 
   if (loading) {
     return (

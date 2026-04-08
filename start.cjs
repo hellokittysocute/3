@@ -389,7 +389,7 @@ app.put('/api/users/:id', async (req, res) => {
         email=COALESCE(EXCLUDED.email, user_profiles.email),
         name=COALESCE(EXCLUDED.name, user_profiles.name),
         avatar_url=COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url)`,
-      [id, email, name, avatar_url||'', role||'user', status||'inactive']
+      [id, email, name, avatar_url||'', role||'user', status||'active']
     );
     const { rows } = await pool.query(`SELECT * FROM user_profiles WHERE id = $1`, [id]);
     res.json(rows[0]);
